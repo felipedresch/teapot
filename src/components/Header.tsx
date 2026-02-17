@@ -1,30 +1,65 @@
 import { Link } from '@tanstack/react-router'
-
 import { useState } from 'react'
 import { BarChart, Globe, Home, Menu, X } from 'lucide-react'
+import { useAuthActions } from '@convex-dev/auth/react'
+import { useCurrentUser } from '../hooks/useCurrentUser'
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false)
+  const { signIn, signOut } = useAuthActions()
+  const { user, isLoading, isAuthenticated } = useCurrentUser()
 
   return (
     <>
-      <header className="p-4 flex items-center bg-gray-800 text-white shadow-lg">
-        <button
-          onClick={() => setIsOpen(true)}
-          className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-          aria-label="Open menu"
-        >
-          <Menu size={24} />
-        </button>
-        <h1 className="ml-4 text-xl font-semibold">
-          <Link to="/">
-            <img
-              src="/tanstack-word-logo-white.svg"
-              alt="TanStack Logo"
-              className="h-10"
-            />
-          </Link>
-        </h1>
+      <header className="p-4 flex items-center justify-between bg-gray-800 text-white shadow-lg">
+        <div className="flex items-center">
+          <button
+            onClick={() => setIsOpen(true)}
+            className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+            aria-label="Open menu"
+          >
+            <Menu size={24} />
+          </button>
+          <h1 className="ml-4 text-xl font-semibold">
+            <Link to="/">
+              <img
+                src="/tanstack-word-logo-white.svg"
+                alt="TanStack Logo"
+                className="h-10"
+              />
+            </Link>
+          </h1>
+        </div>
+
+        <div className="flex items-center gap-4">
+          {!isLoading && isAuthenticated && user ? (
+            <>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="font-medium">
+                  {user.name ?? user.email ?? 'Convidado'}
+                </span>
+                {user.isAdmin && (
+                  <span className="px-2 py-0.5 rounded-full text-xs bg-amber-500 text-gray-900">
+                    Admin
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => void signOut()}
+                className="px-3 py-1.5 rounded-md bg-gray-700 hover:bg-gray-600 text-sm font-medium transition-colors"
+              >
+                Sair
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => void signIn('google')}
+              className="px-3 py-1.5 rounded-md bg-cyan-600 hover:bg-cyan-500 text-sm font-medium transition-colors"
+            >
+              Entrar com Google
+            </button>
+          )}
+        </div>
       </header>
 
       <aside
