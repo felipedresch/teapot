@@ -38,6 +38,8 @@ type EventCreationState = {
   draftEvent: DraftEvent | null
   draftGifts: DraftGift[]
   customGiftCategories: string[]
+  isHydrated: boolean
+  setHydrated: (value: boolean) => void
   setDraftEvent: (data: DraftEvent) => void
   clearDraftEvent: () => void
   addDraftGift: (gift: DraftGift) => void
@@ -56,6 +58,9 @@ export const useEventCreationStore = create<EventCreationState>()(
       draftGifts: [],
       customGiftCategories: [],
       pendingPublish: false,
+      isHydrated: false,
+
+      setHydrated: (value) => set({ isHydrated: value }),
 
       setDraftEvent: (data) => set({ draftEvent: data }),
 
@@ -96,6 +101,9 @@ export const useEventCreationStore = create<EventCreationState>()(
     {
       name: 'event-creation-store-v2',
       storage: createJSONStorage(() => localStorage),
+      onRehydrateStorage: () => (state) => {
+        state?.setHydrated(true)
+      },
       partialize: (state) => ({
         draftEvent: state.draftEvent,
         draftGifts: state.draftGifts,

@@ -54,6 +54,7 @@ function EventCreatePageShell() {
   const {
     draftEvent,
     draftGifts,
+    isHydrated: isCreationStoreHydrated,
     setDraftEvent,
     addDraftGift,
     removeDraftGift,
@@ -97,10 +98,14 @@ function EventCreatePageShell() {
   )
 
   useEffect(() => {
+    if (!isCreationStoreHydrated) {
+      return
+    }
+
     if (!draftEvent) {
       setDraftEvent(eventData)
     }
-  }, [draftEvent, eventData, setDraftEvent])
+  }, [draftEvent, eventData, isCreationStoreHydrated, setDraftEvent])
 
   useEffect(() => {
     const el = descriptionTextareaRef.current
@@ -112,6 +117,7 @@ function EventCreatePageShell() {
 
   const updateEvent = useCallback(
     (patch: Partial<typeof eventData>) => {
+      setError(null)
       setDraftEvent({
         ...eventData,
         ...patch,
@@ -276,13 +282,20 @@ function EventCreatePageShell() {
   ])
 
   useEffect(() => {
-    if (!pendingPublish || isPublishing || isAuthLoading || !isAuthenticated) {
+    if (
+      !isCreationStoreHydrated ||
+      !pendingPublish ||
+      isPublishing ||
+      isAuthLoading ||
+      !isAuthenticated
+    ) {
       return
     }
 
     void finalizeCreation()
   }, [
     finalizeCreation,
+    isCreationStoreHydrated,
     isAuthenticated,
     isAuthLoading,
     isPublishing,
@@ -292,7 +305,7 @@ function EventCreatePageShell() {
   const handlePublishClick = useCallback(async () => {
     if (!isAuthenticated) {
       setPendingPublish(true)
-      await signIn('google')
+      await signIn('google', { redirectTo: '/events/create' })
       return
     }
 
@@ -303,6 +316,7 @@ function EventCreatePageShell() {
     if (!giftName.trim()) {
       return
     }
+    setError(null)
     const normalizedCategory =
       giftCategory.trim() && giftCategory !== '__custom__'
         ? giftCategory.trim()
@@ -748,7 +762,7 @@ function EventCreatePageShell() {
             ) : (
               <motion.div
                 key="gift-list"
-                className="space-y-2.5"
+                className="space-y-3"
                 initial="hidden"
                 animate="visible"
                 variants={{
@@ -760,56 +774,75 @@ function EventCreatePageShell() {
                   {draftGifts.length}{' '}
                   {draftGifts.length === 1 ? 'presente' : 'presentes'} na lista
                 </p>
-                {draftGifts.map((gift) => (
-                  <motion.div
-                    key={gift.tempId}
-                    variants={{
-                      hidden: { opacity: 0, y: 8 },
-                      visible: {
-                        opacity: 1,
-                        y: 0,
-                        transition: { duration: 0.3, ease },
-                      },
-                    }}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-border/40 bg-warm-white/60 p-4 group hover:shadow-dreamy transition-all duration-200"
-                  >
-                    <div className="space-y-1 min-w-0">
-                      <p className="font-medium text-espresso truncate">
-                        {gift.name}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {draftGifts.map((gift) => (
+                    <motion.div
+                      key={gift.tempId}
+                      variants={{
+                        hidden: { opacity: 0, y: 8 },
+                        visible: {
+                          opacity: 1,
+                          y: 0,
+                          transition: { duration: 0.3, ease },
+                        },
+                      }}
+                      className="rounded-2xl border border-gift-available/20 bg-gift-available/10 p-5 transition-all duration-200 hover:shadow-dreamy flex flex-col min-h-[20rem]"
+                    >
+                      <div className="flex items-start justify-between gap-2 min-h-12">
+                        <h4 className="font-display text-base leading-snug text-espresso">
+                          {gift.name}
+                        </h4>
+                        <Badge variant="available" className="shrink-0">
+                          Disponível
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-warm-gray/60 mt-1 min-h-4">
+                        {gift.category || 'Sem categoria'}
                       </p>
-                      {gift.description && (
-                        <p className="text-sm text-warm-gray truncate">
-                          {gift.description}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {gift.category && (
-                          <Badge variant="outline">{gift.category}</Badge>
+                      <div className="mt-3 min-h-16">
+                        {gift.description ? (
+                          <p className="text-sm text-warm-gray leading-relaxed line-clamp-3">
+                            {capitalizeFirst(gift.description)}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-warm-gray/45">Sem descrição</p>
                         )}
-                        {gift.referenceUrl && (
+                      </div>
+                      <div className="min-h-6 mt-1">
+                        {gift.referenceUrl ? (
                           <a
-                            className="text-xs text-muted-rose hover:underline"
+                            className="inline-flex items-center gap-1 text-xs text-muted-rose hover:underline"
                             href={gift.referenceUrl}
                             target="_blank"
                             rel="noreferrer"
                           >
                             Referência
                           </a>
+                        ) : (
+                          <span className="text-xs text-warm-gray/45">
+                            Sem link de referência
+                          </span>
                         )}
                       </div>
-                    </div>
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="ghost"
-                      onClick={() => removeDraftGift(gift.tempId)}
-                      aria-label="Remover presente"
-                      className="opacity-50 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </motion.div>
-                ))}
+                      <div className="mt-auto h-10 flex items-center justify-end">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setError(null)
+                            removeDraftGift(gift.tempId)
+                          }}
+                          aria-label="Remover presente"
+                          className="text-destructive"
+                        >
+                          <Trash2 className="size-4" />
+                          Remover
+                        </Button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
