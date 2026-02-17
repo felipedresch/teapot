@@ -5,22 +5,46 @@ import { motion, AnimatePresence } from 'motion/react'
 import { useEventSearch } from '../hooks/useEvents'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
+import { capitalizeFirst, getDisplayHostNames } from '../lib/presentation'
 
 export const Route = createFileRoute('/')({ component: HomePage })
 
 const ease = [0.22, 1, 0.36, 1] as const
+const USE_CASES: Array<string> = [
+  'Chá de panela',
+  'Casamento',
+  'Aniversário',
+  'Chá de bebê',
+  'Chá de casa nova',
+  'Formatura',
+  'Confraternização',
+  'Evento corporativo',
+  'Bodas',
+  'Noivado',
+]
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  wedding: 'Casamento',
+  'bridal-shower': 'Chá de panela',
+  birthday: 'Aniversário',
+  'baby-shower': 'Chá de bebê',
+  housewarming: 'Chá de casa nova',
+  graduation: 'Formatura',
+  other: 'Outro',
+}
+const PAIR_EVENT_TYPES = new Set(['wedding', 'bridal-shower'])
 
 function HomePage() {
   const [search, setSearch] = useState('')
   const normalizedSearch = search.trim()
   const shouldSearch = normalizedSearch.length >= 2
   const { events, isLoading } = useEventSearch(normalizedSearch, shouldSearch)
+  const visibleEvents = events.slice(0, 10)
   const searchRef = useRef<HTMLDivElement>(null)
 
   return (
     <div className="overflow-hidden">
       {/* ═══ HERO ═══ */}
-      <section className="relative min-h-[78vh] flex flex-col items-center justify-center px-6 pt-12 pb-20">
+      <section className="relative min-h-[66vh] md:min-h-[78vh] flex flex-col items-center justify-center px-6 pt-6 md:pt-12 pb-12 md:pb-20">
         {/* Decorative background shapes */}
         <div
           className="pointer-events-none absolute inset-0 overflow-hidden"
@@ -62,7 +86,29 @@ function HomePage() {
           </motion.p>
 
           <motion.div
-            className="mt-8 md:mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
+            className="mt-7 mx-auto max-w-2xl overflow-hidden border-y border-muted-rose/25 bg-warm-white/70 py-2.5 marquee-fade"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease, delay: 0.3 }}
+            aria-label="Tipos de eventos suportados"
+          >
+            <div className="marquee-fade overflow-hidden">
+              <div className="marquee-track">
+              {[...USE_CASES, ...USE_CASES].map((item, index) => (
+                <span
+                  key={`${item}-${index}`}
+                  className="inline-flex items-center text-sm text-warm-gray/80 whitespace-nowrap"
+                >
+                  {item}
+                  <span className="mx-3 text-muted-rose/45">•</span>
+                </span>
+              ))}
+            </div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            className="mt-6 md:mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease, delay: 0.38 }}
@@ -90,7 +136,7 @@ function HomePage() {
 
         {/* Decorative ornament */}
         <motion.div
-          className="absolute bottom-8 left-1/2 -translate-x-1/2"
+          className="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.9, duration: 1 }}
@@ -150,7 +196,7 @@ function HomePage() {
                   procurando algo?
                 </p>
                 <p className="text-sm text-warm-gray/60 mt-1">
-                  Busque por nome, local ou código do evento.
+                  Busque por nome, local, anfitrião ou código do evento.
                 </p>
               </div>
 
@@ -172,7 +218,7 @@ function HomePage() {
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.2 }}
                     >
-                      Digite ao menos 2 caracteres.
+                      Só eventos públicos aparecem nesta busca.
                     </motion.p>
                   ) : isLoading ? (
                     <motion.div
@@ -189,7 +235,7 @@ function HomePage() {
                         />
                       ))}
                     </motion.div>
-                  ) : events.length === 0 ? (
+                  ) : visibleEvents.length === 0 ? (
                     <motion.p
                       key="empty"
                       className="text-sm text-warm-gray/60 pl-1"
@@ -202,7 +248,7 @@ function HomePage() {
                   ) : (
                     <motion.div
                       key="results"
-                      className="space-y-2"
+                      className="space-y-3"
                       initial="hidden"
                       animate="visible"
                       exit="hidden"
@@ -213,12 +259,15 @@ function HomePage() {
                         },
                       }}
                     >
-                      {events.map((event) => {
-                        const partnerOne = event.partnerOneName?.trim() || ''
-                        const partnerTwo = event.partnerTwoName?.trim() || ''
-                        const hostsName = partnerTwo
-                          ? `${partnerOne} & ${partnerTwo}`
-                          : partnerOne || 'Anfitriões não informados'
+                      {visibleEvents.map((event) => {
+                        const hosts = getDisplayHostNames(event.hosts ?? [])
+                        const hostsName = hosts.join(' • ')
+                        const isPairEvent =
+                          PAIR_EVENT_TYPES.has(event.eventType) && hosts.length === 2
+                        const eventTypeLabel =
+                          event.customEventType ||
+                          EVENT_TYPE_LABELS[event.eventType] ||
+                          'Evento'
                         return (
                           <motion.div
                             key={event._id}
@@ -238,20 +287,34 @@ function HomePage() {
                             >
                               <div className="min-w-0 flex-1 space-y-1.5">
                                 <p className="text-sm font-medium text-espresso">
-                                  {event.name || 'Evento sem nome'}
+                                  {capitalizeFirst(event.name || 'Evento sem nome')}
                                 </p>
-                                <p className="text-xs text-warm-gray/70">
-                                  {hostsName}
-                                </p>
+                                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs">
+                                  <span className="text-muted-rose/80">{eventTypeLabel}</span>
+                                  <span className="text-muted-rose/35">•</span>
+                                  {isPairEvent ? (
+                                    <span className="text-warm-gray/70">
+                                      {hosts[0]}
+                                      <span className="mx-1 font-accent text-muted-rose/70">
+                                        e
+                                      </span>
+                                      {hosts[1]}
+                                    </span>
+                                  ) : (
+                                    <span className="text-warm-gray/70">
+                                      {hostsName || 'Anfitriões não informados'}
+                                    </span>
+                                  )}
+                                </div>
                                 {event.location && (
                                   <div className="flex items-center gap-1.5 text-xs text-warm-gray/60">
                                     <MapPin className="size-3 shrink-0" />
-                                    <span>{event.location}</span>
+                                    <span>{capitalizeFirst(event.location)}</span>
                                   </div>
                                 )}
                                 {event.description && (
                                   <p className="text-xs text-warm-gray/60 line-clamp-2 mt-1.5">
-                                    {event.description}
+                                    {capitalizeFirst(event.description)}
                                   </p>
                                 )}
                               </div>

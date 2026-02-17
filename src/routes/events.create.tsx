@@ -1,14 +1,16 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useAuthActions } from '@convex-dev/auth/react'
-import { useMutation } from 'convex/react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Gift, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { useMutation, useQuery } from 'convex/react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Gift, Plus, Sparkles, Trash2, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { api } from '../../convex/_generated/api'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { useEventCreationStore } from '../store/eventCreationStore'
+import { capitalizeFirst, getDisplayHostNames } from '../lib/presentation'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
+import { cn } from '@/lib/utils'
 import { Badge } from '../components/ui/badge'
 import { DatePicker } from '../components/ui/date-picker'
 import { DEFAULT_GIFT_CATEGORIES } from '../constants/giftCategories'
@@ -27,12 +29,27 @@ const fadeUp = {
   },
 }
 
+const FALLBACK_EVENT_TYPES: Array<{
+  value: string
+  label: string
+  supportsPairNames: boolean
+}> = [
+  { value: 'wedding', label: 'Casamento', supportsPairNames: true },
+  { value: 'bridal-shower', label: 'Chá de panela', supportsPairNames: true },
+  { value: 'birthday', label: 'Aniversário', supportsPairNames: false },
+  { value: 'baby-shower', label: 'Chá de bebê', supportsPairNames: false },
+  { value: 'housewarming', label: 'Chá de casa nova', supportsPairNames: false },
+  { value: 'graduation', label: 'Formatura', supportsPairNames: false },
+  { value: 'other', label: 'Outro', supportsPairNames: false },
+]
+
 function EventCreatePageShell() {
   const navigate = Route.useNavigate()
   const { signIn } = useAuthActions()
   const { isAuthenticated, isLoading: isAuthLoading } = useCurrentUser()
   const createEvent = useMutation(api.events.createEvent)
   const createGift = useMutation(api.gifts.createGift)
+  const eventTypes = useQuery(api.events.listEventTypes)
 
   const {
     draftEvent,
@@ -55,23 +72,27 @@ function EventCreatePageShell() {
   const [isPublishing, setIsPublishing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [createdSlug, setCreatedSlug] = useState<string | null>(null)
+  const descriptionTextareaRef = useRef<HTMLTextAreaElement>(null)
 
   const availableGiftCategories = useMemo(
     () => [...DEFAULT_GIFT_CATEGORIES, ...customGiftCategories],
     [customGiftCategories],
   )
+  const eventTypeOptions = eventTypes ?? FALLBACK_EVENT_TYPES
 
   const eventData = useMemo(
-    () =>
-      draftEvent ?? {
-        name: '',
-        partnerOneName: '',
-        partnerTwoName: '',
-        createdByPartner: 'partnerOne' as const,
-        date: '',
-        location: '',
-        description: '',
-      },
+    () => ({
+      name: draftEvent?.name ?? '',
+      eventType: draftEvent?.eventType ?? 'birthday',
+      customEventType: draftEvent?.customEventType ?? '',
+      hosts: draftEvent?.hosts?.length ? draftEvent.hosts : [''],
+      createdByPartner: draftEvent?.createdByPartner ?? 'partnerOne',
+      isPublic: draftEvent?.isPublic ?? true,
+      date: draftEvent?.date ?? '',
+      location: draftEvent?.location ?? '',
+      description: draftEvent?.description ?? '',
+      coverImageId: draftEvent?.coverImageId,
+    }),
     [draftEvent],
   )
 
@@ -81,6 +102,14 @@ function EventCreatePageShell() {
     }
   }, [draftEvent, eventData, setDraftEvent])
 
+  useEffect(() => {
+    const el = descriptionTextareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    const twoLines = 2 * 1.5 * 16
+    el.style.height = `${Math.max(el.scrollHeight, twoLines)}px`
+  }, [eventData.description])
+
   const updateEvent = useCallback(
     (patch: Partial<typeof eventData>) => {
       setDraftEvent({
@@ -89,6 +118,71 @@ function EventCreatePageShell() {
       })
     },
     [eventData, setDraftEvent],
+  )
+
+  const selectedEventType = useMemo(
+    () =>
+      eventTypeOptions.find((option) => option.value === eventData.eventType) ??
+      null,
+    [eventData.eventType, eventTypeOptions],
+  )
+
+  const showPairFields = Boolean(selectedEventType?.supportsPairNames)
+  const isPairEventType = useCallback(
+    (eventType: string) =>
+      Boolean(
+        eventTypeOptions.find((option) => option.value === eventType)
+          ?.supportsPairNames,
+      ),
+    [eventTypeOptions],
+  )
+
+  const normalizeHosts = useCallback((hosts: Array<string>) => {
+    const normalized = hosts.map((name) => name.trim()).filter(Boolean)
+    return normalized.slice(0, 5)
+  }, [])
+  const previewHosts = useMemo(() => {
+    const normalizedHosts = normalizeHosts(eventData.hosts)
+    return getDisplayHostNames(normalizedHosts)
+  }, [eventData.hosts, normalizeHosts])
+
+  const updateHost = useCallback(
+    (index: number, value: string) => {
+      const nextHosts = [...eventData.hosts]
+      nextHosts[index] = value
+      updateEvent({ hosts: nextHosts })
+    },
+    [eventData.hosts, updateEvent],
+  )
+
+  const addHost = useCallback(() => {
+    if (eventData.hosts.length >= 5) {
+      return
+    }
+    updateEvent({ hosts: [...eventData.hosts, ''] })
+  }, [eventData.hosts, updateEvent])
+
+  const removeHost = useCallback(
+    (index: number) => {
+      const nextHosts = eventData.hosts.filter((_, hostIndex) => hostIndex !== index)
+      updateEvent({ hosts: nextHosts.length > 0 ? nextHosts : [''] })
+    },
+    [eventData.hosts, updateEvent],
+  )
+
+  const handleChangeEventType = useCallback(
+    (eventType: string) => {
+      const shouldUsePairFields = isPairEventType(eventType)
+      const [firstHost = '', secondHost = ''] = eventData.hosts
+      updateEvent({
+        eventType,
+        hosts: shouldUsePairFields ? [firstHost, secondHost] : eventData.hosts,
+        createdByPartner: shouldUsePairFields
+          ? eventData.createdByPartner
+          : 'partnerOne',
+      })
+    },
+    [eventData.createdByPartner, eventData.hosts, isPairEventType, updateEvent],
   )
 
   const finalizeCreation = useCallback(async () => {
@@ -102,8 +196,20 @@ function EventCreatePageShell() {
       return
     }
 
-    if (!draftEvent.partnerOneName.trim() || !draftEvent.partnerTwoName.trim()) {
-      setError('Informe os nomes dos anfitriões.')
+    const normalizedHosts = normalizeHosts(draftEvent.hosts)
+    const isPair = isPairEventType(draftEvent.eventType)
+    if (isPair && normalizedHosts.length !== 2) {
+      setError('Para este tipo de evento, informe exatamente 2 parceiros.')
+      return
+    }
+
+    if (!isPair && normalizedHosts.length === 0) {
+      setError('Informe ao menos um anfitrião.')
+      return
+    }
+
+    if (draftEvent.eventType === 'other' && !draftEvent.customEventType?.trim()) {
+      setError('Descreva o tipo do evento quando selecionar "Outro".')
       return
     }
 
@@ -116,20 +222,26 @@ function EventCreatePageShell() {
     setError(null)
     try {
       const { eventId, slug } = await createEvent({
-        name: draftEvent.name.trim(),
-        partnerOneName: draftEvent.partnerOneName.trim(),
-        partnerTwoName: draftEvent.partnerTwoName.trim(),
-        createdByPartner: draftEvent.createdByPartner,
+        name: capitalizeFirst(draftEvent.name),
+        eventType: draftEvent.eventType,
+        customEventType: draftEvent.customEventType?.trim() || undefined,
+        hosts: normalizedHosts,
+        isPublic: draftEvent.isPublic,
+        createdByPartner: isPair ? draftEvent.createdByPartner : undefined,
         date: draftEvent.date?.trim() || undefined,
-        location: draftEvent.location?.trim() || undefined,
-        description: draftEvent.description?.trim() || undefined,
+        location: draftEvent.location ? capitalizeFirst(draftEvent.location) : undefined,
+        description: draftEvent.description
+          ? capitalizeFirst(draftEvent.description)
+          : undefined,
       })
 
       for (const draftGift of draftGifts) {
         await createGift({
           eventId,
           name: draftGift.name.trim(),
-          description: draftGift.description?.trim() || undefined,
+          description: draftGift.description
+            ? capitalizeFirst(draftGift.description)
+            : undefined,
           category: draftGift.category?.trim() || undefined,
           referenceUrl: draftGift.referenceUrl?.trim() || undefined,
         })
@@ -159,6 +271,8 @@ function EventCreatePageShell() {
     navigate,
     resetAll,
     setPendingPublish,
+    normalizeHosts,
+    isPairEventType,
   ])
 
   useEffect(() => {
@@ -283,22 +397,37 @@ function EventCreatePageShell() {
                 onChange={(e) => updateEvent({ name: e.target.value })}
                 placeholder="Ex.: Chá de Casa Nova"
               />
-              <Input
-                label="Parceiro(a) 1"
-                value={eventData.partnerOneName}
-                onChange={(e) =>
-                  updateEvent({ partnerOneName: e.target.value })
-                }
-                placeholder="Nome da pessoa 1"
-              />
-              <Input
-                label="Parceiro(a) 2"
-                value={eventData.partnerTwoName}
-                onChange={(e) =>
-                  updateEvent({ partnerTwoName: e.target.value })
-                }
-                placeholder="Nome da pessoa 2"
-              />
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-espresso/80 pl-0.5">
+                  Tipo do evento
+                </label>
+                <div className="relative">
+                  <select
+                    value={eventData.eventType}
+                    onChange={(e) => handleChangeEventType(e.target.value)}
+                    className="flex w-full appearance-none rounded-xl border border-border bg-warm-white px-4 py-3 pr-10 text-base text-espresso/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                  >
+                    {eventTypeOptions.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-warm-gray/60 text-xs">
+                    ▼
+                  </span>
+                </div>
+              </div>
+              {eventData.eventType === 'other' && (
+                <Input
+                  label="Qual é o tipo do evento?"
+                  value={eventData.customEventType ?? ''}
+                  onChange={(e) =>
+                    updateEvent({ customEventType: e.target.value })
+                  }
+                  placeholder="Ex.: Chá revelação, bodas, confraternização..."
+                />
+              )}
               <Input
                 label="Local (opcional)"
                 value={eventData.location ?? ''}
@@ -312,56 +441,158 @@ function EventCreatePageShell() {
               />
             </div>
 
-            {/* Partner selection */}
             <div className="rounded-xl border border-border/40 bg-warm-white/60 p-5">
               <p className="text-sm font-medium text-espresso/80 mb-1">
-                Qual dos anfitriões é você?
+                {showPairFields ? 'Nomes dos parceiros' : 'Anfitriões'}
               </p>
               <p className="text-xs text-warm-gray/60 mb-4">
-                Você pode convidar seu parceiro depois.
+                {showPairFields
+                  ? 'Para casamento e chá de panela, use os dois primeiros campos para o casal.'
+                  : 'Adicione até 5 anfitriões.'}
+              </p>
+              <div className="space-y-3">
+                {showPairFields ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input
+                      label="Parceiro(a) 1"
+                      value={eventData.hosts[0] ?? ''}
+                      onChange={(e) => updateHost(0, e.target.value)}
+                      placeholder="Nome da pessoa 1"
+                    />
+                    <Input
+                      label="Parceiro(a) 2"
+                      value={eventData.hosts[1] ?? ''}
+                      onChange={(e) => updateHost(1, e.target.value)}
+                      placeholder="Nome da pessoa 2"
+                    />
+                    <div className="rounded-xl p-4">
+                      <p className="text-sm font-medium text-espresso/80 mb-1">
+                        Qual dos parceiros é você?
+                      </p>
+                      <p className="text-xs text-warm-gray/60 mb-3">
+                        Você pode convidar o outro parceiro depois.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant={
+                            eventData.createdByPartner === 'partnerOne'
+                              ? 'default'
+                              : 'secondary'
+                          }
+                          size="sm"
+                          onClick={() => updateEvent({ createdByPartner: 'partnerOne' })}
+                        >
+                          Eu sou: {eventData.hosts[0] || 'Parceiro(a) 1'}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={
+                            eventData.createdByPartner === 'partnerTwo'
+                              ? 'default'
+                              : 'secondary'
+                          }
+                          size="sm"
+                          onClick={() => updateEvent({ createdByPartner: 'partnerTwo' })}
+                        >
+                          Eu sou: {eventData.hosts[1] || 'Parceiro(a) 2'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                      {eventData.hosts.map((host, index) => (
+                        <div key={`host-${index}`} className="flex gap-2 items-end">
+                          <Input
+                            label={`Anfitrião ${index + 1}`}
+                            value={host}
+                            onChange={(e) => updateHost(index, e.target.value)}
+                            placeholder="Nome do anfitrião"
+                            className="flex-1"
+                          />
+                          {eventData.hosts.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => removeHost(index)}
+                              aria-label={`Remover anfitrião ${index + 1}`}
+                            >
+                              <X className="size-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {eventData.hosts.length < 5 && (
+                      <Button type="button" variant="outline" size="sm" onClick={addHost}>
+                        <Plus className="size-4" />
+                        Adicionar anfitrião
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border/40 bg-warm-white/60 p-5">
+              <p className="text-sm font-medium text-espresso/80 mb-1">
+                Visibilidade do evento
+              </p>
+              <p className="text-xs text-warm-gray/60 mb-4">
+                Evento público aparece na busca da home. No modo "somente com link",
+                seu evento fica acessível apenas para quem tiver o link.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
-                  variant={
-                    eventData.createdByPartner === 'partnerOne'
-                      ? 'default'
-                      : 'secondary'
-                  }
+                  variant={eventData.isPublic ? 'default' : 'secondary'}
                   size="sm"
-                  onClick={() =>
-                    updateEvent({ createdByPartner: 'partnerOne' })
-                  }
+                  onClick={() => updateEvent({ isPublic: true })}
                 >
-                  Eu sou: {eventData.partnerOneName || 'Parceiro(a) 1'}
+                  Público (aparece na home)
                 </Button>
                 <Button
                   type="button"
-                  variant={
-                    eventData.createdByPartner === 'partnerTwo'
-                      ? 'default'
-                      : 'secondary'
-                  }
+                  variant={!eventData.isPublic ? 'default' : 'secondary'}
                   size="sm"
-                  onClick={() =>
-                    updateEvent({ createdByPartner: 'partnerTwo' })
-                  }
+                  onClick={() => updateEvent({ isPublic: false })}
                 >
-                  Eu sou: {eventData.partnerTwoName || 'Parceiro(a) 2'}
+                  Somente com o link
                 </Button>
               </div>
             </div>
 
-            <Input
-              label="Descrição (opcional)"
-              value={eventData.description ?? ''}
-              onChange={(e) => updateEvent({ description: e.target.value })}
-              placeholder="Conte um pouco sobre esse momento"
-            />
+            <div className="space-y-1.5">
+              <label
+                htmlFor="event-description"
+                className="block text-sm font-medium text-espresso/80 pl-0.5"
+              >
+                Descrição (opcional)
+              </label>
+              <textarea
+                ref={descriptionTextareaRef}
+                id="event-description"
+                rows={2}
+                value={eventData.description ?? ''}
+                onChange={(e) => updateEvent({ description: e.target.value })}
+                placeholder="Conte um pouco sobre esse momento"
+                className={cn(
+                  'flex w-full min-h-[4.5rem] resize-none rounded-xl border border-border bg-warm-white',
+                  'px-4 py-3 text-base text-espresso leading-relaxed',
+                  'placeholder:text-warm-gray/50',
+                  'transition-all duration-200',
+                  'focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent',
+                  'disabled:cursor-not-allowed disabled:opacity-50',
+                )}
+              />
+            </div>
           </div>
 
           {/* Live preview */}
-          {(eventData.partnerOneName || eventData.partnerTwoName) && (
+          {previewHosts.length > 0 && (
             <motion.div
               className="mt-8 rounded-2xl border border-blush/40 bg-warm-white/60 p-6 text-center"
               initial={{ opacity: 0, scale: 0.98 }}
@@ -371,18 +602,26 @@ function EventCreatePageShell() {
               <p className="text-[11px] uppercase tracking-widest text-warm-gray/50 mb-3">
                 prévia
               </p>
-              <p className="font-display italic text-2xl md:text-3xl text-espresso leading-[0.95]">
-                {eventData.partnerOneName || '...'}
-              </p>
-              <p className="font-accent text-xl text-muted-rose/50 my-1 inline-block -rotate-6">
-                &
-              </p>
-              <p className="font-display italic text-2xl md:text-3xl text-espresso leading-[0.95]">
-                {eventData.partnerTwoName || '...'}
-              </p>
+              {previewHosts.length === 2 ? (
+                <>
+                  <p className="font-display italic text-2xl md:text-3xl text-espresso leading-[0.95]">
+                    {previewHosts[0]}
+                  </p>
+                  <p className="font-accent text-xl text-muted-rose/50 my-1 inline-block -rotate-6">
+                    &
+                  </p>
+                  <p className="font-display italic text-2xl md:text-3xl text-espresso leading-[0.95]">
+                    {previewHosts[1]}
+                  </p>
+                </>
+              ) : (
+                <p className="font-display italic text-2xl md:text-3xl text-espresso leading-[1.05]">
+                  {previewHosts.join(' • ')}
+                </p>
+              )}
               {eventData.name && (
                 <p className="text-sm text-warm-gray/60 mt-3">
-                  {eventData.name}
+                  {capitalizeFirst(eventData.name)}
                 </p>
               )}
             </motion.div>
@@ -403,7 +642,7 @@ function EventCreatePageShell() {
           </p>
 
           {/* Add gift form */}
-          <div className="rounded-xl border border-border/40 bg-warm-white/60 p-5 space-y-4 mb-8">
+          <div className="rounded-2xl border border-sage/30 bg-sage/5 p-5 md:p-6 space-y-4 mb-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
                 label="Nome do presente"
@@ -419,7 +658,10 @@ function EventCreatePageShell() {
                   <select
                     value={giftCategory}
                     onChange={(e) => setGiftCategory(e.target.value)}
-                    className="flex w-full appearance-none rounded-xl border border-border bg-warm-white px-4 py-3 pr-10 text-base text-espresso transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                    className={cn(
+                      'flex w-full appearance-none rounded-xl border border-border bg-warm-white px-4 py-3 pr-10 text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent',
+                      giftCategory ? 'text-espresso' : 'text-warm-gray/50',
+                    )}
                   >
                     <option value="">Sem categoria</option>
                     {availableGiftCategories.map((category) => (
@@ -452,12 +694,24 @@ function EventCreatePageShell() {
                   </Button>
                 </div>
               )}
-              <Input
-                label="Descrição (opcional)"
-                value={giftDescription}
-                onChange={(e) => setGiftDescription(e.target.value)}
-                placeholder="Detalhes que ajudam o convidado"
-              />
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-espresso/80 pl-0.5">
+                  Descrição (opcional)
+                </label>
+                <textarea
+                  value={giftDescription}
+                  onChange={(e) => setGiftDescription(e.target.value)}
+                  placeholder="Detalhes que ajudam o convidado"
+                  rows={2}
+                  className={cn(
+                    'flex w-full min-h-[4.5rem] resize-y rounded-xl border border-border bg-warm-white',
+                    'px-4 py-3 text-base text-espresso',
+                    'placeholder:text-warm-gray/50',
+                    'transition-all duration-200',
+                    'focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent',
+                  )}
+                />
+              </div>
               <Input
                 label="Link de referência (opcional)"
                 value={giftReferenceUrl}
@@ -465,7 +719,12 @@ function EventCreatePageShell() {
                 placeholder="https://..."
               />
             </div>
-            <Button type="button" variant="outline" onClick={handleAddGift}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleAddGift}
+              disabled={!giftName.trim()}
+            >
               <Plus className="size-4" />
               Adicionar presente
             </Button>

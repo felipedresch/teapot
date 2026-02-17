@@ -30,6 +30,10 @@ const schema = defineSchema({
   events: defineTable({
     name: v.string(),
     slug: v.string(),
+    eventType: v.optional(v.string()),
+    customEventType: v.optional(v.string()),
+    hosts: v.optional(v.array(v.string())),
+    isPublic: v.optional(v.boolean()),
     partnerOneName: v.string(),
     partnerTwoName: v.string(),
     createdByUserId: v.id('users'),
@@ -38,7 +42,9 @@ const schema = defineSchema({
     location: v.optional(v.string()),
     description: v.optional(v.string()),
     coverImageId: v.optional(v.id('_storage')),
-  }).index('by_slug', ['slug']),
+  })
+    .index('by_slug', ['slug'])
+    .index('by_is_public', ['isPublic']),
 
   // Relação entre usuários e eventos com papéis (host/guest)
   eventMembers: defineTable({

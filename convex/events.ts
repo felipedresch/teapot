@@ -2,12 +2,44 @@ import { getAuthUserId } from '@convex-dev/auth/server'
 import { mutation, query, type MutationCtx } from './_generated/server'
 import { v } from 'convex/values'
 
+const DEFAULT_EVENT_TYPES: Array<{
+  value: string
+  label: string
+  supportsPairNames: boolean
+}> = [
+  { value: 'wedding', label: 'Casamento', supportsPairNames: true },
+  { value: 'bridal-shower', label: 'Chá de panela', supportsPairNames: true },
+  { value: 'birthday', label: 'Aniversário', supportsPairNames: false },
+  { value: 'baby-shower', label: 'Chá de bebê', supportsPairNames: false },
+  { value: 'housewarming', label: 'Chá de casa nova', supportsPairNames: false },
+  { value: 'graduation', label: 'Formatura', supportsPairNames: false },
+  { value: 'other', label: 'Outro', supportsPairNames: false },
+]
+
+export const listEventTypes = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      value: v.string(),
+      label: v.string(),
+      supportsPairNames: v.boolean(),
+    }),
+  ),
+  handler: async () => {
+    return DEFAULT_EVENT_TYPES
+  },
+})
+
 export const createEvent = mutation({
   args: {
     name: v.string(),
-    partnerOneName: v.string(),
-    partnerTwoName: v.string(),
-    createdByPartner: v.union(v.literal('partnerOne'), v.literal('partnerTwo')),
+    eventType: v.string(),
+    customEventType: v.optional(v.string()),
+    hosts: v.array(v.string()),
+    isPublic: v.boolean(),
+    createdByPartner: v.optional(
+      v.union(v.literal('partnerOne'), v.literal('partnerTwo')),
+    ),
     date: v.optional(v.string()),
     location: v.optional(v.string()),
     description: v.optional(v.string()),
@@ -23,19 +55,34 @@ export const createEvent = mutation({
       throw new Error('Unauthorized')
     }
 
+    const normalizedHosts = normalizeHosts(args.hosts)
+    const normalizedCustomEventType = normalizeOptionalText(args.customEventType)
+    if (args.eventType === 'other' && !normalizedCustomEventType) {
+      throw new Error('Informe o tipo de evento quando selecionar "Outro".')
+    }
+
     const slug = await generateUniqueEventSlug(ctx, {
       eventName: args.name,
-      partnerOneName: args.partnerOneName,
-      partnerTwoName: args.partnerTwoName,
+      hosts: normalizedHosts,
     })
+
+    const partnerOneName = normalizedHosts[0] ?? ''
+    const partnerTwoName = normalizedHosts[1] ?? ''
 
     const eventId = await ctx.db.insert('events', {
       name: args.name,
       slug,
-      partnerOneName: args.partnerOneName,
-      partnerTwoName: args.partnerTwoName,
+      eventType: args.eventType,
+      customEventType: normalizedCustomEventType,
+      hosts: normalizedHosts,
+      isPublic: args.isPublic,
+      partnerOneName,
+      partnerTwoName,
       createdByUserId: userId,
-      createdByPartner: args.createdByPartner,
+      createdByPartner:
+        partnerTwoName && args.createdByPartner === 'partnerTwo'
+          ? 'partnerTwo'
+          : 'partnerOne',
       date: args.date,
       location: args.location,
       description: args.description,
@@ -64,6 +111,10 @@ export const listEventsForCurrentUser = query({
       role: v.union(v.literal('host'), v.literal('guest')),
       name: v.string(),
       slug: v.string(),
+      eventType: v.string(),
+      customEventType: v.optional(v.string()),
+      hosts: v.array(v.string()),
+      isPublic: v.boolean(),
       partnerOneName: v.string(),
       partnerTwoName: v.string(),
     }),
@@ -84,6 +135,10 @@ export const listEventsForCurrentUser = query({
       role: (typeof memberships)[number]['role']
       name: string
       slug: string
+      eventType: string
+      customEventType?: string
+      hosts: Array<string>
+      isPublic: boolean
       partnerOneName: string
       partnerTwoName: string
     }[] = []
@@ -97,6 +152,10 @@ export const listEventsForCurrentUser = query({
         role: membership.role,
         name: event.name,
         slug: event.slug,
+        eventType: getEventTypeValue(event.eventType),
+        customEventType: normalizeOptionalText(event.customEventType),
+        hosts: getEventHosts(event.hosts, event.partnerOneName, event.partnerTwoName),
+        isPublic: getEventVisibility(event.isPublic),
         partnerOneName: event.partnerOneName,
         partnerTwoName: event.partnerTwoName,
       })
@@ -117,6 +176,10 @@ export const getEventBySlug = query({
       _creationTime: v.number(),
       name: v.string(),
       slug: v.string(),
+      eventType: v.string(),
+      customEventType: v.optional(v.string()),
+      hosts: v.array(v.string()),
+      isPublic: v.boolean(),
       partnerOneName: v.string(),
       partnerTwoName: v.string(),
       createdByUserId: v.id('users'),
@@ -134,7 +197,24 @@ export const getEventBySlug = query({
       .unique()
 
     if (!event) return null
-    return event
+    return {
+      _id: event._id,
+      _creationTime: event._creationTime,
+      name: event.name,
+      slug: event.slug,
+      eventType: getEventTypeValue(event.eventType),
+      customEventType: normalizeOptionalText(event.customEventType),
+      hosts: getEventHosts(event.hosts, event.partnerOneName, event.partnerTwoName),
+      isPublic: getEventVisibility(event.isPublic),
+      partnerOneName: event.partnerOneName,
+      partnerTwoName: event.partnerTwoName,
+      createdByUserId: event.createdByUserId,
+      createdByPartner: event.createdByPartner,
+      date: event.date,
+      location: event.location,
+      description: event.description,
+      coverImageId: event.coverImageId,
+    }
   },
 })
 
@@ -142,12 +222,12 @@ async function generateUniqueEventSlug(
   ctx: MutationCtx,
   input: {
     eventName: string
-    partnerOneName: string
-    partnerTwoName: string
+    hosts: Array<string>
   },
 ) {
+  const hostPart = input.hosts.slice(0, 2).join('-')
   const base = normalizeSlugPart(
-    `${input.partnerOneName}-${input.partnerTwoName}-${input.eventName}`,
+    `${hostPart}-${input.eventName}`,
   )
 
   for (let attempt = 0; attempt < 10; attempt += 1) {
@@ -190,6 +270,9 @@ export const searchPublicEvents = query({
       _id: v.id('events'),
       slug: v.string(),
       name: v.string(),
+      eventType: v.string(),
+      customEventType: v.optional(v.string()),
+      hosts: v.array(v.string()),
       partnerOneName: v.string(),
       partnerTwoName: v.string(),
       location: v.optional(v.string()),
@@ -203,6 +286,9 @@ export const searchPublicEvents = query({
       _id: (typeof events)[number]['_id']
       slug: string
       name: string
+      eventType: string
+      customEventType?: string
+      hosts: Array<string>
       partnerOneName: string
       partnerTwoName: string
       location?: string
@@ -210,9 +296,21 @@ export const searchPublicEvents = query({
     }> = []
 
     for (const event of events) {
+      const isPublic = getEventVisibility(event.isPublic)
+      if (!isPublic) continue
+      const hosts = getEventHosts(
+        event.hosts,
+        event.partnerOneName,
+        event.partnerTwoName,
+      )
+      const eventType = getEventTypeValue(event.eventType)
+      const customEventType = normalizeOptionalText(event.customEventType)
       const searchableText = [
         event.name,
         event.slug,
+        eventType,
+        customEventType ?? '',
+        ...hosts,
         event.location ?? '',
         event.partnerOneName,
         event.partnerTwoName,
@@ -226,6 +324,9 @@ export const searchPublicEvents = query({
           _id: event._id,
           slug: event.slug,
           name: event.name,
+          eventType,
+          customEventType,
+          hosts,
           partnerOneName: event.partnerOneName,
           partnerTwoName: event.partnerTwoName,
           location: event.location,
@@ -273,6 +374,13 @@ export const updateEvent = mutation({
   args: {
     eventId: v.id('events'),
     name: v.optional(v.string()),
+    eventType: v.optional(v.string()),
+    customEventType: v.optional(v.string()),
+    hosts: v.optional(v.array(v.string())),
+    isPublic: v.optional(v.boolean()),
+    createdByPartner: v.optional(
+      v.union(v.literal('partnerOne'), v.literal('partnerTwo')),
+    ),
     partnerOneName: v.optional(v.string()),
     partnerTwoName: v.optional(v.string()),
     date: v.optional(v.string()),
@@ -302,10 +410,35 @@ export const updateEvent = mutation({
       throw new Error('Somente hosts podem editar o evento')
     }
 
+    const currentHosts = getEventHosts(
+      event.hosts,
+      event.partnerOneName,
+      event.partnerTwoName,
+    )
+    const nextHosts = args.hosts ? normalizeHosts(args.hosts) : currentHosts
+    const nextPartnerOneName =
+      args.partnerOneName ?? nextHosts[0] ?? event.partnerOneName
+    const nextPartnerTwoName =
+      args.partnerTwoName ?? nextHosts[1] ?? event.partnerTwoName
+    const nextEventType = args.eventType ?? getEventTypeValue(event.eventType)
+    const nextCustomEventType =
+      nextEventType === 'other'
+        ? normalizeOptionalText(args.customEventType) ?? event.customEventType
+        : normalizeOptionalText(args.customEventType)
+
+    if (nextEventType === 'other' && !nextCustomEventType) {
+      throw new Error('Informe o tipo de evento quando selecionar "Outro".')
+    }
+
     await ctx.db.patch('events', args.eventId, {
       name: args.name ?? event.name,
-      partnerOneName: args.partnerOneName ?? event.partnerOneName,
-      partnerTwoName: args.partnerTwoName ?? event.partnerTwoName,
+      eventType: nextEventType,
+      customEventType: nextCustomEventType,
+      hosts: nextHosts,
+      isPublic: args.isPublic ?? event.isPublic,
+      createdByPartner: args.createdByPartner ?? event.createdByPartner,
+      partnerOneName: nextPartnerOneName,
+      partnerTwoName: nextPartnerTwoName,
       date: args.date ?? event.date,
       location: args.location ?? event.location,
       description: args.description ?? event.description,
@@ -374,4 +507,48 @@ export const deleteEvent = mutation({
     return null
   },
 })
+
+function normalizeHosts(hosts: Array<string>) {
+  const normalized = hosts
+    .map((name) => name.trim())
+    .filter((name) => name.length > 0)
+    .slice(0, 5)
+
+  if (normalized.length === 0) {
+    throw new Error('Informe ao menos um anfitrião.')
+  }
+
+  return normalized
+}
+
+function normalizeOptionalText(value: string | undefined) {
+  const normalized = value?.trim()
+  return normalized ? normalized : undefined
+}
+
+function getEventHosts(
+  hosts: Array<string> | undefined,
+  partnerOneName: string,
+  partnerTwoName: string,
+) {
+  const normalizedHosts =
+    hosts?.map((name) => name.trim()).filter((name) => name.length > 0) ?? []
+
+  if (normalizedHosts.length > 0) {
+    return normalizedHosts.slice(0, 5)
+  }
+
+  return [partnerOneName, partnerTwoName]
+    .map((name) => name.trim())
+    .filter((name) => name.length > 0)
+    .slice(0, 5)
+}
+
+function getEventTypeValue(eventType: string | undefined) {
+  return eventType?.trim() || 'other'
+}
+
+function getEventVisibility(isPublic: boolean | undefined) {
+  return isPublic ?? true
+}
 

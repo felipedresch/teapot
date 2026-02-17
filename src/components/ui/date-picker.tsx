@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { CalendarIcon } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Button } from './button'
 import { Calendar } from './calendar'
 import { Popover, PopoverContent, PopoverTrigger } from './popover'
@@ -10,19 +12,29 @@ type DatePickerProps = {
 }
 
 export function DatePicker({ label, value, onChange }: DatePickerProps) {
+  const [open, setOpen] = useState(false)
   const selectedDate = parseDateFromIso(value)
+
+  const handleSelect = (date: Date | undefined) => {
+    onChange(date ? toIsoDate(date) : '')
+    setOpen(false)
+  }
 
   return (
     <div className="space-y-1.5">
       <p className="block text-sm font-medium text-espresso/80 pl-0.5">{label}</p>
-      <Popover>
+      <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             type="button"
             variant="outline"
-            className="w-full justify-start text-left font-normal"
+            size="lg"
+            className={cn(
+              'w-full justify-start px-4 text-left text-base font-normal',
+              selectedDate ? 'text-espresso' : 'text-warm-gray/50',
+            )}
           >
-            <CalendarIcon className="size-4 text-warm-gray" />
+            <CalendarIcon className="size-4 text-warm-gray/70" />
             {selectedDate ? formatDate(selectedDate) : 'Selecionar data'}
           </Button>
         </PopoverTrigger>
@@ -30,7 +42,7 @@ export function DatePicker({ label, value, onChange }: DatePickerProps) {
           <Calendar
             mode="single"
             selected={selectedDate}
-            onSelect={(date) => onChange(date ? toIsoDate(date) : '')}
+            onSelect={handleSelect}
             initialFocus
           />
         </PopoverContent>
@@ -53,9 +65,5 @@ function toIsoDate(value: Date) {
 }
 
 function formatDate(value: Date) {
-  return new Intl.DateTimeFormat('pt-BR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  }).format(value)
+  return new Intl.DateTimeFormat('pt-BR').format(value)
 }

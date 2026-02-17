@@ -1,5 +1,6 @@
 import { useRouterState } from '@tanstack/react-router'
 import { useEventBySlug } from '../hooks/useEvents'
+import { getDisplayHostNames } from '../lib/presentation'
 
 export default function Footer() {
   const routerState = useRouterState()
@@ -13,6 +14,7 @@ export default function Footer() {
   const { event } = useEventBySlug(slug)
 
   const isEventPage = Boolean(event)
+  const hostNames = getDisplayHostNames(event?.hosts ?? []).join(' • ') || 'anfitriões'
 
   return (
     <footer className="py-12 px-6 text-center">
@@ -40,11 +42,7 @@ export default function Footer() {
           <p className="text-sm text-warm-gray leading-relaxed">
             Feito com carinho para{' '}
             <span className="font-display italic text-espresso">
-              {event?.partnerOneName}
-            </span>{' '}
-            &{' '}
-            <span className="font-display italic text-espresso">
-              {event?.partnerTwoName}
+              {hostNames}
             </span>
           </p>
         ) : (

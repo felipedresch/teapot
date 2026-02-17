@@ -11,10 +11,16 @@ import {
   MapPin,
   Plus,
   Settings2,
+  X,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import type { Id } from '../../convex/_generated/dataModel'
 import { cn } from '../lib/utils'
+import {
+  capitalizeFirst,
+  formatDatePtBrFromIso,
+  getDisplayHostNames,
+} from '../lib/presentation'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { useEventBySlug, useEventMembership } from '../hooks/useEvents'
 import { useGiftMutations, useGifts } from '../hooks/useGifts'
@@ -30,6 +36,25 @@ export const Route = createFileRoute('/events/$slug')({
 })
 
 const ease = [0.22, 1, 0.36, 1] as const
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  wedding: 'Casamento',
+  'bridal-shower': 'Chá de panela',
+  birthday: 'Aniversário',
+  'baby-shower': 'Chá de bebê',
+  housewarming: 'Chá de casa nova',
+  graduation: 'Formatura',
+  other: 'Outro',
+}
+const EVENT_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: 'wedding', label: 'Casamento' },
+  { value: 'bridal-shower', label: 'Chá de panela' },
+  { value: 'birthday', label: 'Aniversário' },
+  { value: 'baby-shower', label: 'Chá de bebê' },
+  { value: 'housewarming', label: 'Chá de casa nova' },
+  { value: 'graduation', label: 'Formatura' },
+  { value: 'other', label: 'Outro' },
+]
+const PAIR_EVENT_TYPES = new Set(['wedding', 'bridal-shower'])
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
   visible: {
@@ -61,11 +86,16 @@ function EventGiftsPageShell() {
   const [editingGiftId, setEditingGiftId] = useState<Id<'gifts'> | null>(null)
   const [isCreatingGift, setIsCreatingGift] = useState(false)
   const [isHostPanelOpen, setIsHostPanelOpen] = useState(false)
+  const [shareLinkTab, setShareLinkTab] = useState<'guest' | 'partner'>('guest')
+  const [expandDescriptions, setExpandDescriptions] = useState(false)
   const [editableEvent, setEditableEvent] = useState<{
     _id: Id<'events'>
     name: string
-    partnerOneName: string
-    partnerTwoName: string
+    eventType: string
+    customEventType?: string
+    hosts: Array<string>
+    createdByPartner: 'partnerOne' | 'partnerTwo'
+    isPublic: boolean
     date?: string
     location?: string
     description?: string
@@ -105,8 +135,11 @@ function EventGiftsPageShell() {
       return {
         _id: event._id,
         name: event.name,
-        partnerOneName: event.partnerOneName,
-        partnerTwoName: event.partnerTwoName,
+        eventType: event.eventType,
+        customEventType: event.customEventType ?? '',
+        hosts: event.hosts,
+        createdByPartner: event.createdByPartner,
+        isPublic: event.isPublic,
         date: event.date ?? undefined,
         location: event.location ?? undefined,
         description: event.description ?? undefined,
@@ -157,19 +190,83 @@ function EventGiftsPageShell() {
     [isAuthenticated, reserveNow, signIn],
   )
 
+  const isPairEventType = useCallback((eventType: string) => {
+    return PAIR_EVENT_TYPES.has(eventType)
+  }, [])
+
+  const updateEditableHost = useCallback((index: number, value: string) => {
+    setEditableEvent((current) => {
+      if (!current) return current
+      const nextHosts = [...current.hosts]
+      nextHosts[index] = value
+      return { ...current, hosts: nextHosts }
+    })
+  }, [])
+
+  const addEditableHost = useCallback(() => {
+    setEditableEvent((current) => {
+      if (!current || current.hosts.length >= 5) return current
+      return { ...current, hosts: [...current.hosts, ''] }
+    })
+  }, [])
+
+  const removeEditableHost = useCallback((index: number) => {
+    setEditableEvent((current) => {
+      if (!current) return current
+      const nextHosts = current.hosts.filter((_, hostIndex) => hostIndex !== index)
+      return { ...current, hosts: nextHosts.length > 0 ? nextHosts : [''] }
+    })
+  }, [])
+
+  const handleChangeEditableEventType = useCallback(
+    (eventType: string) => {
+      setEditableEvent((current) => {
+        if (!current) return current
+        const shouldUsePairFields = isPairEventType(eventType)
+        const [firstHost = '', secondHost = ''] = current.hosts
+        return {
+          ...current,
+          eventType,
+          hosts: shouldUsePairFields ? [firstHost, secondHost] : current.hosts,
+          createdByPartner: shouldUsePairFields
+            ? current.createdByPartner
+            : 'partnerOne',
+        }
+      })
+    },
+    [isPairEventType],
+  )
+
   const handleSaveEvent = useCallback(async () => {
     if (!event || !isHostView || !editableEvent) return
+    const normalizedHosts = editableEvent.hosts.map((host) => host.trim()).filter(Boolean)
+    const isPair = isPairEventType(editableEvent.eventType)
+    if (isPair && normalizedHosts.length !== 2) {
+      setError('Para este tipo de evento, informe exatamente 2 parceiros.')
+      return
+    }
+    if (!isPair && normalizedHosts.length === 0) {
+      setError('Informe ao menos um anfitrião.')
+      return
+    }
     setEventSaving(true)
     setError(null)
     try {
       await updateEvent({
         eventId: event._id,
-        name: editableEvent.name.trim() || undefined,
-        partnerOneName: editableEvent.partnerOneName.trim() || undefined,
-        partnerTwoName: editableEvent.partnerTwoName.trim() || undefined,
+        name: editableEvent.name ? capitalizeFirst(editableEvent.name) : undefined,
+        eventType: editableEvent.eventType,
+        customEventType: editableEvent.customEventType?.trim() || undefined,
+        hosts: normalizedHosts,
+        createdByPartner: isPair ? editableEvent.createdByPartner : undefined,
+        isPublic: editableEvent.isPublic,
         date: editableEvent.date?.trim() || undefined,
-        location: editableEvent.location?.trim() || undefined,
-        description: editableEvent.description?.trim() || undefined,
+        location: editableEvent.location
+          ? capitalizeFirst(editableEvent.location)
+          : undefined,
+        description: editableEvent.description
+          ? capitalizeFirst(editableEvent.description)
+          : undefined,
       })
     } catch (updateError) {
       setError(
@@ -180,7 +277,7 @@ function EventGiftsPageShell() {
     } finally {
       setEventSaving(false)
     }
-  }, [event, isHostView, editableEvent, updateEvent])
+  }, [event, isHostView, editableEvent, updateEvent, isPairEventType])
 
   const handleDeleteEvent = useCallback(async () => {
     if (!event || !isHostView) return
@@ -231,7 +328,9 @@ function EventGiftsPageShell() {
       await createGift({
         eventId: event._id,
         name: newGiftForm.name.trim(),
-        description: newGiftForm.description.trim() || undefined,
+        description: newGiftForm.description
+          ? capitalizeFirst(newGiftForm.description)
+          : undefined,
         category: newGiftForm.category.trim() || undefined,
         referenceUrl: newGiftForm.referenceUrl.trim() || undefined,
       })
@@ -259,7 +358,9 @@ function EventGiftsPageShell() {
       await updateGift({
         giftId: editingGiftId,
         name: giftForm.name.trim() || undefined,
-        description: giftForm.description.trim() || undefined,
+        description: giftForm.description
+          ? capitalizeFirst(giftForm.description)
+          : undefined,
         category: giftForm.category.trim() || undefined,
         referenceUrl: giftForm.referenceUrl.trim() || undefined,
       })
@@ -297,11 +398,41 @@ function EventGiftsPageShell() {
   // ── Loading ──
   if (isEventLoading) {
     return (
-      <div className="max-w-2xl mx-auto px-6 py-28 text-center">
-        <div className="space-y-3">
-          <div className="h-6 w-32 mx-auto rounded-lg bg-blush/20 animate-shimmer" />
-          <div className="h-12 w-64 mx-auto rounded-lg bg-blush/15 animate-shimmer" />
-          <div className="h-4 w-48 mx-auto rounded-lg bg-blush/10 animate-shimmer" />
+      <div className="px-6 py-14 md:py-20">
+        <div className="max-w-5xl mx-auto space-y-10 md:space-y-12">
+          <div className="max-w-2xl mx-auto text-center space-y-5">
+            <div className="h-5 w-40 mx-auto rounded-lg bg-blush/10 animate-shimmer" />
+            <div className="h-14 w-72 mx-auto rounded-xl bg-blush/8 animate-shimmer" />
+            <div className="h-4 w-52 mx-auto rounded-lg bg-blush/7 animate-shimmer" />
+            <div className="h-4 w-64 mx-auto rounded-lg bg-blush/7 animate-shimmer" />
+          </div>
+
+          <div className="rounded-2xl border border-border/40 bg-warm-white/60 p-6 md:p-8 space-y-4">
+            <div className="h-5 w-48 rounded-lg bg-blush/8 animate-shimmer" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[1, 2, 3, 4].map((item) => (
+                <div
+                  key={item}
+                  className="h-12 rounded-xl bg-blush/8 animate-shimmer"
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[1, 2, 3].map((item) => (
+              <div
+                key={item}
+                className="h-56 rounded-2xl border border-border/25 bg-warm-white/55 p-5 space-y-3"
+              >
+                <div className="h-4 w-2/3 rounded bg-blush/8 animate-shimmer" />
+                <div className="h-3 w-1/3 rounded bg-blush/7 animate-shimmer" />
+                <div className="h-3 w-full rounded bg-blush/6 animate-shimmer" />
+                <div className="h-3 w-5/6 rounded bg-blush/6 animate-shimmer" />
+                <div className="h-9 w-full rounded-xl bg-blush/7 animate-shimmer" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     )
@@ -324,6 +455,25 @@ function EventGiftsPageShell() {
   }
 
   const headerEvent = isHostView && editableEvent ? editableEvent : event
+  const headerHosts = getDisplayHostNames(
+    headerEvent.hosts.length > 0 ? headerEvent.hosts : ['Anfitriões'],
+  )
+  const normalizedHeaderHosts = headerEvent.hosts
+    .map((host) => host.trim())
+    .filter(Boolean)
+  const shouldUsePairLayout =
+    PAIR_EVENT_TYPES.has(headerEvent.eventType) && headerHosts.length === 2
+  const canSharePartnerInvite =
+    PAIR_EVENT_TYPES.has(headerEvent.eventType) &&
+    normalizedHeaderHosts.length === 2
+  const eventTypeLabel =
+    headerEvent.customEventType ||
+    EVENT_TYPE_LABELS[headerEvent.eventType] ||
+    'Evento'
+  const hasLongDescriptions = gifts.some(
+    (gift) => (gift.description?.trim().length ?? 0) > 140,
+  )
+  const cardSizeClass = expandDescriptions ? 'min-h-[24rem]' : 'min-h-[20rem]'
 
   return (
     <div>
@@ -354,26 +504,34 @@ function EventGiftsPageShell() {
             variants={fadeUp}
             className="font-accent text-xl md:text-2xl text-muted-rose"
           >
-            lista de presentes
+            {eventTypeLabel}
           </motion.p>
 
           <motion.div variants={fadeUp} className="mt-6 md:mt-8">
-            <p className="font-display italic text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-espresso leading-[0.9]">
-              {headerEvent.partnerOneName}
-            </p>
-            <p className="font-accent text-3xl md:text-4xl text-muted-rose/60 my-2 md:my-3 inline-block -rotate-6">
-              &
-            </p>
-            <p className="font-display italic text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-espresso leading-[0.9]">
-              {headerEvent.partnerTwoName}
-            </p>
+            {shouldUsePairLayout ? (
+              <>
+                <p className="font-display italic text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-espresso leading-[0.9]">
+                  {headerHosts[0]}
+                </p>
+                <p className="font-accent text-3xl md:text-4xl text-muted-rose/60 my-2 md:my-3 inline-block -rotate-6">
+                  &
+                </p>
+                <p className="font-display italic text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-espresso leading-[0.9]">
+                  {headerHosts[1]}
+                </p>
+              </>
+            ) : (
+              <p className="font-display italic text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-espresso leading-[0.95]">
+                {headerHosts.join(' • ')}
+              </p>
+            )}
           </motion.div>
 
           <motion.p
             variants={fadeUp}
             className="mt-6 text-warm-gray text-lg"
           >
-            {headerEvent.name}
+            {capitalizeFirst(headerEvent.name)}
           </motion.p>
 
           {(headerEvent.location || headerEvent.date) && (
@@ -384,10 +542,12 @@ function EventGiftsPageShell() {
               {headerEvent.location && (
                 <span className="inline-flex items-center gap-1.5">
                   <MapPin className="size-3.5" />
-                  {headerEvent.location}
+                  {capitalizeFirst(headerEvent.location)}
                 </span>
               )}
-              {headerEvent.date && <span>{headerEvent.date}</span>}
+              {headerEvent.date && (
+                <span>{formatDatePtBrFromIso(headerEvent.date)}</span>
+              )}
             </motion.div>
           )}
 
@@ -396,16 +556,9 @@ function EventGiftsPageShell() {
               variants={fadeUp}
               className="mt-4 text-warm-gray leading-relaxed max-w-lg mx-auto"
             >
-              {headerEvent.description}
+              {capitalizeFirst(headerEvent.description)}
             </motion.p>
           )}
-
-          <motion.p
-            variants={fadeUp}
-            className="mt-6 text-[11px] text-warm-gray/40 tracking-widest uppercase"
-          >
-            {event.slug}
-          </motion.p>
 
           <motion.div variants={fadeUp} className="flex justify-center mt-8">
             <OrnamentDivider className="w-28 text-muted-rose/25" />
@@ -449,9 +602,9 @@ function EventGiftsPageShell() {
                 transition={{ duration: 0.35, ease }}
                 className="overflow-hidden"
               >
-                <div className="pt-6 space-y-6">
+                <div className="pt-8 space-y-8">
                   {editableEvent && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
                       <Input
                         label="Nome do evento"
                         value={editableEvent.name}
@@ -461,24 +614,165 @@ function EventGiftsPageShell() {
                           )
                         }
                       />
-                      <Input
-                        label="Parceiro(a) 1"
-                        value={editableEvent.partnerOneName}
-                        onChange={(e) =>
-                          setEditableEvent((c) =>
-                            c ? { ...c, partnerOneName: e.target.value } : c,
-                          )
-                        }
-                      />
-                      <Input
-                        label="Parceiro(a) 2"
-                        value={editableEvent.partnerTwoName}
-                        onChange={(e) =>
-                          setEditableEvent((c) =>
-                            c ? { ...c, partnerTwoName: e.target.value } : c,
-                          )
-                        }
-                      />
+                      <div className="space-y-1.5">
+                        <label className="block text-sm font-medium text-espresso/80 pl-0.5">
+                          Tipo do evento
+                        </label>
+                        <div className="relative">
+                          <select
+                            value={editableEvent.eventType}
+                            onChange={(e) =>
+                              handleChangeEditableEventType(e.target.value)
+                            }
+                            className="flex w-full appearance-none rounded-xl border border-border bg-warm-white px-4 py-3 pr-10 text-base text-espresso/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                          >
+                            {EVENT_TYPE_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-warm-gray/60 text-xs">
+                            ▼
+                          </span>
+                        </div>
+                      </div>
+                      {editableEvent.eventType === 'other' && (
+                        <Input
+                          label="Qual é o tipo do evento?"
+                          value={editableEvent.customEventType ?? ''}
+                          onChange={(e) =>
+                            setEditableEvent((c) =>
+                              c
+                                ? {
+                                    ...c,
+                                    customEventType: e.target.value,
+                                  }
+                                : c,
+                            )
+                          }
+                        />
+                      )}
+                      <div className="md:col-span-2 rounded-xl border border-border/35 bg-warm-white/45 p-4 md:p-5 space-y-4">
+                        <div>
+                          <p className="text-sm font-medium text-espresso/85">
+                            {PAIR_EVENT_TYPES.has(editableEvent.eventType)
+                              ? 'Anfitriões do casal'
+                              : 'Anfitriões'}
+                          </p>
+                          <p className="text-xs text-warm-gray/60 mt-1">
+                            {PAIR_EVENT_TYPES.has(editableEvent.eventType)
+                              ? 'Defina os nomes do casal e quem está gerenciando o evento.'
+                              : 'Adicione até 5 anfitriões para este evento.'}
+                          </p>
+                        </div>
+                        {PAIR_EVENT_TYPES.has(editableEvent.eventType) ? (
+                          <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <Input
+                                label="Parceiro(a) 1"
+                                value={editableEvent.hosts[0] ?? ''}
+                                onChange={(e) => updateEditableHost(0, e.target.value)}
+                                placeholder="Nome da pessoa 1"
+                              />
+                              <Input
+                                label="Parceiro(a) 2"
+                                value={editableEvent.hosts[1] ?? ''}
+                                onChange={(e) => updateEditableHost(1, e.target.value)}
+                                placeholder="Nome da pessoa 2"
+                              />
+                            </div>
+                            <div className="rounded-xl border border-border/25 bg-warm-white/55 p-4">
+                              <p className="text-sm font-medium text-espresso/80 mb-1">
+                                Qual dos parceiros é você?
+                              </p>
+                              <p className="text-xs text-warm-gray/60 mb-3">
+                                Você pode convidar o outro parceiro depois.
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                <Button
+                                  type="button"
+                                  variant={
+                                    editableEvent.createdByPartner === 'partnerOne'
+                                      ? 'default'
+                                      : 'secondary'
+                                  }
+                                  size="sm"
+                                  onClick={() =>
+                                    setEditableEvent((current) =>
+                                      current
+                                        ? { ...current, createdByPartner: 'partnerOne' }
+                                        : current,
+                                    )
+                                  }
+                                >
+                                  Eu sou: {editableEvent.hosts[0] || 'Parceiro(a) 1'}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant={
+                                    editableEvent.createdByPartner === 'partnerTwo'
+                                      ? 'default'
+                                      : 'secondary'
+                                  }
+                                  size="sm"
+                                  onClick={() =>
+                                    setEditableEvent((current) =>
+                                      current
+                                        ? { ...current, createdByPartner: 'partnerTwo' }
+                                        : current,
+                                    )
+                                  }
+                                >
+                                  Eu sou: {editableEvent.hosts[1] || 'Parceiro(a) 2'}
+                                </Button>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                              {editableEvent.hosts.map((host, index) => (
+                                <div
+                                  key={`edit-host-${index}`}
+                                  className="flex gap-2 items-end"
+                                >
+                                  <Input
+                                    label={`Anfitrião ${index + 1}`}
+                                    value={host}
+                                    onChange={(e) => updateEditableHost(index, e.target.value)}
+                                    placeholder="Nome do anfitrião"
+                                    className="flex-1"
+                                  />
+                                  {editableEvent.hosts.length > 1 && (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon-sm"
+                                      onClick={() => removeEditableHost(index)}
+                                      aria-label={`Remover anfitrião ${index + 1}`}
+                                    >
+                                      <X className="size-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            {editableEvent.hosts.length < 5 && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={addEditableHost}
+                                className="mt-1"
+                              >
+                                <Plus className="size-4" />
+                                Adicionar anfitrião
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
                       <Input
                         label="Local (opcional)"
                         value={editableEvent.location ?? ''}
@@ -497,15 +791,55 @@ function EventGiftsPageShell() {
                           )
                         }
                       />
-                      <Input
-                        label="Descrição (opcional)"
-                        value={editableEvent.description ?? ''}
-                        onChange={(e) =>
-                          setEditableEvent((c) =>
-                            c ? { ...c, description: e.target.value } : c,
-                          )
-                        }
-                      />
+                      <div className="space-y-1.5">
+                        <label className="block text-sm font-medium text-espresso/80 pl-0.5">
+                          Descrição (opcional)
+                        </label>
+                        <textarea
+                          value={editableEvent.description ?? ''}
+                          onChange={(e) =>
+                            setEditableEvent((c) =>
+                              c ? { ...c, description: e.target.value } : c,
+                            )
+                          }
+                          rows={2}
+                          className="flex w-full min-h-[4.5rem] resize-y rounded-xl border border-border bg-warm-white px-4 py-3 text-base text-espresso placeholder:text-warm-gray/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-sm font-medium text-espresso/80 pl-0.5">
+                          Visibilidade
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={editableEvent.isPublic ? 'default' : 'secondary'}
+                            onClick={() =>
+                              setEditableEvent((c) =>
+                                c ? { ...c, isPublic: true } : c,
+                              )
+                            }
+                          >
+                            Público
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={!editableEvent.isPublic ? 'default' : 'secondary'}
+                            onClick={() =>
+                              setEditableEvent((c) =>
+                                c ? { ...c, isPublic: false } : c,
+                              )
+                            }
+                          >
+                            Somente com link
+                          </Button>
+                        </div>
+                        <p className="text-[11px] text-warm-gray/60 pl-0.5">
+                          Eventos não públicos ficam ocultos da busca da home.
+                        </p>
+                      </div>
                     </div>
                   )}
 
@@ -536,32 +870,51 @@ function EventGiftsPageShell() {
                       <Link2 className="size-4 text-muted-rose/60" />
                       Links para compartilhar
                     </p>
-                    <div className="space-y-3">
+                    <div className="inline-flex rounded-xl border border-border/50 p-1 bg-warm-white/70">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={shareLinkTab === 'guest' ? 'default' : 'ghost'}
+                        onClick={() => setShareLinkTab('guest')}
+                      >
+                        Convidados
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={shareLinkTab === 'partner' ? 'default' : 'ghost'}
+                        onClick={() => setShareLinkTab('partner')}
+                      >
+                        Parceiro
+                      </Button>
+                    </div>
+                    {shareLinkTab === 'partner' ? (
                       <div>
                         <p className="text-xs text-warm-gray/70 mb-1.5">
                           Convite para o outro anfitrião
                         </p>
-                        <Input
-                          readOnly
-                          value={`/events/${event.slug}/convite-parceiro`}
-                        />
-                        <p className="text-[11px] text-warm-gray/50 mt-1 pl-0.5">
-                          Envie somente para o outro anfitrião.
-                        </p>
+                        <Input readOnly value={`/events/${event.slug}/convite-parceiro`} />
+                        {canSharePartnerInvite ? (
+                          <p className="text-[11px] text-warm-gray/50 mt-1 pl-0.5">
+                            Envie somente para o outro anfitrião.
+                          </p>
+                        ) : (
+                          <p className="text-[11px] text-warm-gray/50 mt-1 pl-0.5">
+                            Dica: este convite é ideal para eventos com dois anfitriões.
+                          </p>
+                        )}
                       </div>
+                    ) : (
                       <div>
                         <p className="text-xs text-warm-gray/70 mb-1.5">
                           Página pública para convidados
                         </p>
-                        <Input
-                          readOnly
-                          value={`/events/${event.slug}`}
-                        />
+                        <Input readOnly value={`/events/${event.slug}`} />
                         <p className="text-[11px] text-warm-gray/50 mt-1 pl-0.5">
                           Este link é para os convidados escolherem presentes.
                         </p>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -587,7 +940,7 @@ function EventGiftsPageShell() {
               <Gift className="size-4 text-sage" />
               Adicionar presente
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
                 label="Nome do presente"
                 value={newGiftForm.name}
@@ -609,7 +962,10 @@ function EventGiftsPageShell() {
                         category: e.target.value,
                       }))
                     }
-                    className="flex w-full appearance-none rounded-xl border border-border bg-warm-white px-4 py-3 pr-10 text-base text-espresso transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                    className={cn(
+                      'flex w-full appearance-none rounded-xl border border-border bg-warm-white px-4 py-3 pr-10 text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent',
+                      newGiftForm.category ? 'text-espresso' : 'text-warm-gray/50',
+                    )}
                   >
                     <option value="">Sem categoria</option>
                     {DEFAULT_GIFT_CATEGORIES.map((category) => (
@@ -623,17 +979,23 @@ function EventGiftsPageShell() {
                   </span>
                 </div>
               </div>
-              <Input
-                label="Descrição (opcional)"
-                value={newGiftForm.description}
-                onChange={(e) =>
-                  setNewGiftForm((c) => ({
-                    ...c,
-                    description: e.target.value,
-                  }))
-                }
-                placeholder="Detalhes para o convidado"
-              />
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-espresso/80 pl-0.5">
+                  Descrição (opcional)
+                </label>
+                <textarea
+                  value={newGiftForm.description}
+                  onChange={(e) =>
+                    setNewGiftForm((c) => ({
+                      ...c,
+                      description: e.target.value,
+                    }))
+                  }
+                  placeholder="Detalhes para o convidado"
+                  rows={2}
+                  className="flex w-full min-h-[4.5rem] resize-y rounded-xl border border-border bg-warm-white px-4 py-3 text-base text-espresso placeholder:text-warm-gray/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                />
+              </div>
               <Input
                 label="Link de referência (opcional)"
                 value={newGiftForm.referenceUrl}
@@ -652,6 +1014,7 @@ function EventGiftsPageShell() {
                 size="sm"
                 onClick={() => void handleCreateGift()}
                 isLoading={isCreatingGift}
+                disabled={!newGiftForm.name.trim()}
               >
                 <Plus className="size-3.5" />
                 Adicionar
@@ -663,6 +1026,18 @@ function EventGiftsPageShell() {
 
       {/* ═══ GIFT GRID ═══ */}
       <section className="px-6 pb-24 max-w-5xl mx-auto">
+        {hasLongDescriptions && (
+          <div className="mb-4 flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setExpandDescriptions((prev) => !prev)}
+            >
+              {expandDescriptions ? 'Recolher descrições' : 'Expandir descrições'}
+            </Button>
+          </div>
+        )}
         {isGiftsLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {[1, 2, 3].map((i) => (
@@ -709,7 +1084,8 @@ function EventGiftsPageShell() {
                     },
                   }}
                   className={cn(
-                    'rounded-2xl border p-5 transition-all duration-200 hover:shadow-dreamy',
+                    'rounded-2xl border p-5 transition-all duration-200 hover:shadow-dreamy flex flex-col h-full',
+                    cardSizeClass,
                     statusStyles,
                   )}
                 >
@@ -724,6 +1100,7 @@ function EventGiftsPageShell() {
                             name: e.target.value,
                           }))
                         }
+                        placeholder="Ex.: Jogo de panelas"
                       />
                       <div className="space-y-1.5">
                         <label className="block text-sm font-medium text-espresso/80 pl-0.5">
@@ -738,7 +1115,10 @@ function EventGiftsPageShell() {
                                 category: e.target.value,
                               }))
                             }
-                            className="flex w-full appearance-none rounded-xl border border-border bg-warm-white px-4 py-3 pr-10 text-base text-espresso transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                            className={cn(
+                              'flex w-full appearance-none rounded-xl border border-border bg-warm-white px-4 py-3 pr-10 text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent',
+                              giftForm.category ? 'text-espresso' : 'text-warm-gray/50',
+                            )}
                           >
                             <option value="">Sem categoria</option>
                             {DEFAULT_GIFT_CATEGORIES.map((category) => (
@@ -752,16 +1132,23 @@ function EventGiftsPageShell() {
                           </span>
                         </div>
                       </div>
-                      <Input
-                        label="Descrição"
-                        value={giftForm.description}
-                        onChange={(e) =>
-                          setGiftForm((c) => ({
-                            ...c,
-                            description: e.target.value,
-                          }))
-                        }
-                      />
+                      <div className="space-y-1.5">
+                        <label className="block text-sm font-medium text-espresso/80 pl-0.5">
+                          Descrição
+                        </label>
+                        <textarea
+                          value={giftForm.description}
+                          onChange={(e) =>
+                            setGiftForm((c) => ({
+                              ...c,
+                              description: e.target.value,
+                            }))
+                          }
+                          placeholder="Detalhes para o convidado"
+                          rows={3}
+                          className="flex w-full rounded-xl border border-border bg-warm-white px-4 py-3 text-base text-espresso placeholder:text-warm-gray/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                        />
+                      </div>
                       <Input
                         label="Link de referência"
                         value={giftForm.referenceUrl}
@@ -771,6 +1158,7 @@ function EventGiftsPageShell() {
                             referenceUrl: e.target.value,
                           }))
                         }
+                        placeholder="https://..."
                       />
                       <div className="flex gap-2 justify-end pt-1">
                         <Button
@@ -792,7 +1180,7 @@ function EventGiftsPageShell() {
                     </div>
                   ) : (
                     <>
-                      <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start justify-between gap-2 min-h-12">
                         <h4 className="font-display text-base leading-snug text-espresso">
                           {gift.name}
                         </h4>
@@ -801,31 +1189,55 @@ function EventGiftsPageShell() {
                         </Badge>
                       </div>
 
-                      {gift.category && (
-                        <p className="text-xs text-warm-gray/60 mt-1">
-                          {gift.category}
-                        </p>
-                      )}
+                      <p className="text-xs text-warm-gray/60 mt-1 min-h-4">
+                        {gift.category || 'Sem categoria'}
+                      </p>
 
-                      {gift.description && (
-                        <p className="text-sm text-warm-gray leading-relaxed mt-3">
-                          {gift.description}
-                        </p>
-                      )}
+                      <div className="mt-3 min-h-16">
+                        {gift.description ? (
+                          <>
+                            <p
+                              className={cn(
+                                'text-sm text-warm-gray leading-relaxed',
+                                expandDescriptions ? 'line-clamp-8' : 'line-clamp-3',
+                              )}
+                            >
+                              {capitalizeFirst(gift.description)}
+                            </p>
+                            {(gift.description?.trim().length ?? 0) > 140 && (
+                              <button
+                                type="button"
+                                onClick={() => setExpandDescriptions((prev) => !prev)}
+                                className="mt-1 text-xs text-muted-rose hover:underline"
+                              >
+                                {expandDescriptions ? 'Ver menos' : 'Ver mais'}
+                              </button>
+                            )}
+                          </>
+                        ) : (
+                          <p className="text-sm text-warm-gray/45">Sem descrição</p>
+                        )}
+                      </div>
 
-                      {gift.referenceUrl && (
-                        <a
-                          href={gift.referenceUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-2 inline-flex items-center gap-1 text-xs text-muted-rose hover:underline"
-                        >
-                          Ver referência
-                          <ArrowRight className="size-3" />
-                        </a>
-                      )}
+                      <div className="min-h-6 mt-1">
+                        {gift.referenceUrl ? (
+                          <a
+                            href={gift.referenceUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-muted-rose hover:underline"
+                          >
+                            Ver referência
+                            <ArrowRight className="size-3" />
+                          </a>
+                        ) : (
+                          <span className="text-xs text-warm-gray/45">
+                            Sem link de referência
+                          </span>
+                        )}
+                      </div>
 
-                      <div className="mt-4">
+                      <div className="mt-auto h-10 flex items-center">
                         {gift.status === 'available' ? (
                           isHostView && !isMembershipLoading ? (
                             <p className="text-xs text-warm-gray/50 text-center py-1">

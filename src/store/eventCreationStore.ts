@@ -23,9 +23,11 @@ type DraftGift = {
 
 type DraftEvent = {
   name: string
-  partnerOneName: string
-  partnerTwoName: string
+  eventType: string
+  customEventType?: string
+  hosts: Array<string>
   createdByPartner: 'partnerOne' | 'partnerTwo'
+  isPublic: boolean
   date?: string
   location?: string
   description?: string
@@ -92,7 +94,7 @@ export const useEventCreationStore = create<EventCreationState>()(
         }),
     }),
     {
-      name: 'event-creation-store-v1',
+      name: 'event-creation-store-v2',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         draftEvent: state.draftEvent,
