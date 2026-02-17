@@ -53,7 +53,7 @@ export default function Footer() {
           </p>
         )}
 
-        <p className="text-xs text-warm-gray/50 mt-3 font-accent text-base">
+        <p className="text-warm-gray/50 mt-4 font-accent text-2xl">
           com amor, sempre
         </p>
       </div>

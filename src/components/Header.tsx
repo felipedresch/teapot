@@ -36,9 +36,10 @@ export default function Header() {
         {/* ── Couple Name / Logo ── */}
         <Link
           to="/"
-          className="font-display text-lg italic text-espresso tracking-tight hover:text-soft-terracotta transition-colors duration-200"
+          className="group font-display text-lg italic tracking-tight transition-colors duration-200"
         >
-          Teapot
+          <span className="text-espresso">my</span>
+          <span className="text-primary transition-colors duration-200 group-hover:text-espresso">wish</span>
         </Link>
 
         {/* ── Desktop Navigation ── */}
@@ -99,7 +100,10 @@ export default function Header() {
 
             <SheetContent side="right">
               <SheetHeader>
-                <SheetTitle className="font-display italic text-lg">Teapot</SheetTitle>
+                <SheetTitle className="font-display italic text-lg">
+                <span className="text-warm-gray">my</span>
+                <span className="text-espresso">wish</span>
+              </SheetTitle>
               </SheetHeader>
 
               <nav className="flex flex-col gap-1 px-2 mt-2">

@@ -24,7 +24,7 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'Mimos — Lista de Presentes',
+        title: 'MyWish — Lista de Presentes',
       },
       {
         name: 'description',

@@ -2,37 +2,42 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { useMutation } from 'convex/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Gift, Heart, Link2, MapPin, Settings2, Users } from 'lucide-react'
+import {
+  ArrowRight,
+  ChevronDown,
+  Gift,
+  Heart,
+  Link2,
+  MapPin,
+  Plus,
+  Settings2,
+} from 'lucide-react'
+import { motion, AnimatePresence } from 'motion/react'
 import type { Id } from '../../convex/_generated/dataModel'
+import { cn } from '../lib/utils'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { useEventBySlug, useEventMembership } from '../hooks/useEvents'
 import { useGiftMutations, useGifts } from '../hooks/useGifts'
 import { api } from '../../convex/_generated/api'
 import { Button } from '../components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Input } from '../components/ui/input'
-
-// Rota pública da lista de presentes de um evento específico.
-// Path esperado: /events/$slug
-//
-// Fluxo:
-// - Host envia este link para os convidados.
-// - Convidado cai diretamente na página da lista de presentes daquele evento.
-// - Nesta página:
-//   - carregaremos o evento via slug (useEventBySlug);
-//   - carregaremos os gifts deste evento (useGifts);
-//   - usuário NÃO precisa estar logado para apenas visualizar a lista;
-//   - ao clicar para "escolher / reservar" um presente:
-//     - se não estiver logado, será forçado a fazer login com Google;
-//     - após login, utilizaremos a mutation reserveGift (que também cria
-//       automaticamente membership guest no eventMembers se ainda não existir);
-//     - depois do login, ele deve voltar para esta mesma página com o estado
-//       preservado para concluir a reserva.
+import { DatePicker } from '../components/ui/date-picker'
+import { DEFAULT_GIFT_CATEGORIES } from '../constants/giftCategories'
 
 export const Route = createFileRoute('/events/$slug')({
   component: EventGiftsPageShell,
 })
+
+const ease = [0.22, 1, 0.36, 1] as const
+const fadeUp = {
+  hidden: { opacity: 0, y: 16 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease },
+  },
+}
 
 function EventGiftsPageShell() {
   const { slug } = Route.useParams()
@@ -40,17 +45,22 @@ function EventGiftsPageShell() {
   const { isAuthenticated, isLoading: isAuthLoading } = useCurrentUser()
   const { event, isLoading: isEventLoading } = useEventBySlug(slug)
   const { gifts, isLoading: isGiftsLoading } = useGifts(event?._id)
-  const { membership, isLoading: isMembershipLoading } = useEventMembership(event?._id as Id<'events'> | undefined)
+  const { membership, isLoading: isMembershipLoading } = useEventMembership(
+    event?._id as Id<'events'> | undefined,
+  )
   const { createGift, reserveGift, updateGift, deleteGift } = useGiftMutations()
   const updateEvent = useMutation(api.events.updateEvent)
   const deleteEvent = useMutation(api.events.deleteEvent)
 
-  const [reservingGiftId, setReservingGiftId] = useState<Id<'gifts'> | null>(null)
+  const [reservingGiftId, setReservingGiftId] = useState<Id<'gifts'> | null>(
+    null,
+  )
   const [error, setError] = useState<string | null>(null)
   const [eventSaving, setEventSaving] = useState(false)
   const [eventDeleting, setEventDeleting] = useState(false)
   const [editingGiftId, setEditingGiftId] = useState<Id<'gifts'> | null>(null)
   const [isCreatingGift, setIsCreatingGift] = useState(false)
+  const [isHostPanelOpen, setIsHostPanelOpen] = useState(false)
   const [editableEvent, setEditableEvent] = useState<{
     _id: Id<'events'>
     name: string
@@ -170,7 +180,7 @@ function EventGiftsPageShell() {
     } finally {
       setEventSaving(false)
     }
-  }, [event, isHostView, updateEvent])
+  }, [event, isHostView, editableEvent, updateEvent])
 
   const handleDeleteEvent = useCallback(async () => {
     if (!event || !isHostView) return
@@ -284,23 +294,31 @@ function EventGiftsPageShell() {
     [deleteGift, isHostView],
   )
 
+  // ── Loading ──
   if (isEventLoading) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-14">
-        <p className="text-sm text-warm-gray">Carregando evento...</p>
+      <div className="max-w-2xl mx-auto px-6 py-28 text-center">
+        <div className="space-y-3">
+          <div className="h-6 w-32 mx-auto rounded-lg bg-blush/20 animate-shimmer" />
+          <div className="h-12 w-64 mx-auto rounded-lg bg-blush/15 animate-shimmer" />
+          <div className="h-4 w-48 mx-auto rounded-lg bg-blush/10 animate-shimmer" />
+        </div>
       </div>
     )
   }
 
+  // ── Not found ──
   if (!event) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-14">
-        <h1 className="font-display italic text-3xl text-espresso mb-2">
+      <div className="max-w-2xl mx-auto px-6 py-28 text-center space-y-4">
+        <OrnamentDivider className="w-20 text-muted-rose/20 mx-auto" />
+        <h1 className="font-display italic text-3xl text-espresso">
           Evento não encontrado
         </h1>
-        <p className="text-warm-gray">
+        <p className="text-warm-gray leading-relaxed">
           Verifique o link e tente novamente.
         </p>
+        <OrnamentDivider className="w-20 text-muted-rose/20 mx-auto" />
       </div>
     )
   }
@@ -308,278 +326,320 @@ function EventGiftsPageShell() {
   const headerEvent = isHostView && editableEvent ? editableEvent : event
 
   return (
-    <div className="relative">
-      <section className="relative min-h-[45vh] flex flex-col items-center justify-center px-6 py-16 overflow-hidden text-center">
-        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-          <div className="absolute -top-24 right-[10%] w-72 h-72 bg-blush/30 rounded-full blur-[100px]" />
-          <div className="absolute -bottom-20 left-[10%] w-80 h-80 bg-sage/20 rounded-full blur-[120px]" />
+    <div>
+      {/* ═══ HERO — Invitation Style ═══ */}
+      <section className="relative py-20 md:py-28 px-6 overflow-hidden">
+        <div
+          className="pointer-events-none absolute inset-0"
+          aria-hidden="true"
+        >
+          <div className="absolute -top-20 right-[10%] w-64 h-64 bg-blush/15 rounded-full blur-[100px]" />
+          <div className="absolute -bottom-16 left-[10%] w-72 h-72 bg-sage/10 rounded-full blur-[120px]" />
         </div>
 
-        <div className="relative max-w-2xl space-y-4">
-          <p className="text-xs uppercase tracking-[0.3em] text-warm-gray">lista de presentes</p>
-          <h1 className="font-display text-4xl md:text-5xl italic leading-[1.1] text-espresso">
-            {headerEvent.partnerOneName}{' '}
-            <span className="text-muted-rose">&</span>{' '}
-            {headerEvent.partnerTwoName}
-          </h1>
-          <p className="text-lg text-muted-rose/80">{headerEvent.name}</p>
-          <p className="text-xs text-warm-gray/80">Codigo do evento: {event.slug}</p>
-          {headerEvent.location ? (
-            <p className="text-sm text-warm-gray inline-flex items-center gap-2">
-              <MapPin className="size-4" />
-              {headerEvent.location}
+        <motion.div
+          className="relative max-w-2xl mx-auto text-center"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: {},
+            visible: { transition: { staggerChildren: 0.08 } },
+          }}
+        >
+          <motion.div variants={fadeUp} className="flex justify-center mb-8">
+            <OrnamentDivider className="w-28 text-muted-rose/25" />
+          </motion.div>
+
+          <motion.p
+            variants={fadeUp}
+            className="font-accent text-xl md:text-2xl text-muted-rose"
+          >
+            lista de presentes
+          </motion.p>
+
+          <motion.div variants={fadeUp} className="mt-6 md:mt-8">
+            <p className="font-display italic text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-espresso leading-[0.9]">
+              {headerEvent.partnerOneName}
             </p>
-          ) : null}
-          {headerEvent.description ? (
-            <p className="text-warm-gray leading-relaxed">
+            <p className="font-accent text-3xl md:text-4xl text-muted-rose/60 my-2 md:my-3 inline-block -rotate-6">
+              &
+            </p>
+            <p className="font-display italic text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-espresso leading-[0.9]">
+              {headerEvent.partnerTwoName}
+            </p>
+          </motion.div>
+
+          <motion.p
+            variants={fadeUp}
+            className="mt-6 text-warm-gray text-lg"
+          >
+            {headerEvent.name}
+          </motion.p>
+
+          {(headerEvent.location || headerEvent.date) && (
+            <motion.div
+              variants={fadeUp}
+              className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-warm-gray/70"
+            >
+              {headerEvent.location && (
+                <span className="inline-flex items-center gap-1.5">
+                  <MapPin className="size-3.5" />
+                  {headerEvent.location}
+                </span>
+              )}
+              {headerEvent.date && <span>{headerEvent.date}</span>}
+            </motion.div>
+          )}
+
+          {headerEvent.description && (
+            <motion.p
+              variants={fadeUp}
+              className="mt-4 text-warm-gray leading-relaxed max-w-lg mx-auto"
+            >
               {headerEvent.description}
-            </p>
-          ) : null}
-        </div>
+            </motion.p>
+          )}
+
+          <motion.p
+            variants={fadeUp}
+            className="mt-6 text-[11px] text-warm-gray/40 tracking-widest uppercase"
+          >
+            {event.slug}
+          </motion.p>
+
+          <motion.div variants={fadeUp} className="flex justify-center mt-8">
+            <OrnamentDivider className="w-28 text-muted-rose/25" />
+          </motion.div>
+        </motion.div>
       </section>
 
-      {isHostView ? (
-        <section className="px-6 pb-10 max-w-5xl mx-auto space-y-4">
-          <div className="rounded-2xl border border-muted-rose/40 bg-blush/10 p-4 md:p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-espresso flex items-center gap-2">
-                <Settings2 className="size-4" />
-                Visão do anfitrião
-              </p>
-              <p className="text-xs text-warm-gray">
-                Só você vê esta área. Convidados veem apenas a lista de presentes.
-              </p>
+      {/* ═══ HOST PANEL — Collapsible ═══ */}
+      {isHostView && (
+        <section className="px-6 pb-6 max-w-5xl mx-auto">
+          <button
+            type="button"
+            onClick={() => setIsHostPanelOpen((prev) => !prev)}
+            className="w-full flex items-center justify-between gap-3 rounded-2xl border border-muted-rose/25 bg-blush/8 px-5 py-4 transition-all duration-200 hover:bg-blush/15 hover:border-muted-rose/35 cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <Settings2 className="size-4 text-muted-rose/70" />
+              <div className="text-left">
+                <p className="text-sm font-medium text-espresso">
+                  Painel do anfitrião
+                </p>
+                <p className="text-xs text-warm-gray/70">
+                  Edite o evento, gerencie presentes e compartilhe.
+                </p>
+              </div>
             </div>
-          </div>
+            <ChevronDown
+              className={cn(
+                'size-4 text-warm-gray transition-transform duration-300',
+                isHostPanelOpen && 'rotate-180',
+              )}
+            />
+          </button>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {editableEvent ? (
-              <>
-                <Input
-                  label="Nome do evento"
-                  value={editableEvent.name}
-                  onChange={(e) =>
-                    setEditableEvent((current) =>
-                      current
-                        ? {
-                            ...current,
-                            name: e.target.value,
-                          }
-                        : current,
-                    )
-                  }
-                />
-                <Input
-                  label="Parceiro(a) 1"
-                  value={editableEvent.partnerOneName}
-                  onChange={(e) =>
-                    setEditableEvent((current) =>
-                      current
-                        ? {
-                            ...current,
-                            partnerOneName: e.target.value,
-                          }
-                        : current,
-                    )
-                  }
-                />
-                <Input
-                  label="Parceiro(a) 2"
-                  value={editableEvent.partnerTwoName}
-                  onChange={(e) =>
-                    setEditableEvent((current) =>
-                      current
-                        ? {
-                            ...current,
-                            partnerTwoName: e.target.value,
-                          }
-                        : current,
-                    )
-                  }
-                />
-                <Input
-                  label="Local (opcional)"
-                  value={editableEvent.location ?? ''}
-                  onChange={(e) =>
-                    setEditableEvent((current) =>
-                      current
-                        ? {
-                            ...current,
-                            location: e.target.value,
-                          }
-                        : current,
-                    )
-                  }
-                />
-                <Input
-                  label="Data (opcional)"
-                  value={editableEvent.date ?? ''}
-                  onChange={(e) =>
-                    setEditableEvent((current) =>
-                      current
-                        ? {
-                            ...current,
-                            date: e.target.value,
-                          }
-                        : current,
-                    )
-                  }
-                  placeholder="AAAA-MM-DD"
-                />
-                <Input
-                  label="Descrição (opcional)"
-                  value={editableEvent.description ?? ''}
-                  onChange={(e) =>
-                    setEditableEvent((current) =>
-                      current
-                        ? {
-                            ...current,
-                            description: e.target.value,
-                          }
-                        : current,
-                    )
-                  }
-                />
-              </>
-            ) : null}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-sm">
-                  <Settings2 className="size-4 text-muted-rose" />
-                  Configurações do evento
-                </CardTitle>
-                <CardDescription>
-                  Edite informações do evento e gerencie a lista de presentes.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => void handleSaveEvent()}
-                  isLoading={eventSaving}
-                >
-                  Salvar informações do evento
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="w-full text-destructive"
-                  onClick={() => void handleDeleteEvent()}
-                  isLoading={eventDeleting}
-                >
-                  Excluir evento
-                </Button>
-              </CardContent>
-            </Card>
+          <AnimatePresence>
+            {isHostPanelOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.35, ease }}
+                className="overflow-hidden"
+              >
+                <div className="pt-6 space-y-6">
+                  {editableEvent && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Input
+                        label="Nome do evento"
+                        value={editableEvent.name}
+                        onChange={(e) =>
+                          setEditableEvent((c) =>
+                            c ? { ...c, name: e.target.value } : c,
+                          )
+                        }
+                      />
+                      <Input
+                        label="Parceiro(a) 1"
+                        value={editableEvent.partnerOneName}
+                        onChange={(e) =>
+                          setEditableEvent((c) =>
+                            c ? { ...c, partnerOneName: e.target.value } : c,
+                          )
+                        }
+                      />
+                      <Input
+                        label="Parceiro(a) 2"
+                        value={editableEvent.partnerTwoName}
+                        onChange={(e) =>
+                          setEditableEvent((c) =>
+                            c ? { ...c, partnerTwoName: e.target.value } : c,
+                          )
+                        }
+                      />
+                      <Input
+                        label="Local (opcional)"
+                        value={editableEvent.location ?? ''}
+                        onChange={(e) =>
+                          setEditableEvent((c) =>
+                            c ? { ...c, location: e.target.value } : c,
+                          )
+                        }
+                      />
+                      <DatePicker
+                        label="Data (opcional)"
+                        value={editableEvent.date ?? ''}
+                        onChange={(value) =>
+                          setEditableEvent((c) =>
+                            c ? { ...c, date: value } : c,
+                          )
+                        }
+                      />
+                      <Input
+                        label="Descrição (opcional)"
+                        value={editableEvent.description ?? ''}
+                        onChange={(e) =>
+                          setEditableEvent((c) =>
+                            c ? { ...c, description: e.target.value } : c,
+                          )
+                        }
+                      />
+                    </div>
+                  )}
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-sm">
-                  <Users className="size-4 text-muted-rose" />
-                  Links para compartilhar
-                </CardTitle>
-                <CardDescription>
-                  Use o link certo para convidar seu parceiro e os convidados.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-espresso/80 pl-0.5">
-                    Link para convidar o outro membro do casal
-                  </p>
-                  <div className="flex gap-2">
-                    <Input
-                      readOnly
-                      value={`/events/${event.slug}/convite-parceiro`}
-                    />
-                    <Button type="button" variant="outline" size="icon-sm" disabled>
-                      <Link2 className="size-4" />
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void handleSaveEvent()}
+                      isLoading={eventSaving}
+                    >
+                      Salvar alterações
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive"
+                      onClick={() => void handleDeleteEvent()}
+                      isLoading={eventDeleting}
+                    >
+                      Excluir evento
                     </Button>
                   </div>
-                  <p className="text-[11px] text-warm-gray">
-                    Envie este link somente para o outro membro do casal. (Lógica de convite será conectada depois.)
-                  </p>
-                </div>
 
-                <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-espresso/80 pl-0.5">
-                    Link da página pública para os convidados
-                  </p>
-                  <div className="flex gap-2">
-                    <Input readOnly value={`/events/${event.slug}`} />
-                    <Button type="button" variant="outline" size="icon-sm" disabled>
-                      <Link2 className="size-4" />
-                    </Button>
+                  <div className="rounded-xl border border-border/40 bg-warm-white/60 p-5 space-y-4">
+                    <p className="text-sm font-medium text-espresso flex items-center gap-2">
+                      <Link2 className="size-4 text-muted-rose/60" />
+                      Links para compartilhar
+                    </p>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-xs text-warm-gray/70 mb-1.5">
+                          Convite para o outro anfitrião
+                        </p>
+                        <Input
+                          readOnly
+                          value={`/events/${event.slug}/convite-parceiro`}
+                        />
+                        <p className="text-[11px] text-warm-gray/50 mt-1 pl-0.5">
+                          Envie somente para o outro anfitrião.
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-warm-gray/70 mb-1.5">
+                          Página pública para convidados
+                        </p>
+                        <Input
+                          readOnly
+                          value={`/events/${event.slug}`}
+                        />
+                        <p className="text-[11px] text-warm-gray/50 mt-1 pl-0.5">
+                          Este link é para os convidados escolherem presentes.
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-warm-gray">
-                    Este é o link que você deve mandar para os convidados escolherem presentes.
-                  </p>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </section>
-      ) : null}
+      )}
 
-      <section className="px-6 pb-20 max-w-5xl mx-auto">
-        {error ? (
-          <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 mb-6">
+      {/* ═══ ERROR ═══ */}
+      {error && (
+        <div className="px-6 max-w-5xl mx-auto pb-4">
+          <p className="text-sm text-destructive bg-destructive/8 border border-destructive/20 rounded-xl px-4 py-3">
             {error}
           </p>
-        ) : null}
+        </div>
+      )}
 
-        {isHostView && (
-          <div className="mb-6 rounded-2xl border border-muted-rose/40 bg-blush/10 p-4 md:p-5 space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-medium text-espresso flex items-center gap-2">
-                <Gift className="size-4 text-muted-rose" />
-                Adicionar novo presente
-              </p>
-            </div>
+      {/* ═══ ADD GIFT (Host) ═══ */}
+      {isHostView && (
+        <section className="px-6 pb-8 max-w-5xl mx-auto">
+          <div className="rounded-2xl border border-sage/30 bg-sage/5 p-5 md:p-6 space-y-4">
+            <p className="text-sm font-medium text-espresso flex items-center gap-2">
+              <Gift className="size-4 text-sage" />
+              Adicionar presente
+            </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <Input
                 label="Nome do presente"
                 value={newGiftForm.name}
                 onChange={(e) =>
-                  setNewGiftForm((current) => ({
-                    ...current,
-                    name: e.target.value,
-                  }))
+                  setNewGiftForm((c) => ({ ...c, name: e.target.value }))
                 }
                 placeholder="Ex.: Jogo de panelas"
               />
-              <Input
-                label="Categoria (opcional)"
-                value={newGiftForm.category}
-                onChange={(e) =>
-                  setNewGiftForm((current) => ({
-                    ...current,
-                    category: e.target.value,
-                  }))
-                }
-                placeholder="Ex.: Cozinha"
-              />
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-espresso/80 pl-0.5">
+                  Categoria (opcional)
+                </label>
+                <div className="relative">
+                  <select
+                    value={newGiftForm.category}
+                    onChange={(e) =>
+                      setNewGiftForm((c) => ({
+                        ...c,
+                        category: e.target.value,
+                      }))
+                    }
+                    className="flex w-full appearance-none rounded-xl border border-border bg-warm-white px-4 py-3 pr-10 text-base text-espresso transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                  >
+                    <option value="">Sem categoria</option>
+                    {DEFAULT_GIFT_CATEGORIES.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-warm-gray/60 text-xs">
+                    ▼
+                  </span>
+                </div>
+              </div>
               <Input
                 label="Descrição (opcional)"
                 value={newGiftForm.description}
                 onChange={(e) =>
-                  setNewGiftForm((current) => ({
-                    ...current,
+                  setNewGiftForm((c) => ({
+                    ...c,
                     description: e.target.value,
                   }))
                 }
-                placeholder="Detalhes que ajudam o convidado"
+                placeholder="Detalhes para o convidado"
               />
               <Input
                 label="Link de referência (opcional)"
                 value={newGiftForm.referenceUrl}
                 onChange={(e) =>
-                  setNewGiftForm((current) => ({
-                    ...current,
+                  setNewGiftForm((c) => ({
+                    ...c,
                     referenceUrl: e.target.value,
                   }))
                 }
@@ -593,68 +653,111 @@ function EventGiftsPageShell() {
                 onClick={() => void handleCreateGift()}
                 isLoading={isCreatingGift}
               >
-                Adicionar presente
+                <Plus className="size-3.5" />
+                Adicionar
               </Button>
             </div>
           </div>
-        )}
+        </section>
+      )}
 
+      {/* ═══ GIFT GRID ═══ */}
+      <section className="px-6 pb-24 max-w-5xl mx-auto">
         {isGiftsLoading ? (
-          <p className="text-sm text-warm-gray">Carregando presentes...</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-44 rounded-2xl bg-blush/10 animate-shimmer"
+              />
+            ))}
+          </div>
         ) : gifts.length === 0 ? (
-          <p className="text-sm text-warm-gray">Ainda não há presentes cadastrados para este evento.</p>
+          <div className="text-center py-20">
+            <Gift className="size-10 text-warm-gray/15 mx-auto mb-4" />
+            <p className="text-warm-gray/50 leading-relaxed">
+              Ainda não há presentes nesta lista.
+            </p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {gifts.map((gift) => (
-              <Card key={gift._id} className="p-0 overflow-hidden">
-                <div className="aspect-[4/3] flex items-center justify-center bg-gradient-to-br from-blush/40 via-warm-white to-sage/20">
-                  <Gift className="size-9 text-espresso/15" />
-                </div>
-                <CardContent className="p-5 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="space-y-1">
-                      <h4 className="text-base leading-snug">
-                        {editingGiftId === gift._id && isHostView ? (
-                          <Input
-                            value={giftForm.name}
-                            onChange={(e) =>
-                              setGiftForm((current) => ({
-                                ...current,
-                                name: e.target.value,
-                              }))
-                            }
-                          />
-                        ) : (
-                          gift.name
-                        )}
-                      </h4>
-                      {gift.category ? (
-                        editingGiftId === gift._id && isHostView ? (
-                          <Input
+          <motion.div
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: {},
+              visible: { transition: { staggerChildren: 0.05 } },
+            }}
+          >
+            {gifts.map((gift) => {
+              const isEditing = editingGiftId === gift._id && isHostView
+              const statusStyles = {
+                available: 'bg-gift-available/10 border-gift-available/20',
+                reserved: 'bg-gift-reserved/12 border-gift-reserved/20',
+                received: 'bg-gift-received/12 border-gift-received/20',
+              }[gift.status]
+
+              return (
+                <motion.div
+                  key={gift._id}
+                  variants={{
+                    hidden: { opacity: 0, y: 14 },
+                    visible: {
+                      opacity: 1,
+                      y: 0,
+                      transition: { duration: 0.45, ease },
+                    },
+                  }}
+                  className={cn(
+                    'rounded-2xl border p-5 transition-all duration-200 hover:shadow-dreamy',
+                    statusStyles,
+                  )}
+                >
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      <Input
+                        label="Nome"
+                        value={giftForm.name}
+                        onChange={(e) =>
+                          setGiftForm((c) => ({
+                            ...c,
+                            name: e.target.value,
+                          }))
+                        }
+                      />
+                      <div className="space-y-1.5">
+                        <label className="block text-sm font-medium text-espresso/80 pl-0.5">
+                          Categoria
+                        </label>
+                        <div className="relative">
+                          <select
                             value={giftForm.category}
                             onChange={(e) =>
-                              setGiftForm((current) => ({
-                                ...current,
+                              setGiftForm((c) => ({
+                                ...c,
                                 category: e.target.value,
                               }))
                             }
-                            placeholder="Categoria"
-                          />
-                        ) : (
-                          <p className="text-xs text-warm-gray">Categoria: {gift.category}</p>
-                        )
-                      ) : null}
-                    </div>
-                    <Badge variant={gift.status}>{STATUS_LABELS[gift.status]}</Badge>
-                  </div>
-                  {editingGiftId === gift._id && isHostView ? (
-                    <div className="space-y-2">
+                            className="flex w-full appearance-none rounded-xl border border-border bg-warm-white px-4 py-3 pr-10 text-base text-espresso transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                          >
+                            <option value="">Sem categoria</option>
+                            {DEFAULT_GIFT_CATEGORIES.map((category) => (
+                              <option key={category} value={category}>
+                                {category}
+                              </option>
+                            ))}
+                          </select>
+                          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-warm-gray/60 text-xs">
+                            ▼
+                          </span>
+                        </div>
+                      </div>
                       <Input
                         label="Descrição"
                         value={giftForm.description}
                         onChange={(e) =>
-                          setGiftForm((current) => ({
-                            ...current,
+                          setGiftForm((c) => ({
+                            ...c,
                             description: e.target.value,
                           }))
                         }
@@ -663,13 +766,13 @@ function EventGiftsPageShell() {
                         label="Link de referência"
                         value={giftForm.referenceUrl}
                         onChange={(e) =>
-                          setGiftForm((current) => ({
-                            ...current,
+                          setGiftForm((c) => ({
+                            ...c,
                             referenceUrl: e.target.value,
                           }))
                         }
                       />
-                      <div className="flex gap-2 justify-end">
+                      <div className="flex gap-2 justify-end pt-1">
                         <Button
                           type="button"
                           variant="ghost"
@@ -683,71 +786,127 @@ function EventGiftsPageShell() {
                           size="sm"
                           onClick={() => void handleSaveGift()}
                         >
-                          Salvar presente
+                          Salvar
                         </Button>
                       </div>
                     </div>
-                  ) : gift.description ? (
-                    <p className="text-sm text-warm-gray leading-relaxed">
-                      {gift.description}
-                    </p>
-                  ) : null}
-
-                  {gift.status === 'available' ? (
-                    isHostView && !isMembershipLoading ? (
-                      <p className="text-xs text-warm-gray text-center py-1">
-                        Você é anfitrião deste evento. Convidados verão aqui o botão para presentear.
-                      </p>
-                    ) : (
-                      <Button
-                        size="sm"
-                        className="w-full"
-                        isLoading={reservingGiftId === gift._id}
-                        onClick={() => void handleReserveGift(gift._id)}
-                      >
-                        Quero presentear
-                      </Button>
-                    )
-                  ) : gift.status === 'reserved' ? (
-                    <p className="text-xs text-muted-rose text-center py-1">
-                      {isHostView && gift.reservedByName
-                        ? `Reservado por ${gift.reservedByName}`
-                        : 'Alguém já escolheu este mimo'}
-                    </p>
                   ) : (
-                    <p className="text-xs text-warm-gray text-center py-1 font-accent text-sm">
-                      Recebido com carinho <Heart className="size-3 inline" />
-                    </p>
-                  )}
+                    <>
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="font-display text-base leading-snug text-espresso">
+                          {gift.name}
+                        </h4>
+                        <Badge variant={gift.status} className="shrink-0">
+                          {STATUS_LABELS[gift.status]}
+                        </Badge>
+                      </div>
 
-                  {isHostView && (
-                    <div className="flex justify-end gap-2 pt-2 border-t border-border/40 mt-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => startEditingGift(gift)}
-                      >
-                        Editar
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive"
-                        onClick={() => void handleDeleteGift(gift._id)}
-                      >
-                        Excluir
-                      </Button>
-                    </div>
+                      {gift.category && (
+                        <p className="text-xs text-warm-gray/60 mt-1">
+                          {gift.category}
+                        </p>
+                      )}
+
+                      {gift.description && (
+                        <p className="text-sm text-warm-gray leading-relaxed mt-3">
+                          {gift.description}
+                        </p>
+                      )}
+
+                      {gift.referenceUrl && (
+                        <a
+                          href={gift.referenceUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 inline-flex items-center gap-1 text-xs text-muted-rose hover:underline"
+                        >
+                          Ver referência
+                          <ArrowRight className="size-3" />
+                        </a>
+                      )}
+
+                      <div className="mt-4">
+                        {gift.status === 'available' ? (
+                          isHostView && !isMembershipLoading ? (
+                            <p className="text-xs text-warm-gray/50 text-center py-1">
+                              Convidados verão o botão aqui
+                            </p>
+                          ) : (
+                            <Button
+                              size="sm"
+                              className="w-full"
+                              isLoading={reservingGiftId === gift._id}
+                              onClick={() =>
+                                void handleReserveGift(gift._id)
+                              }
+                            >
+                              <Heart className="size-3.5" />
+                              Quero presentear
+                            </Button>
+                          )
+                        ) : gift.status === 'reserved' ? (
+                          <p className="text-xs text-muted-rose/80 text-center py-1">
+                            {isHostView && gift.reservedByName
+                              ? `Reservado por ${gift.reservedByName}`
+                              : 'Alguém já escolheu este mimo'}
+                          </p>
+                        ) : (
+                          <p className="text-center py-1 font-accent text-sm text-warm-gray">
+                            Recebido com carinho{' '}
+                            <Heart className="size-3 inline" />
+                          </p>
+                        )}
+                      </div>
+
+                      {isHostView && (
+                        <div className="flex justify-end gap-2 pt-3 mt-3 border-t border-border/20">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => startEditingGift(gift)}
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive"
+                            onClick={() => void handleDeleteGift(gift._id)}
+                          >
+                            Excluir
+                          </Button>
+                        </div>
+                      )}
+                    </>
                   )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                </motion.div>
+              )
+            })}
+          </motion.div>
         )}
       </section>
     </div>
+  )
+}
+
+function OrnamentDivider({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 120 24"
+      fill="none"
+      className={className}
+      aria-hidden="true"
+    >
+      <path
+        d="M0 12 C20 4, 40 20, 60 12 C80 4, 100 20, 120 12"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <circle cx="60" cy="12" r="2" fill="currentColor" opacity="0.5" />
+    </svg>
   )
 }
 
@@ -758,4 +917,3 @@ const STATUS_LABELS: Record<'available' | 'reserved' | 'received', string> = {
 }
 
 const PENDING_GIFT_KEY = 'pending-gift-reservation-id'
-

@@ -190,7 +190,10 @@ export const searchPublicEvents = query({
       _id: v.id('events'),
       slug: v.string(),
       name: v.string(),
+      partnerOneName: v.string(),
+      partnerTwoName: v.string(),
       location: v.optional(v.string()),
+      description: v.optional(v.string()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -200,7 +203,10 @@ export const searchPublicEvents = query({
       _id: (typeof events)[number]['_id']
       slug: string
       name: string
+      partnerOneName: string
+      partnerTwoName: string
       location?: string
+      description?: string
     }> = []
 
     for (const event of events) {
@@ -208,6 +214,9 @@ export const searchPublicEvents = query({
         event.name,
         event.slug,
         event.location ?? '',
+        event.partnerOneName,
+        event.partnerTwoName,
+        event.description ?? '',
       ]
         .join(' ')
         .toLocaleLowerCase('pt-BR')
@@ -217,7 +226,10 @@ export const searchPublicEvents = query({
           _id: event._id,
           slug: event.slug,
           name: event.name,
+          partnerOneName: event.partnerOneName,
+          partnerTwoName: event.partnerTwoName,
           location: event.location,
+          description: event.description,
         })
       }
     }
