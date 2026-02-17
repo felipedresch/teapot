@@ -18,6 +18,18 @@ export function useMyEvents() {
   }
 }
 
+export function useMyEventsGrouped() {
+  const grouped = useQuery(api.events.listMyEventsGrouped)
+
+  const isLoading = grouped === undefined
+
+  return {
+    hosting: grouped?.hosting ?? [],
+    attending: grouped?.attending ?? [],
+    isLoading,
+  }
+}
+
 // Hook para carregar um evento público por slug
 // - Usado na rota pública /eventos/$slug
 // - Não exige autenticação, apenas carrega os dados básicos do evento.

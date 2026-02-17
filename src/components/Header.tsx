@@ -1,6 +1,7 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useLocation } from '@tanstack/react-router'
 import { Menu, LogOut } from 'lucide-react'
 import { useAuthActions } from '@convex-dev/auth/react'
+import { useCallback, useEffect } from 'react'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { Button } from './ui/button'
 import {
@@ -29,6 +30,30 @@ const navItems = [{ label: 'Início', href: '/' as const }]
 export default function Header() {
   const { signIn, signOut } = useAuthActions()
   const { user, isLoading, isAuthenticated } = useCurrentUser()
+  const location = useLocation()
+
+  const handleSignIn = useCallback(async () => {
+    const returnPath = `${location.pathname}${location.searchStr}${location.hash}`
+    await signIn('google', { redirectTo: returnPath })
+  }, [location.hash, location.pathname, location.searchStr, signIn])
+
+  useEffect(() => {
+    if (isLoading || !isAuthenticated) {
+      return
+    }
+
+    const currentUrl = new URL(window.location.href)
+    const hasOAuthParams =
+      currentUrl.searchParams.has('code') || currentUrl.searchParams.has('state')
+    if (!hasOAuthParams) {
+      return
+    }
+
+    currentUrl.searchParams.delete('code')
+    currentUrl.searchParams.delete('state')
+    const nextUrl = `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`
+    window.history.replaceState({}, '', nextUrl)
+  }, [isAuthenticated, isLoading])
 
   return (
     <header className="sticky top-0 z-40 bg-warm-white/70 backdrop-blur-xl border-b border-border/30">
@@ -82,7 +107,7 @@ export default function Header() {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => void signIn('google')}
+                onClick={() => void handleSignIn()}
               >
                 Entrar
               </Button>
@@ -156,7 +181,7 @@ export default function Header() {
                   ) : (
                     <Button
                       size="default"
-                      onClick={() => void signIn('google')}
+                      onClick={() => void handleSignIn()}
                       className="w-full"
                     >
                       Entrar com Google

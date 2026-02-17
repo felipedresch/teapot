@@ -67,7 +67,7 @@ const fadeUp = {
 function EventGiftsPageShell() {
   const { slug } = Route.useParams()
   const { signIn } = useAuthActions()
-  const { isAuthenticated, isLoading: isAuthLoading } = useCurrentUser()
+  const { isAuthenticated } = useCurrentUser()
   const { event, isLoading: isEventLoading } = useEventBySlug(slug)
   const { gifts, isLoading: isGiftsLoading } = useGifts(event?._id)
   const { membership, isLoading: isMembershipLoading } = useEventMembership(
@@ -81,6 +81,7 @@ function EventGiftsPageShell() {
     null,
   )
   const [error, setError] = useState<string | null>(null)
+  const [showReserveLoginPrompt, setShowReserveLoginPrompt] = useState(false)
   const [eventSaving, setEventSaving] = useState(false)
   const [eventDeleting, setEventDeleting] = useState(false)
   const [editingGiftId, setEditingGiftId] = useState<Id<'gifts'> | null>(null)
@@ -168,27 +169,29 @@ function EventGiftsPageShell() {
     [reserveGift],
   )
 
-  useEffect(() => {
-    if (!isAuthenticated || isAuthLoading) return
-    const pendingGiftId = localStorage.getItem(PENDING_GIFT_KEY)
-    if (!pendingGiftId) return
-
-    localStorage.removeItem(PENDING_GIFT_KEY)
-    void reserveNow(pendingGiftId as Id<'gifts'>)
-  }, [isAuthenticated, isAuthLoading, reserveNow])
-
   const handleReserveGift = useCallback(
     async (giftId: Id<'gifts'>) => {
       if (!isAuthenticated) {
-        localStorage.setItem(PENDING_GIFT_KEY, giftId)
-        await signIn('google')
+        setError(null)
+        setShowReserveLoginPrompt(true)
         return
       }
 
+      setShowReserveLoginPrompt(false)
       await reserveNow(giftId)
     },
-    [isAuthenticated, reserveNow, signIn],
+    [isAuthenticated, reserveNow],
   )
+
+  const handleSignInToReserve = useCallback(async () => {
+    await signIn('google', { redirectTo: `/events/${slug}` })
+  }, [signIn, slug])
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      setShowReserveLoginPrompt(false)
+    }
+  }, [isAuthenticated])
 
   const isPairEventType = useCallback((eventType: string) => {
     return PAIR_EVENT_TYPES.has(eventType)
@@ -249,24 +252,41 @@ function EventGiftsPageShell() {
       setError('Informe ao menos um anfitrião.')
       return
     }
+    const nextName = editableEvent.name ? capitalizeFirst(editableEvent.name) : event.name
+    const nextCustomEventType = editableEvent.customEventType?.trim() || undefined
+    const nextDate = editableEvent.date?.trim() || undefined
+    const nextLocation = editableEvent.location
+      ? capitalizeFirst(editableEvent.location)
+      : undefined
+    const nextDescription = editableEvent.description
+      ? capitalizeFirst(editableEvent.description)
+      : undefined
     setEventSaving(true)
     setError(null)
     try {
       await updateEvent({
         eventId: event._id,
-        name: editableEvent.name ? capitalizeFirst(editableEvent.name) : undefined,
+        name: nextName,
         eventType: editableEvent.eventType,
-        customEventType: editableEvent.customEventType?.trim() || undefined,
+        customEventType: nextCustomEventType,
         hosts: normalizedHosts,
         createdByPartner: isPair ? editableEvent.createdByPartner : undefined,
         isPublic: editableEvent.isPublic,
-        date: editableEvent.date?.trim() || undefined,
-        location: editableEvent.location
-          ? capitalizeFirst(editableEvent.location)
-          : undefined,
-        description: editableEvent.description
-          ? capitalizeFirst(editableEvent.description)
-          : undefined,
+        date: nextDate,
+        location: nextLocation,
+        description: nextDescription,
+      })
+      setEditableEvent((current) => {
+        if (!current) return current
+        return {
+          ...current,
+          name: nextName,
+          customEventType: nextCustomEventType,
+          hosts: normalizedHosts,
+          date: nextDate,
+          location: nextLocation,
+          description: nextDescription,
+        }
       })
     } catch (updateError) {
       setError(
@@ -401,19 +421,19 @@ function EventGiftsPageShell() {
       <div className="px-6 py-14 md:py-20">
         <div className="max-w-5xl mx-auto space-y-10 md:space-y-12">
           <div className="max-w-2xl mx-auto text-center space-y-5">
-            <div className="h-5 w-40 mx-auto rounded-lg bg-blush/10 animate-shimmer" />
-            <div className="h-14 w-72 mx-auto rounded-xl bg-blush/8 animate-shimmer" />
-            <div className="h-4 w-52 mx-auto rounded-lg bg-blush/7 animate-shimmer" />
-            <div className="h-4 w-64 mx-auto rounded-lg bg-blush/7 animate-shimmer" />
+            <div className="h-5 w-40 mx-auto rounded-lg bg-blush/5 animate-pulse" />
+            <div className="h-14 w-72 mx-auto rounded-xl bg-blush/4 animate-pulse" />
+            <div className="h-4 w-52 mx-auto rounded-lg bg-blush/4 animate-pulse" />
+            <div className="h-4 w-64 mx-auto rounded-lg bg-blush/4 animate-pulse" />
           </div>
 
-          <div className="rounded-2xl border border-border/40 bg-warm-white/60 p-6 md:p-8 space-y-4">
-            <div className="h-5 w-48 rounded-lg bg-blush/8 animate-shimmer" />
+          <div className="rounded-2xl border border-border/25 bg-warm-white/45 p-6 md:p-8 space-y-4">
+            <div className="h-5 w-48 rounded-lg bg-blush/4 animate-pulse" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[1, 2, 3, 4].map((item) => (
                 <div
                   key={item}
-                  className="h-12 rounded-xl bg-blush/8 animate-shimmer"
+                  className="h-12 rounded-xl bg-blush/4 animate-pulse"
                 />
               ))}
             </div>
@@ -423,13 +443,13 @@ function EventGiftsPageShell() {
             {[1, 2, 3].map((item) => (
               <div
                 key={item}
-                className="h-56 rounded-2xl border border-border/25 bg-warm-white/55 p-5 space-y-3"
+                className="h-56 rounded-2xl border border-border/20 bg-warm-white/45 p-5 space-y-3"
               >
-                <div className="h-4 w-2/3 rounded bg-blush/8 animate-shimmer" />
-                <div className="h-3 w-1/3 rounded bg-blush/7 animate-shimmer" />
-                <div className="h-3 w-full rounded bg-blush/6 animate-shimmer" />
-                <div className="h-3 w-5/6 rounded bg-blush/6 animate-shimmer" />
-                <div className="h-9 w-full rounded-xl bg-blush/7 animate-shimmer" />
+                <div className="h-4 w-2/3 rounded bg-blush/4 animate-pulse" />
+                <div className="h-3 w-1/3 rounded bg-blush/4 animate-pulse" />
+                <div className="h-3 w-full rounded bg-blush/3 animate-pulse" />
+                <div className="h-3 w-5/6 rounded bg-blush/3 animate-pulse" />
+                <div className="h-9 w-full rounded-xl bg-blush/4 animate-pulse" />
               </div>
             ))}
           </div>
@@ -924,6 +944,16 @@ function EventGiftsPageShell() {
       )}
 
       {/* ═══ ERROR ═══ */}
+      {showReserveLoginPrompt && (
+        <div className="px-6 max-w-5xl mx-auto pb-4">
+          <div className="text-sm text-espresso bg-sage/15 border border-sage/25 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <span>Faca login para reservar um presente.</span>
+            <Button size="sm" variant="outline" onClick={() => void handleSignInToReserve()}>
+              Fazer login
+            </Button>
+          </div>
+        </div>
+      )}
       {error && (
         <div className="px-6 max-w-5xl mx-auto pb-4">
           <p className="text-sm text-destructive bg-destructive/8 border border-destructive/20 rounded-xl px-4 py-3">
@@ -1026,6 +1056,14 @@ function EventGiftsPageShell() {
 
       {/* ═══ GIFT GRID ═══ */}
       <section className="px-6 pb-24 max-w-5xl mx-auto">
+        {!isHostView && (
+          <div className="text-center mb-8 md:mb-10">
+            <p className="font-accent text-xl md:text-2xl text-muted-rose">com carinho</p>
+            <h2 className="font-display italic text-3xl md:text-4xl text-espresso mt-1">
+              Lista de presentes
+            </h2>
+          </div>
+        )}
         {hasLongDescriptions && (
           <div className="mb-4 flex justify-end">
             <Button
@@ -1043,7 +1081,7 @@ function EventGiftsPageShell() {
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-44 rounded-2xl bg-blush/10 animate-shimmer"
+                className="h-44 rounded-2xl bg-blush/4 animate-pulse"
               />
             ))}
           </div>
@@ -1328,4 +1366,3 @@ const STATUS_LABELS: Record<'available' | 'reserved' | 'received', string> = {
   received: 'Recebido',
 }
 
-const PENDING_GIFT_KEY = 'pending-gift-reservation-id'

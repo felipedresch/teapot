@@ -2,7 +2,8 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
 import { ArrowRight, Search, Sparkles, MapPin } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
-import { useEventSearch } from '../hooks/useEvents'
+import { useEventSearch, useMyEventsGrouped } from '../hooks/useEvents'
+import { useCurrentUser } from '../hooks/useCurrentUser'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { capitalizeFirst, getDisplayHostNames } from '../lib/presentation'
@@ -35,11 +36,22 @@ const PAIR_EVENT_TYPES = new Set(['wedding', 'bridal-shower'])
 
 function HomePage() {
   const [search, setSearch] = useState('')
+  const { isAuthenticated, isLoading: isAuthLoading } = useCurrentUser()
+  const {
+    hosting,
+    attending,
+    isLoading: isMyEventsLoading,
+  } = useMyEventsGrouped()
   const normalizedSearch = search.trim()
   const shouldSearch = normalizedSearch.length >= 2
   const { events, isLoading } = useEventSearch(normalizedSearch, shouldSearch)
   const visibleEvents = events.slice(0, 10)
   const searchRef = useRef<HTMLDivElement>(null)
+  const shouldShowMyEventsSection =
+    isAuthenticated &&
+    !isAuthLoading &&
+    !isMyEventsLoading &&
+    (hosting.length > 0 || attending.length > 0)
 
   return (
     <div className="overflow-hidden">
@@ -331,7 +343,105 @@ function HomePage() {
           </motion.div>
         </div>
       </section>
+      {shouldShowMyEventsSection && (
+        <section className="px-6 pb-24">
+          <div className="max-w-6xl mx-auto space-y-8">
+            <div className="text-center">
+              <p className="font-accent text-2xl text-muted-rose">sua area</p>
+              <h2 className="font-display italic text-3xl md:text-4xl text-espresso mt-1">
+                Meus eventos
+              </h2>
+            </div>
+
+            {hosting.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-espresso/80">Eventos que voce organiza</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {hosting.map((event) => (
+                    <MyEventCard
+                      key={`host-${event.eventId}`}
+                      slug={event.slug}
+                      name={event.name}
+                      eventType={event.eventType}
+                      customEventType={event.customEventType}
+                      hosts={event.hosts}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {attending.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-espresso/80">
+                  Eventos que voce participa como convidado
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {attending.map((event) => (
+                    <MyEventCard
+                      key={`guest-${event.eventId}`}
+                      slug={event.slug}
+                      name={event.name}
+                      eventType={event.eventType}
+                      customEventType={event.customEventType}
+                      hosts={event.hosts}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
     </div>
+  )
+}
+
+function MyEventCard({
+  slug,
+  name,
+  eventType,
+  customEventType,
+  hosts,
+}: {
+  slug: string
+  name: string
+  eventType: string
+  customEventType?: string
+  hosts: Array<string>
+}) {
+  const displayHosts = getDisplayHostNames(hosts)
+  const hostsName = displayHosts.join(' • ')
+  const eventTypeLabel = customEventType || EVENT_TYPE_LABELS[eventType] || 'Evento'
+  const isPairEvent =
+    PAIR_EVENT_TYPES.has(eventType) && displayHosts.length === 2
+
+  return (
+    <Link
+      to="/events/$slug"
+      params={{ slug }}
+      className="group flex items-start justify-between gap-3 rounded-xl border border-border/40 bg-warm-white/80 px-4 py-4 transition-all duration-200 hover:shadow-dreamy hover:border-muted-rose/30 hover:-translate-y-px"
+    >
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <p className="text-sm font-medium text-espresso">
+          {capitalizeFirst(name || 'Evento sem nome')}
+        </p>
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs">
+          <span className="text-muted-rose/80">{eventTypeLabel}</span>
+          <span className="text-muted-rose/35">•</span>
+          {isPairEvent ? (
+            <span className="text-warm-gray/70">
+              {displayHosts[0]}
+              <span className="mx-1 font-accent text-muted-rose/70">e</span>
+              {displayHosts[1]}
+            </span>
+          ) : (
+            <span className="text-warm-gray/70">{hostsName || 'Anfitrioes nao informados'}</span>
+          )}
+        </div>
+      </div>
+      <ArrowRight className="size-3.5 text-warm-gray/30 group-hover:text-muted-rose transition-colors shrink-0 mt-0.5" />
+    </Link>
   )
 }
 

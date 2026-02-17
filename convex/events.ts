@@ -1,5 +1,6 @@
 import { getAuthUserId } from '@convex-dev/auth/server'
-import { mutation, query, type MutationCtx } from './_generated/server'
+import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server'
+import type { Id } from './_generated/dataModel'
 import { v } from 'convex/values'
 
 const DEFAULT_EVENT_TYPES: Array<{
@@ -15,6 +16,21 @@ const DEFAULT_EVENT_TYPES: Array<{
   { value: 'graduation', label: 'Formatura', supportsPairNames: false },
   { value: 'other', label: 'Outro', supportsPairNames: false },
 ]
+
+type EventRole = 'host' | 'guest'
+
+type EventSummary = {
+  eventId: Id<'events'>
+  role: EventRole
+  name: string
+  slug: string
+  eventType: string
+  customEventType?: string
+  hosts: Array<string>
+  isPublic: boolean
+  partnerOneName: string
+  partnerTwoName: string
+}
 
 export const listEventTypes = query({
   args: {},
@@ -130,38 +146,58 @@ export const listEventsForCurrentUser = query({
       .withIndex('by_user', (q) => q.eq('userId', userId))
       .collect()
 
-    const results: {
-      eventId: typeof memberships[number]['eventId']
-      role: (typeof memberships)[number]['role']
-      name: string
-      slug: string
-      eventType: string
-      customEventType?: string
-      hosts: Array<string>
-      isPublic: boolean
-      partnerOneName: string
-      partnerTwoName: string
-    }[] = []
+    return await mapMembershipsToEventSummaries(ctx, memberships)
+  },
+})
 
-    for (const membership of memberships) {
-      const event = await ctx.db.get(membership.eventId)
-      if (!event) continue
-
-      results.push({
-        eventId: event._id,
-        role: membership.role,
-        name: event.name,
-        slug: event.slug,
-        eventType: getEventTypeValue(event.eventType),
-        customEventType: normalizeOptionalText(event.customEventType),
-        hosts: getEventHosts(event.hosts, event.partnerOneName, event.partnerTwoName),
-        isPublic: getEventVisibility(event.isPublic),
-        partnerOneName: event.partnerOneName,
-        partnerTwoName: event.partnerTwoName,
-      })
+export const listMyEventsGrouped = query({
+  args: {},
+  returns: v.object({
+    hosting: v.array(
+      v.object({
+        eventId: v.id('events'),
+        role: v.union(v.literal('host'), v.literal('guest')),
+        name: v.string(),
+        slug: v.string(),
+        eventType: v.string(),
+        customEventType: v.optional(v.string()),
+        hosts: v.array(v.string()),
+        isPublic: v.boolean(),
+        partnerOneName: v.string(),
+        partnerTwoName: v.string(),
+      }),
+    ),
+    attending: v.array(
+      v.object({
+        eventId: v.id('events'),
+        role: v.union(v.literal('host'), v.literal('guest')),
+        name: v.string(),
+        slug: v.string(),
+        eventType: v.string(),
+        customEventType: v.optional(v.string()),
+        hosts: v.array(v.string()),
+        isPublic: v.boolean(),
+        partnerOneName: v.string(),
+        partnerTwoName: v.string(),
+      }),
+    ),
+  }),
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) {
+      return { hosting: [], attending: [] }
     }
 
-    return results
+    const memberships = await ctx.db
+      .query('eventMembers')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect()
+
+    const summaries = await mapMembershipsToEventSummaries(ctx, memberships)
+    return {
+      hosting: summaries.filter((summary) => summary.role === 'host'),
+      attending: summaries.filter((summary) => summary.role === 'guest'),
+    }
   },
 })
 
@@ -550,5 +586,35 @@ function getEventTypeValue(eventType: string | undefined) {
 
 function getEventVisibility(isPublic: boolean | undefined) {
   return isPublic ?? true
+}
+
+async function mapMembershipsToEventSummaries(
+  ctx: QueryCtx,
+  memberships: Array<{
+    eventId: Id<'events'>
+    role: EventRole
+  }>,
+) {
+  const results: Array<EventSummary> = []
+
+  for (const membership of memberships) {
+    const event = await ctx.db.get(membership.eventId)
+    if (!event) continue
+
+    results.push({
+      eventId: event._id,
+      role: membership.role,
+      name: event.name,
+      slug: event.slug,
+      eventType: getEventTypeValue(event.eventType),
+      customEventType: normalizeOptionalText(event.customEventType),
+      hosts: getEventHosts(event.hosts, event.partnerOneName, event.partnerTwoName),
+      isPublic: getEventVisibility(event.isPublic),
+      partnerOneName: event.partnerOneName,
+      partnerTwoName: event.partnerTwoName,
+    })
+  }
+
+  return results
 }
 
