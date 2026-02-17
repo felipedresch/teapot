@@ -1,5 +1,8 @@
-//  @ts-check
+import js from '@eslint/js'
 
-import { tanstackConfig } from '@tanstack/eslint-config'
-
-export default [...tanstackConfig]
+export default [
+  {
+    ignores: ['dist', 'node_modules', '.output'],
+  },
+  js.configs.recommended,
+]
