@@ -1,11 +1,14 @@
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
+import {
+  HeadContent,
+  Link,
+  Scripts,
+  createRootRoute,
+} from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 
-import Header from '../components/Header'
-
+import Layout from '../components/Layout'
 import ConvexProvider from '../integrations/convex/provider'
-
 import PostHogProvider from '../integrations/posthog/provider'
 
 import appCss from '../styles.css?url'
@@ -21,7 +24,12 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'TanStack Start Starter',
+        title: 'MyWish — Lista de Presentes',
+      },
+      {
+        name: 'description',
+        content:
+          'Um lugar aconchegante para celebrar com carinho. Escolha mimos especiais para presentear.',
       },
     ],
     links: [
@@ -40,24 +48,24 @@ export const Route = createRootRoute({
       },
       {
         rel: 'stylesheet',
-        href: 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600&display=swap',
+        href: 'https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,300;1,9..144,400;1,9..144,500&display=swap',
       },
     ],
   }),
   shellComponent: RootDocument,
+  notFoundComponent: RootNotFound,
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <head>
         <HeadContent />
       </head>
       <body>
         <ConvexProvider>
           <PostHogProvider>
-            <Header />
-            {children}
+            <Layout>{children}</Layout>
             <TanStackDevtools
               config={{
                 position: 'bottom-right',
@@ -74,5 +82,17 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <Scripts />
       </body>
     </html>
+  )
+}
+
+function RootNotFound() {
+  return (
+    <div className="max-w-5xl mx-auto px-6 py-14 text-center space-y-3">
+      <h1 className="font-display italic text-3xl text-espresso">Pagina nao encontrada</h1>
+      <p className="text-sm text-warm-gray">Esse link nao existe ou nao esta mais disponivel.</p>
+      <Link to="/" className="text-sm text-muted-rose hover:underline">
+        Voltar para a pagina inicial
+      </Link>
+    </div>
   )
 }

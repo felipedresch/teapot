@@ -1,10 +1,12 @@
 @import 'tailwindcss';
-
 @import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
-/* Reset mínimo + base */
+/* ═══════════════════════════════════════════════════════
+   RESET
+   ═══════════════════════════════════════════════════════ */
+
 *,
 *::before,
 *::after {
@@ -22,99 +24,66 @@ body {
     'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #fdf8f3;
-  color: #3d3530;
+  position: relative;
 }
 
 code {
-  font-family:
-    ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    Monaco,
-    Consolas,
-    'Liberation Mono',
-    'Courier New',
-    monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    'Liberation Mono', 'Courier New', monospace;
 }
 
+/* ═══════════════════════════════════════════════════════
+   DESIGN TOKENS
+   ═══════════════════════════════════════════════════════ */
+
 :root {
-  /* Paleta principal */
-  --color-cream: #fdf8f3;
-  --color-blush: #e8d5d0;
-  --color-sage: #c5d1c8;
+  /* ── Raw Palette ── */
+  --cream: #fdf8f3;
+  --blush: #e8d5d0;
+  --sage: #c5d1c8;
+  --warm-white: #fffefb;
+  --soft-terracotta: #d4a89a;
+  --muted-rose: #c9a9a6;
+  --stone: #8b8178;
+  --espresso: #3d3530;
+  --warm-gray: #6b635b;
 
-  /* Suporte */
-  --color-warm-white: #fffefb;
-  --color-soft-terracotta: #d4a89a;
-  --color-muted-rose: #c9a9a6;
-  --color-stone: #8b8178;
+  /* ── Gift Status ── */
+  --gift-available: #a8c5a8;
+  --gift-reserved: #d4b5b0;
+  --gift-received: #d4c4a8;
 
-  /* Texto */
-  --color-espresso: #3d3530;
-  --color-warm-gray: #6b635b;
-
-  /* Estado de presentes */
-  --color-success: #a8c5a8;
-  --color-reserved: #d4b5b0;
-  --color-received: #d4c4a8;
-
-  /* Mapeamento para o sistema de tokens Tailwind */
-  --background: var(--color-cream);
-  --foreground: var(--color-espresso);
-  --card: var(--color-warm-white);
-  --card-foreground: var(--color-espresso);
-  --popover: var(--color-warm-white);
-  --popover-foreground: var(--color-espresso);
-  --primary: var(--color-soft-terracotta);
-  --primary-foreground: #fffeff;
-  --secondary: var(--color-blush);
-  --secondary-foreground: var(--color-espresso);
-  --muted: var(--color-blush);
-  --muted-foreground: var(--color-warm-gray);
-  --accent: var(--color-sage);
-  --accent-foreground: var(--color-espresso);
+  /* ── Semantic Tokens (shadcn compat) ── */
+  --background: var(--cream);
+  --foreground: var(--espresso);
+  --card: var(--warm-white);
+  --card-foreground: var(--espresso);
+  --popover: var(--warm-white);
+  --popover-foreground: var(--espresso);
+  --primary: var(--soft-terracotta);
+  --primary-foreground: #fffefb;
+  --secondary: var(--blush);
+  --secondary-foreground: var(--espresso);
+  --muted: var(--blush);
+  --muted-foreground: var(--warm-gray);
+  --accent: var(--sage);
+  --accent-foreground: var(--espresso);
   --destructive: #b85c5c;
   --destructive-foreground: #fff8f6;
-  --border: rgba(139, 129, 120, 0.15);
-  --input: rgba(139, 129, 120, 0.18);
-  --ring: rgba(212, 168, 154, 0.6);
+  --border: rgba(139, 129, 120, 0.12);
+  --input: rgba(139, 129, 120, 0.15);
+  --ring: rgba(212, 168, 154, 0.5);
 
-  /* Radii – mais orgânicos e macios */
-  --radius-xs: 0.5rem;
-  --radius-sm: 0.75rem;
-  --radius-md: 1rem;
-  --radius-lg: 1.5rem;
-  --radius-xl: 2rem;
-  --radius-pill: 999px;
-
-  /* Compat para tokens usados pelo template */
+  /* ── Radii ── */
   --radius: 1.25rem;
 
-  /* Sombras suaves e difusas */
-  --shadow-soft: 0 18px 60px rgba(61, 53, 48, 0.12),
-    0 4px 18px rgba(61, 53, 48, 0.06);
-  --shadow-card: 0 12px 40px rgba(61, 53, 48, 0.1),
-    0 2px 12px rgba(61, 53, 48, 0.06);
-
-  /* Tipografia – escala sugerida */
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.25rem;
-  --text-2xl: 1.5rem;
-  --text-3xl: 2rem;
-  --text-4xl: 2.5rem;
-  --text-5xl: 3.5rem;
-
-  /* Sidebar (caso ainda seja usada em algum lugar) */
-  --sidebar: var(--color-warm-white);
-  --sidebar-foreground: var(--color-espresso);
-  --sidebar-primary: var(--color-soft-terracotta);
-  --sidebar-primary-foreground: #fffeff;
-  --sidebar-accent: var(--color-blush);
-  --sidebar-accent-foreground: var(--color-espresso);
+  /* ── Sidebar (framework compat) ── */
+  --sidebar: var(--warm-white);
+  --sidebar-foreground: var(--espresso);
+  --sidebar-primary: var(--soft-terracotta);
+  --sidebar-primary-foreground: #fffefb;
+  --sidebar-accent: var(--blush);
+  --sidebar-accent-foreground: var(--espresso);
   --sidebar-border: rgba(139, 129, 120, 0.2);
   --sidebar-ring: rgba(212, 168, 154, 0.7);
 }
@@ -149,7 +118,46 @@ code {
   --sidebar-ring: rgba(244, 236, 228, 0.6);
 }
 
+/* ═══════════════════════════════════════════════════════
+   TAILWIND THEME — Static tokens (compiled at build time)
+   ═══════════════════════════════════════════════════════ */
+
+@theme {
+  /* Font families */
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-accent: 'Caveat', cursive;
+
+  /* Shadows — dreamy, diffuse, warm */
+  --shadow-dreamy: 0 4px 20px rgba(61, 53, 48, 0.08),
+    0 1px 3px rgba(61, 53, 48, 0.04);
+  --shadow-dreamy-md: 0 12px 40px rgba(61, 53, 48, 0.1),
+    0 2px 12px rgba(61, 53, 48, 0.06);
+  --shadow-dreamy-lg: 0 18px 60px rgba(61, 53, 48, 0.12),
+    0 4px 18px rgba(61, 53, 48, 0.06);
+}
+
+/* ═══════════════════════════════════════════════════════
+   TAILWIND THEME — Dynamic tokens (runtime CSS variables)
+   ═══════════════════════════════════════════════════════ */
+
 @theme inline {
+  /* ── Palette Colors ── */
+  --color-cream: var(--cream);
+  --color-blush: var(--blush);
+  --color-sage: var(--sage);
+  --color-warm-white: var(--warm-white);
+  --color-soft-terracotta: var(--soft-terracotta);
+  --color-muted-rose: var(--muted-rose);
+  --color-espresso: var(--espresso);
+  --color-warm-gray: var(--warm-gray);
+
+  /* ── Gift Status ── */
+  --color-gift-available: var(--gift-available);
+  --color-gift-reserved: var(--gift-reserved);
+  --color-gift-received: var(--gift-received);
+
+  /* ── Semantic Tokens ── */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -169,10 +177,14 @@ code {
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
+  /* ── Radii ── */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* ── Sidebar ── */
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -182,6 +194,53 @@ code {
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 }
+
+/* ═══════════════════════════════════════════════════════
+   KEYFRAME ANIMATIONS
+   ═══════════════════════════════════════════════════════ */
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes soft-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes marquee-x {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   BASE LAYER
+   ═══════════════════════════════════════════════════════ */
 
 @layer base {
   * {
@@ -194,21 +253,120 @@ code {
   h2,
   h3,
   h4 {
-    font-family: 'Fraunces', 'DM Sans', system-ui, -apple-system,
-      BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    letter-spacing: -0.03em;
+    font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
+    letter-spacing: -0.02em;
+    color: var(--espresso);
+    font-weight: 400;
   }
   h1 {
-    font-size: var(--text-4xl);
+    font-size: 2.5rem;
+    line-height: 1.15;
   }
   h2 {
-    font-size: var(--text-3xl);
+    font-size: 2rem;
+    line-height: 1.2;
   }
   h3 {
-    font-size: var(--text-2xl);
+    font-size: 1.5rem;
+    line-height: 1.3;
   }
   h4 {
-    font-size: var(--text-xl);
+    font-size: 1.25rem;
+    line-height: 1.35;
+  }
+  @media (min-width: 768px) {
+    h1 {
+      font-size: 3rem;
+    }
+    h2 {
+      font-size: 2.25rem;
+    }
   }
 }
 
+/* ═══════════════════════════════════════════════════════
+   PAPER TEXTURE — Subtle noise overlay for that
+   artisanal, hand-touched feeling
+   ═══════════════════════════════════════════════════════ */
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.1;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+
+/* ═══════════════════════════════════════════════════════
+   CUSTOM ANIMATION CLASSES
+   ═══════════════════════════════════════════════════════ */
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--blush) 0%,
+    var(--cream) 40%,
+    var(--blush) 80%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+.animate-fade-up {
+  animation: fade-up 0.5s ease-out both;
+}
+
+.marquee-fade {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 6%,
+    black 94%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 6%,
+    black 94%,
+    transparent 100%
+  );
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+}
+
+.marquee-track {
+  display: inline-flex;
+  min-width: max-content;
+  animation: marquee-x 28s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   SELECTION — Brand-tinted text selection
+   ═══════════════════════════════════════════════════════ */
+
+::selection {
+  background-color: var(--blush);
+  color: var(--espresso);
+}
+
+/* ═══════════════════════════════════════════════════════
+   SMOOTH SCROLL — Respects user preferences
+   ═══════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}

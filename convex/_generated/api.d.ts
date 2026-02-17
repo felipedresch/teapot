@@ -8,7 +8,14 @@
  * @module
  */
 
+import type * as auth from "../auth.js";
+import type * as config from "../config.js";
+import type * as eventConfig from "../eventConfig.js";
+import type * as events from "../events.js";
+import type * as gifts from "../gifts.js";
+import type * as http from "../http.js";
 import type * as todos from "../todos.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -17,7 +24,14 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  auth: typeof auth;
+  config: typeof config;
+  eventConfig: typeof eventConfig;
+  events: typeof events;
+  gifts: typeof gifts;
+  http: typeof http;
   todos: typeof todos;
+  users: typeof users;
 }>;
 
 /**
