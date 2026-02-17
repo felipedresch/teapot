@@ -1,128 +1,176 @@
 import { Link } from '@tanstack/react-router'
-import { useState } from 'react'
-import { BarChart, Globe, Home, Menu, X } from 'lucide-react'
+import { Menu, LogOut } from 'lucide-react'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { useCurrentUser } from '../hooks/useCurrentUser'
+import { useSiteConfig } from '../hooks/useSiteConfig'
+import { Button } from './ui/button'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from './ui/sheet'
+
+const NAV_LINK_BASE =
+  'text-sm transition-colors duration-200 relative py-1'
+const NAV_LINK_INACTIVE = `${NAV_LINK_BASE} text-warm-gray hover:text-espresso`
+const NAV_LINK_ACTIVE = `${NAV_LINK_BASE} text-espresso font-medium`
+
+const MOBILE_LINK_BASE =
+  'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-200 text-base'
+const MOBILE_LINK_INACTIVE = `${MOBILE_LINK_BASE} text-espresso hover:bg-blush/20`
+const MOBILE_LINK_ACTIVE = `${MOBILE_LINK_BASE} text-espresso font-medium bg-blush/20`
+
+// TODO: Adicionar rotas quando forem criadas:
+// { label: 'Lista', href: '/lista' },
+// { label: 'Meus Presentes', href: '/meus-presentes' },
+const navItems = [{ label: 'Início', href: '/' as const }]
 
 export default function Header() {
-  const [isOpen, setIsOpen] = useState(false)
   const { signIn, signOut } = useAuthActions()
   const { user, isLoading, isAuthenticated } = useCurrentUser()
+  const { partnerOneName, partnerTwoName } = useSiteConfig()
 
   return (
-    <>
-      <header className="p-4 flex items-center justify-between bg-gray-800 text-white shadow-lg">
-        <div className="flex items-center">
-          <button
-            onClick={() => setIsOpen(true)}
-            className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-            aria-label="Open menu"
-          >
-            <Menu size={24} />
-          </button>
-          <h1 className="ml-4 text-xl font-semibold">
-            <Link to="/">
-              <img
-                src="/tanstack-word-logo-white.svg"
-                alt="TanStack Logo"
-                className="h-10"
-              />
-            </Link>
-          </h1>
-        </div>
+    <header className="sticky top-0 z-40 bg-warm-white/70 backdrop-blur-xl border-b border-border/30">
+      <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+        {/* ── Couple Name / Logo ── */}
+        <Link
+          to="/"
+          className="font-display text-lg italic text-espresso tracking-tight hover:text-soft-terracotta transition-colors duration-200"
+        >
+          {partnerOneName}{' '}
+          <span className="text-muted-rose">&</span>{' '}
+          {partnerTwoName}
+        </Link>
 
-        <div className="flex items-center gap-4">
-          {!isLoading && isAuthenticated && user ? (
-            <>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="font-medium">
-                  {user.name ?? user.email ?? 'Convidado'}
-                </span>
-                {user.isAdmin && (
-                  <span className="px-2 py-0.5 rounded-full text-xs bg-amber-500 text-gray-900">
-                    Admin
-                  </span>
-                )}
-              </div>
-              <button
-                onClick={() => void signOut()}
-                className="px-3 py-1.5 rounded-md bg-gray-700 hover:bg-gray-600 text-sm font-medium transition-colors"
-              >
-                Sair
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => void signIn('google')}
-              className="px-3 py-1.5 rounded-md bg-cyan-600 hover:bg-cyan-500 text-sm font-medium transition-colors"
+        {/* ── Desktop Navigation ── */}
+        <nav className="hidden md:flex items-center gap-8">
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              to={item.href}
+              className={NAV_LINK_INACTIVE}
+              activeProps={{ className: NAV_LINK_ACTIVE }}
             >
-              Entrar com Google
-            </button>
-          )}
-        </div>
-      </header>
+              {item.label}
+            </Link>
+          ))}
 
-      <aside
-        className={`fixed top-0 left-0 h-full w-80 bg-gray-900 text-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        <div className="flex items-center justify-between p-4 border-b border-gray-700">
-          <h2 className="text-xl font-bold">Navigation</h2>
-          <button
-            onClick={() => setIsOpen(false)}
-            className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-            aria-label="Close menu"
-          >
-            <X size={24} />
-          </button>
-        </div>
-
-        <nav className="flex-1 p-4 overflow-y-auto">
-          <Link
-            to="/"
-            onClick={() => setIsOpen(false)}
-            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
-            activeProps={{
-              className:
-                'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
-            }}
-          >
-            <Home size={20} />
-            <span className="font-medium">Home</span>
-          </Link>
-
-          {/* Demo Links Start */}
-
-          <Link
-            to="/demo/convex"
-            onClick={() => setIsOpen(false)}
-            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
-            activeProps={{
-              className:
-                'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
-            }}
-          >
-            <Globe size={20} />
-            <span className="font-medium">Convex</span>
-          </Link>
-
-          <Link
-            to="/demo/posthog"
-            onClick={() => setIsOpen(false)}
-            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
-            activeProps={{
-              className:
-                'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
-            }}
-          >
-            <BarChart size={20} />
-            <span className="font-medium">PostHog</span>
-          </Link>
-
-          {/* Demo Links End */}
+          {/* Auth */}
+          {!isLoading &&
+            (isAuthenticated && user ? (
+              <div className="flex items-center gap-3">
+                {user.image ? (
+                  <img
+                    src={user.image}
+                    alt={user.name ?? ''}
+                    className="size-7 rounded-full object-cover ring-1 ring-border"
+                  />
+                ) : null}
+                <span className="text-sm text-warm-gray max-w-[120px] truncate">
+                  {user.name ?? 'Convidado'}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => void signOut()}
+                  aria-label="Sair"
+                >
+                  <LogOut className="size-4" />
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void signIn('google')}
+              >
+                Entrar
+              </Button>
+            ))}
         </nav>
-      </aside>
-    </>
+
+        {/* ── Mobile Menu Trigger ── */}
+        <div className="md:hidden">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon-sm" aria-label="Menu">
+                <Menu className="size-5" />
+              </Button>
+            </SheetTrigger>
+
+            <SheetContent side="right">
+              <SheetHeader>
+                <SheetTitle className="font-display italic text-lg">
+                  {partnerOneName[0]}{' '}
+                  <span className="text-muted-rose">&</span>{' '}
+                  {partnerTwoName[0]}
+                </SheetTitle>
+              </SheetHeader>
+
+              <nav className="flex flex-col gap-1 px-2 mt-2">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    to={item.href}
+                    className={MOBILE_LINK_INACTIVE}
+                    activeProps={{ className: MOBILE_LINK_ACTIVE }}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </nav>
+
+              {/* Auth — mobile */}
+              <div className="mt-auto p-6 pt-4 border-t border-border/30">
+                {!isLoading &&
+                  (isAuthenticated && user ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        {user.image && (
+                          <img
+                            src={user.image}
+                            alt={user.name ?? ''}
+                            className="size-8 rounded-full object-cover ring-1 ring-border"
+                          />
+                        )}
+                        <div>
+                          <p className="text-sm font-medium text-espresso">
+                            {user.name ?? 'Convidado'}
+                          </p>
+                          {user.email && (
+                            <p className="text-xs text-warm-gray truncate max-w-[180px]">
+                              {user.email}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => void signOut()}
+                        className="w-full justify-start"
+                      >
+                        <LogOut className="size-4" />
+                        Sair
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      size="default"
+                      onClick={() => void signIn('google')}
+                      className="w-full"
+                    >
+                      Entrar com Google
+                    </Button>
+                  ))}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </div>
+    </header>
   )
 }

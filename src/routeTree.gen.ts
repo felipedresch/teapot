@@ -10,12 +10,24 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as EventsCreateRouteImport } from './routes/events.create'
+import { Route as EventsSlugRouteImport } from './routes/events.$slug'
 import { Route as DemoPosthogRouteImport } from './routes/demo/posthog'
 import { Route as DemoConvexRouteImport } from './routes/demo/convex'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EventsCreateRoute = EventsCreateRouteImport.update({
+  id: '/events/create',
+  path: '/events/create',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EventsSlugRoute = EventsSlugRouteImport.update({
+  id: '/events/$slug',
+  path: '/events/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoPosthogRoute = DemoPosthogRouteImport.update({
@@ -33,30 +45,54 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/demo/convex': typeof DemoConvexRoute
   '/demo/posthog': typeof DemoPosthogRoute
+  '/events/$slug': typeof EventsSlugRoute
+  '/events/create': typeof EventsCreateRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/demo/convex': typeof DemoConvexRoute
   '/demo/posthog': typeof DemoPosthogRoute
+  '/events/$slug': typeof EventsSlugRoute
+  '/events/create': typeof EventsCreateRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/demo/convex': typeof DemoConvexRoute
   '/demo/posthog': typeof DemoPosthogRoute
+  '/events/$slug': typeof EventsSlugRoute
+  '/events/create': typeof EventsCreateRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/demo/convex' | '/demo/posthog'
+  fullPaths:
+    | '/'
+    | '/demo/convex'
+    | '/demo/posthog'
+    | '/events/$slug'
+    | '/events/create'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/demo/convex' | '/demo/posthog'
-  id: '__root__' | '/' | '/demo/convex' | '/demo/posthog'
+  to:
+    | '/'
+    | '/demo/convex'
+    | '/demo/posthog'
+    | '/events/$slug'
+    | '/events/create'
+  id:
+    | '__root__'
+    | '/'
+    | '/demo/convex'
+    | '/demo/posthog'
+    | '/events/$slug'
+    | '/events/create'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DemoConvexRoute: typeof DemoConvexRoute
   DemoPosthogRoute: typeof DemoPosthogRoute
+  EventsSlugRoute: typeof EventsSlugRoute
+  EventsCreateRoute: typeof EventsCreateRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -66,6 +102,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/events/create': {
+      id: '/events/create'
+      path: '/events/create'
+      fullPath: '/events/create'
+      preLoaderRoute: typeof EventsCreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/events/$slug': {
+      id: '/events/$slug'
+      path: '/events/$slug'
+      fullPath: '/events/$slug'
+      preLoaderRoute: typeof EventsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo/posthog': {
@@ -89,6 +139,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DemoConvexRoute: DemoConvexRoute,
   DemoPosthogRoute: DemoPosthogRoute,
+  EventsSlugRoute: EventsSlugRoute,
+  EventsCreateRoute: EventsCreateRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

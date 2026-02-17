@@ -2,10 +2,8 @@ import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 
-import Header from '../components/Header'
-
+import Layout from '../components/Layout'
 import ConvexProvider from '../integrations/convex/provider'
-
 import PostHogProvider from '../integrations/posthog/provider'
 
 import appCss from '../styles.css?url'
@@ -21,7 +19,12 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'TanStack Start Starter',
+        title: 'Mimos — Lista de Presentes',
+      },
+      {
+        name: 'description',
+        content:
+          'Um lugar aconchegante para celebrar com carinho. Escolha mimos especiais para presentear.',
       },
     ],
     links: [
@@ -40,7 +43,7 @@ export const Route = createRootRoute({
       },
       {
         rel: 'stylesheet',
-        href: 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600&display=swap',
+        href: 'https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,300;1,9..144,400;1,9..144,500&display=swap',
       },
     ],
   }),
@@ -49,15 +52,14 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <head>
         <HeadContent />
       </head>
       <body>
         <ConvexProvider>
           <PostHogProvider>
-            <Header />
-            {children}
+            <Layout>{children}</Layout>
             <TanStackDevtools
               config={{
                 position: 'bottom-right',
