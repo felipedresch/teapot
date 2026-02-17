@@ -421,19 +421,19 @@ function EventGiftsPageShell() {
       <div className="px-6 py-14 md:py-20">
         <div className="max-w-5xl mx-auto space-y-10 md:space-y-12">
           <div className="max-w-2xl mx-auto text-center space-y-5">
-            <div className="h-5 w-40 mx-auto rounded-lg bg-blush/5 animate-pulse" />
-            <div className="h-14 w-72 mx-auto rounded-xl bg-blush/4 animate-pulse" />
-            <div className="h-4 w-52 mx-auto rounded-lg bg-blush/4 animate-pulse" />
-            <div className="h-4 w-64 mx-auto rounded-lg bg-blush/4 animate-pulse" />
+            <div className="h-5 w-40 mx-auto rounded-lg bg-blush/30 animate-pulse" />
+            <div className="h-14 w-72 mx-auto rounded-xl bg-blush/25 animate-pulse" />
+            <div className="h-4 w-52 mx-auto rounded-lg bg-blush/25 animate-pulse" />
+            <div className="h-4 w-64 mx-auto rounded-lg bg-blush/25 animate-pulse" />
           </div>
 
-          <div className="rounded-2xl border border-border/25 bg-warm-white/45 p-6 md:p-8 space-y-4">
-            <div className="h-5 w-48 rounded-lg bg-blush/4 animate-pulse" />
+          <div className="rounded-2xl border border-border/50 bg-warm-white/80 p-6 md:p-8 space-y-4">
+            <div className="h-5 w-48 rounded-lg bg-blush/25 animate-pulse" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[1, 2, 3, 4].map((item) => (
                 <div
                   key={item}
-                  className="h-12 rounded-xl bg-blush/4 animate-pulse"
+                  className="h-12 rounded-xl bg-blush/25 animate-pulse"
                 />
               ))}
             </div>
@@ -443,13 +443,13 @@ function EventGiftsPageShell() {
             {[1, 2, 3].map((item) => (
               <div
                 key={item}
-                className="h-56 rounded-2xl border border-border/20 bg-warm-white/45 p-5 space-y-3"
+                className="h-56 rounded-2xl border border-border/50 bg-warm-white/80 p-5 space-y-3"
               >
-                <div className="h-4 w-2/3 rounded bg-blush/4 animate-pulse" />
-                <div className="h-3 w-1/3 rounded bg-blush/4 animate-pulse" />
-                <div className="h-3 w-full rounded bg-blush/3 animate-pulse" />
-                <div className="h-3 w-5/6 rounded bg-blush/3 animate-pulse" />
-                <div className="h-9 w-full rounded-xl bg-blush/4 animate-pulse" />
+                <div className="h-4 w-2/3 rounded bg-blush/25 animate-pulse" />
+                <div className="h-3 w-1/3 rounded bg-blush/22 animate-pulse" />
+                <div className="h-3 w-full rounded bg-blush/22 animate-pulse" />
+                <div className="h-3 w-5/6 rounded bg-blush/22 animate-pulse" />
+                <div className="h-9 w-full rounded-xl bg-blush/25 animate-pulse" />
               </div>
             ))}
           </div>
@@ -1081,7 +1081,7 @@ function EventGiftsPageShell() {
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-44 rounded-2xl bg-blush/4 animate-pulse"
+                className="h-44 rounded-2xl bg-blush/25 animate-pulse"
               />
             ))}
           </div>
