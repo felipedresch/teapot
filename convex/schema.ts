@@ -30,6 +30,10 @@ const schema = defineSchema({
   events: defineTable({
     name: v.string(),
     slug: v.string(),
+    partnerOneName: v.string(),
+    partnerTwoName: v.string(),
+    createdByUserId: v.id('users'),
+    createdByPartner: v.union(v.literal('partnerOne'), v.literal('partnerTwo')),
     date: v.optional(v.string()),
     location: v.optional(v.string()),
     description: v.optional(v.string()),

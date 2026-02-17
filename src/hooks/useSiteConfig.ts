@@ -1,18 +1,26 @@
-// TODO: Conectar à tabela `config` do Convex para buscar valores reais
-// Por enquanto retorna dados placeholder para desenvolvimento.
-// A tabela config já existe no schema (convex/schema.ts) com key/value.
-// Quando integrar, usar useQuery(api.config.getAll) ou similar.
+import { useQuery } from 'convex/react'
+import { api } from '../../convex/_generated/api'
+
+const DEFAULT_CONFIG = {
+  partnerOneName: '',
+  partnerTwoName: '',
+  eventName: '',
+  eventDate: '',
+  welcomeMessage:
+    'Que bom que você está aqui! Escolha com carinho um mimo para nos presentear nessa fase tão especial.',
+  thankYouMessage: 'Muito obrigado pelo carinho! ♥',
+}
 
 export function useSiteConfig() {
-  // TODO: Replace with Convex query
+  const config = useQuery(api.config.getPublicSiteConfig)
+
   return {
-    partnerOneName: 'Sthéfany',
-    partnerTwoName: 'Bruno',
-    eventName: 'Chá de Casa Nova',
-    eventDate: '15 de Março de 2025',
-    welcomeMessage:
-      'Que bom que você está aqui! Escolha com carinho um mimo para nos presentear nessa fase tão especial.',
-    thankYouMessage: 'Muito obrigado pelo carinho! ♥',
-    isLoading: false,
+    partnerOneName: config?.partnerOneName ?? DEFAULT_CONFIG.partnerOneName,
+    partnerTwoName: config?.partnerTwoName ?? DEFAULT_CONFIG.partnerTwoName,
+    eventName: config?.eventName ?? DEFAULT_CONFIG.eventName,
+    eventDate: config?.eventDate ?? DEFAULT_CONFIG.eventDate,
+    welcomeMessage: config?.welcomeMessage ?? DEFAULT_CONFIG.welcomeMessage,
+    thankYouMessage: config?.thankYouMessage ?? DEFAULT_CONFIG.thankYouMessage,
+    isLoading: config === undefined,
   }
 }

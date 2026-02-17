@@ -9,6 +9,7 @@
 //   - Associar o usuário autenticado como host do evento (já feito em createEvent).
 
 import { create } from 'zustand'
+import { createJSONStorage, persist } from 'zustand/middleware'
 import type { Id } from '../../convex/_generated/dataModel'
 
 type DraftGift = {
@@ -22,7 +23,9 @@ type DraftGift = {
 
 type DraftEvent = {
   name: string
-  slug: string
+  partnerOneName: string
+  partnerTwoName: string
+  createdByPartner: 'partnerOne' | 'partnerTwo'
   date?: string
   location?: string
   description?: string
@@ -32,31 +35,72 @@ type DraftEvent = {
 type EventCreationState = {
   draftEvent: DraftEvent | null
   draftGifts: DraftGift[]
+  customGiftCategories: string[]
   setDraftEvent: (data: DraftEvent) => void
   clearDraftEvent: () => void
   addDraftGift: (gift: DraftGift) => void
   removeDraftGift: (tempId: string) => void
+  addCustomGiftCategory: (value: string) => void
   clearDraftGifts: () => void
+  pendingPublish: boolean
+  setPendingPublish: (value: boolean) => void
+  resetAll: () => void
 }
 
-export const useEventCreationStore = create<EventCreationState>((set) => ({
-  draftEvent: null,
-  draftGifts: [],
+export const useEventCreationStore = create<EventCreationState>()(
+  persist(
+    (set) => ({
+      draftEvent: null,
+      draftGifts: [],
+      customGiftCategories: [],
+      pendingPublish: false,
 
-  setDraftEvent: (data) => set({ draftEvent: data }),
+      setDraftEvent: (data) => set({ draftEvent: data }),
 
-  clearDraftEvent: () => set({ draftEvent: null }),
+      clearDraftEvent: () => set({ draftEvent: null }),
 
-  addDraftGift: (gift) =>
-    set((state) => ({
-      draftGifts: [...state.draftGifts, gift],
-    })),
+      addDraftGift: (gift) =>
+        set((state) => ({
+          draftGifts: [...state.draftGifts, gift],
+        })),
 
-  removeDraftGift: (tempId) =>
-    set((state) => ({
-      draftGifts: state.draftGifts.filter((g) => g.tempId !== tempId),
-    })),
+      removeDraftGift: (tempId) =>
+        set((state) => ({
+          draftGifts: state.draftGifts.filter((g) => g.tempId !== tempId),
+        })),
 
-  clearDraftGifts: () => set({ draftGifts: [] }),
-}))
+      addCustomGiftCategory: (value) =>
+        set((state) => {
+          const normalized = value.trim()
+          if (!normalized) return state
+          if (state.customGiftCategories.includes(normalized)) return state
+          return {
+            customGiftCategories: [...state.customGiftCategories, normalized],
+          }
+        }),
+
+      clearDraftGifts: () => set({ draftGifts: [] }),
+
+      setPendingPublish: (value) => set({ pendingPublish: value }),
+
+      resetAll: () =>
+        set({
+          draftEvent: null,
+          draftGifts: [],
+          customGiftCategories: [],
+          pendingPublish: false,
+        }),
+    }),
+    {
+      name: 'event-creation-store-v1',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        draftEvent: state.draftEvent,
+        draftGifts: state.draftGifts,
+        customGiftCategories: state.customGiftCategories,
+        pendingPublish: state.pendingPublish,
+      }),
+    },
+  ),
+)
 

@@ -26,10 +26,14 @@ export function useGifts(eventId: Id<'events'> | undefined) {
 export function useGiftMutations() {
   const createGift = useMutation(api.gifts.createGift)
   const reserveGift = useMutation(api.gifts.reserveGift)
+  const updateGift = useMutation(api.gifts.updateGift)
+  const deleteGift = useMutation(api.gifts.deleteGift)
 
   return {
     createGift,
     reserveGift,
+    updateGift,
+    deleteGift,
   }
 }
 

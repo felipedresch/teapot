@@ -2,7 +2,6 @@ import { Link } from '@tanstack/react-router'
 import { Menu, LogOut } from 'lucide-react'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { useCurrentUser } from '../hooks/useCurrentUser'
-import { useSiteConfig } from '../hooks/useSiteConfig'
 import { Button } from './ui/button'
 import {
   Sheet,
@@ -30,7 +29,6 @@ const navItems = [{ label: 'Início', href: '/' as const }]
 export default function Header() {
   const { signIn, signOut } = useAuthActions()
   const { user, isLoading, isAuthenticated } = useCurrentUser()
-  const { partnerOneName, partnerTwoName } = useSiteConfig()
 
   return (
     <header className="sticky top-0 z-40 bg-warm-white/70 backdrop-blur-xl border-b border-border/30">
@@ -40,9 +38,7 @@ export default function Header() {
           to="/"
           className="font-display text-lg italic text-espresso tracking-tight hover:text-soft-terracotta transition-colors duration-200"
         >
-          {partnerOneName}{' '}
-          <span className="text-muted-rose">&</span>{' '}
-          {partnerTwoName}
+          Teapot
         </Link>
 
         {/* ── Desktop Navigation ── */}
@@ -60,17 +56,17 @@ export default function Header() {
 
           {/* Auth */}
           {!isLoading &&
-            (isAuthenticated && user ? (
+            (isAuthenticated ? (
               <div className="flex items-center gap-3">
-                {user.image ? (
+                {user?.image ? (
                   <img
                     src={user.image}
-                    alt={user.name ?? ''}
+                    alt={user?.name ?? ''}
                     className="size-7 rounded-full object-cover ring-1 ring-border"
                   />
                 ) : null}
                 <span className="text-sm text-warm-gray max-w-[120px] truncate">
-                  {user.name ?? 'Convidado'}
+                  {user?.name ?? 'Conta conectada'}
                 </span>
                 <Button
                   variant="ghost"
@@ -103,11 +99,7 @@ export default function Header() {
 
             <SheetContent side="right">
               <SheetHeader>
-                <SheetTitle className="font-display italic text-lg">
-                  {partnerOneName[0]}{' '}
-                  <span className="text-muted-rose">&</span>{' '}
-                  {partnerTwoName[0]}
-                </SheetTitle>
+                <SheetTitle className="font-display italic text-lg">Teapot</SheetTitle>
               </SheetHeader>
 
               <nav className="flex flex-col gap-1 px-2 mt-2">
@@ -126,21 +118,21 @@ export default function Header() {
               {/* Auth — mobile */}
               <div className="mt-auto p-6 pt-4 border-t border-border/30">
                 {!isLoading &&
-                  (isAuthenticated && user ? (
+                  (isAuthenticated ? (
                     <div className="space-y-3">
                       <div className="flex items-center gap-3">
-                        {user.image && (
+                        {user?.image && (
                           <img
                             src={user.image}
-                            alt={user.name ?? ''}
+                            alt={user?.name ?? ''}
                             className="size-8 rounded-full object-cover ring-1 ring-border"
                           />
                         )}
                         <div>
                           <p className="text-sm font-medium text-espresso">
-                            {user.name ?? 'Convidado'}
+                            {user?.name ?? 'Conta conectada'}
                           </p>
-                          {user.email && (
+                          {user?.email && (
                             <p className="text-xs text-warm-gray truncate max-w-[180px]">
                               {user.email}
                             </p>

@@ -5,6 +5,7 @@
 
 import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
+import type { Id } from '../../convex/_generated/dataModel'
 
 export function useMyEvents() {
   const events = useQuery(api.events.listEventsForCurrentUser)
@@ -32,6 +33,32 @@ export function useEventBySlug(slug: string | undefined) {
   return {
     event,
     isLoading,
+  }
+}
+
+export function useEventMembership(eventId: Id<'events'> | undefined) {
+  const membership = useQuery(
+    api.events.getMembershipForCurrentUserAndEvent,
+    eventId ? { eventId } : 'skip',
+  )
+
+  const isLoading = membership === undefined
+
+  return {
+    membership: membership ?? null,
+    isLoading,
+  }
+}
+
+export function useEventSearch(search: string, enabled: boolean) {
+  const events = useQuery(
+    api.events.searchPublicEvents,
+    enabled ? { search: search.trim() || undefined } : 'skip',
+  )
+
+  return {
+    events: events ?? [],
+    isLoading: enabled && events === undefined,
   }
 }
 

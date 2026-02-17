@@ -1,7 +1,18 @@
-import { useSiteConfig } from '../hooks/useSiteConfig'
+import { useRouterState } from '@tanstack/react-router'
+import { useEventBySlug } from '../hooks/useEvents'
 
 export default function Footer() {
-  const { partnerOneName, partnerTwoName } = useSiteConfig()
+  const routerState = useRouterState()
+  const pathname = routerState.location.pathname
+
+  const slug =
+    pathname.startsWith('/events/') && pathname.split('/').length >= 3
+      ? pathname.split('/')[2]
+      : undefined
+
+  const { event } = useEventBySlug(slug)
+
+  const isEventPage = Boolean(event)
 
   return (
     <footer className="py-12 px-6 text-center">
@@ -25,16 +36,22 @@ export default function Footer() {
           <div className="w-8 h-px bg-muted-rose/30" />
         </div>
 
-        <p className="text-sm text-warm-gray leading-relaxed">
-          Feito com carinho para{' '}
-          <span className="font-display italic text-espresso">
-            {partnerOneName}
-          </span>{' '}
-          &{' '}
-          <span className="font-display italic text-espresso">
-            {partnerTwoName}
-          </span>
-        </p>
+        {isEventPage ? (
+          <p className="text-sm text-warm-gray leading-relaxed">
+            Feito com carinho para{' '}
+            <span className="font-display italic text-espresso">
+              {event?.partnerOneName}
+            </span>{' '}
+            &{' '}
+            <span className="font-display italic text-espresso">
+              {event?.partnerTwoName}
+            </span>
+          </p>
+        ) : (
+          <p className="text-sm text-warm-gray leading-relaxed">
+            Feito com carinho para celebrar momentos especiais
+          </p>
+        )}
 
         <p className="text-xs text-warm-gray/50 mt-3 font-accent text-base">
           com amor, sempre

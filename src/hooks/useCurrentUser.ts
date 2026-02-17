@@ -1,14 +1,15 @@
 import { useQuery } from 'convex/react'
+import { useConvexAuth } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 
 export function useCurrentUser() {
-  const user = useQuery(api.users.currentUser)
+  const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth()
+  const user = useQuery(api.users.currentUser, isAuthenticated ? {} : 'skip')
 
-  const isLoading = user === undefined
-  const isAuthenticated = !!user
+  const isLoading = isAuthLoading || (isAuthenticated && user === undefined)
 
   return {
-    user,
+    user: user ?? null,
     isLoading,
     isAuthenticated,
   }
