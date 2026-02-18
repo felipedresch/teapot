@@ -72,6 +72,17 @@ const fadeUp = {
   },
 }
 
+const FORM_SELECT_CLASS =
+  'flex w-full appearance-none rounded-xl border border-border/80 bg-warm-white px-4 py-3 pr-10 text-base text-espresso transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent'
+const FORM_TEXTAREA_CLASS =
+  'flex w-full rounded-xl border border-border/80 bg-warm-white px-4 py-3 text-base text-espresso placeholder:text-warm-gray/55 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent'
+const UPLOAD_CHIP_CLASS =
+  'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs border cursor-pointer transition-colors shadow-sm border-muted-rose/35 bg-warm-white text-espresso hover:bg-muted-rose/16 hover:border-muted-rose/60'
+const UPLOAD_DROPZONE_CLASS =
+  'rounded-xl border border-dashed border-muted-rose/35 bg-warm-white/70 flex flex-col items-center justify-center text-sm text-warm-gray/75 cursor-pointer transition-colors hover:bg-muted-rose/10 hover:border-muted-rose/55'
+const PRIMARY_ACTION_CLASS =
+  'shadow-dreamy-md hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ring/70'
+
 type FloatingDecorKind =
   | 'stem'
   | 'sprig'
@@ -435,6 +446,7 @@ function EventGiftsPageShell() {
   const [isUploadingGiftImage, setIsUploadingGiftImage] = useState(false)
   const [isUploadingEditedGiftImage, setIsUploadingEditedGiftImage] = useState(false)
   const [isHostPanelOpen, setIsHostPanelOpen] = useState(false)
+  const [isAddGiftPanelOpen, setIsAddGiftPanelOpen] = useState(true)
   const [deleteGiftConfirm, setDeleteGiftConfirm] = useState<{
     giftId: Id<'gifts'>
     giftName: string
@@ -1388,7 +1400,7 @@ function EventGiftsPageShell() {
                             onChange={(e) =>
                               handleChangeEditableEventType(e.target.value)
                             }
-                            className="flex w-full appearance-none rounded-xl border border-border bg-warm-white px-4 py-3 pr-10 text-base text-espresso/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                            className={FORM_SELECT_CLASS}
                           >
                             {EVENT_TYPE_OPTIONS.map((option) => (
                               <option key={option.value} value={option.value}>
@@ -1567,7 +1579,7 @@ function EventGiftsPageShell() {
                             )
                           }
                           rows={2}
-                          className="flex w-full min-h-[4.5rem] resize-y rounded-xl border border-border bg-warm-white px-4 py-3 text-base text-espresso placeholder:text-warm-gray/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                          className={cn(FORM_TEXTAREA_CLASS, 'min-h-[4.5rem] resize-y')}
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -1638,8 +1650,7 @@ function EventGiftsPageShell() {
                           />
                           <span
                             className={cn(
-                              'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs border cursor-pointer transition-colors shadow-sm',
-                              'border-border/80 bg-warm-white/95 hover:bg-blush/10',
+                              UPLOAD_CHIP_CLASS,
                               isUploadingCover && 'opacity-60 cursor-not-allowed',
                             )}
                           >
@@ -1649,7 +1660,7 @@ function EventGiftsPageShell() {
                         </label>
                       </div>
                     ) : (
-                      <label className="rounded-xl border border-dashed border-border/50 h-36 flex flex-col items-center justify-center gap-2 text-sm text-warm-gray/65 cursor-pointer transition-colors hover:bg-blush/10">
+                      <label className={cn(UPLOAD_DROPZONE_CLASS, 'h-36 gap-2')}>
                         <input
                           type="file"
                           accept="image/*"
@@ -1686,9 +1697,10 @@ function EventGiftsPageShell() {
                   <div className="flex flex-wrap gap-3">
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="default"
                       size="sm"
                       onClick={() => void handleSaveEvent()}
+                      className={PRIMARY_ACTION_CLASS}
                       isLoading={eventSaving}
                     >
                       Salvar alterações
@@ -1786,162 +1798,194 @@ function EventGiftsPageShell() {
       {/* ═══ ADD GIFT (Host) ═══ */}
       {isHostView && (
         <section className="px-6 pb-8 max-w-5xl mx-auto">
-          <div className="rounded-2xl border border-sage/30 bg-sage/5 p-5 md:p-6 space-y-4">
-            <p className="text-sm font-medium text-espresso flex items-center gap-2">
-              <Gift className="size-4 text-sage" />
-              Adicionar presente
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="Nome do presente"
-                value={newGiftForm.name}
-                onChange={(e) =>
-                  setNewGiftForm((c) => ({ ...c, name: e.target.value }))
-                }
-                placeholder="Ex.: Jogo de panelas"
-              />
-              <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-espresso/80 pl-0.5">
-                  Categoria (opcional)
-                </label>
-                <div className="relative">
-                  <select
-                    value={newGiftForm.category}
-                    onChange={(e) =>
-                      setNewGiftForm((c) => ({
-                        ...c,
-                        category: e.target.value,
-                      }))
-                    }
-                    className={cn(
-                      'flex w-full appearance-none rounded-xl border border-border bg-warm-white px-4 py-3 pr-10 text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent',
-                      newGiftForm.category ? 'text-espresso' : 'text-warm-gray/50',
-                    )}
-                  >
-                    <option value="">Sem categoria</option>
-                    {DEFAULT_GIFT_CATEGORIES.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-warm-gray/60 text-xs">
-                    ▼
-                  </span>
+          <div className="rounded-2xl border border-sage/30 bg-sage/5 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setIsAddGiftPanelOpen((prev) => !prev)}
+              className="w-full flex items-center justify-between gap-3 px-5 py-4 transition-all duration-200 hover:bg-sage/10 cursor-pointer"
+            >
+              <div className="flex items-center gap-3 text-left">
+                <Gift className="size-4 text-sage" />
+                <div>
+                  <p className="text-sm font-medium text-espresso">Adicionar presente</p>
+                  <p className="text-xs text-warm-gray/70">
+                    Crie novos itens da lista e organize imagens e links.
+                  </p>
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-espresso/80 pl-0.5">
-                  Descrição (opcional)
-                </label>
-                <textarea
-                  value={newGiftForm.description}
-                  onChange={(e) =>
-                    setNewGiftForm((c) => ({
-                      ...c,
-                      description: e.target.value,
-                    }))
-                  }
-                  placeholder="Detalhes para o convidado"
-                  rows={2}
-                  className="flex w-full min-h-[4.5rem] resize-y rounded-xl border border-border bg-warm-white px-4 py-3 text-base text-espresso placeholder:text-warm-gray/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-                />
-              </div>
-              <Input
-                label="Link de referência (opcional)"
-                value={newGiftForm.referenceUrl}
-                onChange={(e) =>
-                  setNewGiftForm((c) => ({
-                    ...c,
-                    referenceUrl: e.target.value,
-                  }))
-                }
-                placeholder="https://..."
+              <ChevronDown
+                className={cn(
+                  'size-4 text-warm-gray transition-transform duration-300',
+                  isAddGiftPanelOpen && 'rotate-180',
+                )}
               />
-              <div className="md:col-span-2 space-y-2">
-                <p className="text-sm font-medium text-espresso/80 pl-0.5">
-                  Imagem do presente (opcional)
-                </p>
-                <p className="text-[11px] text-warm-gray/60 leading-relaxed max-w-md">
-                  Recomendação: JPG/WEBP em 1:1. Ideal 1200×1200 (mínimo 600×600),
-                  até 8MB.
-                </p>
-                {newGiftForm.imageUrl ? (
-                  <div className="rounded-xl overflow-hidden border border-border/30 max-w-sm bg-warm-white relative group">
-                    <img
-                      src={newGiftForm.imageUrl}
-                      alt="Prévia do presente"
-                      className="w-full h-44 object-contain"
-                    />
-                    <label className="absolute bottom-3 right-3 inline-flex">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="sr-only"
+            </button>
+
+            <AnimatePresence>
+              {isAddGiftPanelOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3, ease }}
+                  className="overflow-hidden border-t border-sage/20"
+                >
+                  <div className="p-5 md:p-6 space-y-4 bg-warm-white/40">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Input
+                        label="Nome do presente"
+                        value={newGiftForm.name}
                         onChange={(e) =>
-                          void handleUploadGiftImage(e.target.files?.[0], 'create')
+                          setNewGiftForm((c) => ({ ...c, name: e.target.value }))
                         }
-                        disabled={isUploadingGiftImage}
+                        placeholder="Ex.: Jogo de panelas"
                       />
-                      <span
-                        className={cn(
-                          'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs border cursor-pointer transition-colors shadow-sm',
-                          'border-border/80 bg-warm-white/95 hover:bg-blush/10',
-                          isUploadingGiftImage && 'opacity-60 cursor-not-allowed',
+                      <div className="space-y-1.5">
+                        <label className="block text-sm font-medium text-espresso/80 pl-0.5">
+                          Categoria (opcional)
+                        </label>
+                        <div className="relative">
+                          <select
+                            value={newGiftForm.category}
+                            onChange={(e) =>
+                              setNewGiftForm((c) => ({
+                                ...c,
+                                category: e.target.value,
+                              }))
+                            }
+                            className={cn(
+                              FORM_SELECT_CLASS,
+                              newGiftForm.category ? 'text-espresso' : 'text-warm-gray/55',
+                            )}
+                          >
+                            <option value="">Sem categoria</option>
+                            {DEFAULT_GIFT_CATEGORIES.map((category) => (
+                              <option key={category} value={category}>
+                                {category}
+                              </option>
+                            ))}
+                          </select>
+                          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-warm-gray/60 text-xs">
+                            ▼
+                          </span>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-sm font-medium text-espresso/80 pl-0.5">
+                          Descrição (opcional)
+                        </label>
+                        <textarea
+                          value={newGiftForm.description}
+                          onChange={(e) =>
+                            setNewGiftForm((c) => ({
+                              ...c,
+                              description: e.target.value,
+                            }))
+                          }
+                          placeholder="Detalhes para o convidado"
+                          rows={2}
+                          className={cn(FORM_TEXTAREA_CLASS, 'min-h-[4.5rem] resize-y')}
+                        />
+                      </div>
+                      <Input
+                        label="Link de referência (opcional)"
+                        value={newGiftForm.referenceUrl}
+                        onChange={(e) =>
+                          setNewGiftForm((c) => ({
+                            ...c,
+                            referenceUrl: e.target.value,
+                          }))
+                        }
+                        placeholder="https://..."
+                      />
+                      <div className="md:col-span-2 space-y-2">
+                        <p className="text-sm font-medium text-espresso/80 pl-0.5">
+                          Imagem do presente (opcional)
+                        </p>
+                        <p className="text-[11px] text-warm-gray/60 leading-relaxed max-w-md">
+                          Recomendação: JPG/WEBP em 1:1. Ideal 1200×1200 (mínimo 600×600),
+                          até 8MB.
+                        </p>
+                        {newGiftForm.imageUrl ? (
+                          <div className="rounded-xl overflow-hidden border border-border/30 max-w-sm bg-warm-white relative group">
+                            <img
+                              src={newGiftForm.imageUrl}
+                              alt="Prévia do presente"
+                              className="w-full h-44 object-contain"
+                            />
+                            <label className="absolute bottom-3 right-3 inline-flex">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="sr-only"
+                                onChange={(e) =>
+                                  void handleUploadGiftImage(e.target.files?.[0], 'create')
+                                }
+                                disabled={isUploadingGiftImage}
+                              />
+                              <span
+                                className={cn(
+                                  UPLOAD_CHIP_CLASS,
+                                  isUploadingGiftImage && 'opacity-60 cursor-not-allowed',
+                                )}
+                              >
+                                <ImagePlus className="size-3.5" />
+                                Trocar imagem
+                              </span>
+                            </label>
+                          </div>
+                        ) : (
+                          <label className={cn(UPLOAD_DROPZONE_CLASS, 'h-28 gap-1.5')}>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="sr-only"
+                              onChange={(e) =>
+                                void handleUploadGiftImage(e.target.files?.[0], 'create')
+                              }
+                              disabled={isUploadingGiftImage}
+                            />
+                            <ImagePlus className="size-5 text-muted-rose/75" />
+                            <span>{isUploadingGiftImage ? 'Enviando imagem...' : 'Enviar imagem'}</span>
+                          </label>
                         )}
+                        <div className="flex flex-wrap gap-2">
+                          {newGiftForm.imageId && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive"
+                              onClick={handleRemoveDraftGiftImage}
+                              disabled={isUploadingGiftImage}
+                            >
+                              <Trash2 className="size-4" />
+                              Remover imagem
+                            </Button>
+                          )}
+                        </div>
+                        {isUploadingGiftImage && (
+                          <p className="text-xs text-warm-gray/60">Enviando imagem...</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => void handleCreateGift()}
+                        className={PRIMARY_ACTION_CLASS}
+                        isLoading={isCreatingGift}
+                        disabled={!newGiftForm.name.trim()}
                       >
-                        <ImagePlus className="size-3.5" />
-                        Trocar imagem
-                      </span>
-                    </label>
+                        <Plus className="size-3.5" />
+                        Adicionar
+                      </Button>
+                    </div>
                   </div>
-                ) : (
-                  <label className="rounded-xl bg-warm-white border border-dashed border-border/50 h-28 flex flex-col items-center justify-center gap-1.5 text-sm text-warm-gray/65 cursor-pointer transition-colors hover:bg-blush/10">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="sr-only"
-                      onChange={(e) =>
-                        void handleUploadGiftImage(e.target.files?.[0], 'create')
-                      }
-                      disabled={isUploadingGiftImage}
-                    />
-                    <ImagePlus className="size-5 text-muted-rose/70" />
-                    <span>{isUploadingGiftImage ? 'Enviando imagem...' : 'Enviar imagem'}</span>
-                  </label>
-                )}
-                <div className="flex flex-wrap gap-2">
-                  {newGiftForm.imageId && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive"
-                      onClick={handleRemoveDraftGiftImage}
-                      disabled={isUploadingGiftImage}
-                    >
-                      <Trash2 className="size-4" />
-                      Remover imagem
-                    </Button>
-                  )}
-                </div>
-                {isUploadingGiftImage && (
-                  <p className="text-xs text-warm-gray/60">Enviando imagem...</p>
-                )}
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => void handleCreateGift()}
-                isLoading={isCreatingGift}
-                disabled={!newGiftForm.name.trim()}
-              >
-                <Plus className="size-3.5" />
-                Adicionar
-              </Button>
-            </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </section>
       )}
@@ -2057,8 +2101,7 @@ function EventGiftsPageShell() {
                             />
                             <span
                               className={cn(
-                                'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm border cursor-pointer transition-colors',
-                                'border-border bg-warm-white hover:bg-blush/10',
+                                'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm border cursor-pointer transition-colors shadow-sm border-muted-rose/35 bg-warm-white text-espresso hover:bg-muted-rose/16 hover:border-muted-rose/60',
                                 isUploadingEditedGiftImage &&
                                   'opacity-60 cursor-not-allowed',
                               )}
@@ -2099,8 +2142,8 @@ function EventGiftsPageShell() {
                               }))
                             }
                             className={cn(
-                              'flex w-full appearance-none rounded-xl border border-border bg-warm-white px-4 py-3 pr-10 text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent',
-                              giftForm.category ? 'text-espresso' : 'text-warm-gray/50',
+                              FORM_SELECT_CLASS,
+                              giftForm.category ? 'text-espresso' : 'text-warm-gray/55',
                             )}
                           >
                             <option value="">Sem categoria</option>
@@ -2129,7 +2172,7 @@ function EventGiftsPageShell() {
                           }
                           placeholder="Detalhes para o convidado"
                           rows={3}
-                          className="flex w-full rounded-xl border border-border bg-warm-white px-4 py-3 text-base text-espresso placeholder:text-warm-gray/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                          className={cn(FORM_TEXTAREA_CLASS, 'resize-y')}
                         />
                       </div>
                       <Input
@@ -2155,6 +2198,7 @@ function EventGiftsPageShell() {
                         <Button
                           type="button"
                           size="sm"
+                          className={PRIMARY_ACTION_CLASS}
                           onClick={() => void handleSaveGift()}
                         >
                           Salvar
