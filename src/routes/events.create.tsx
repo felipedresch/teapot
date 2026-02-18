@@ -2,9 +2,10 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { useMutation, useQuery } from 'convex/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Gift, Plus, Sparkles, Trash2, X } from 'lucide-react'
+import { Gift, ImagePlus, Plus, Sparkles, Trash2, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { api } from '../../convex/_generated/api'
+import type { Id } from '../../convex/_generated/dataModel'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { useEventCreationStore } from '../store/eventCreationStore'
 import { capitalizeFirst, getDisplayHostNames } from '../lib/presentation'
@@ -73,12 +74,104 @@ const FALLBACK_EVENT_TYPES: Array<{
   { value: 'other', label: 'Outro', supportsPairNames: false },
 ]
 
+const MAX_IMAGE_FILE_SIZE_BYTES = 8 * 1024 * 1024
+const COVER_PREVIEW_OPTIONS = {
+  maxSide: 1280,
+  quality: 0.82,
+}
+const GIFT_PREVIEW_OPTIONS = {
+  maxSide: 720,
+  quality: 0.8,
+}
+const UPLOAD_CHIP_CLASS =
+  'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs border cursor-pointer transition-colors shadow-sm border-muted-rose/35 bg-warm-white text-espresso hover:bg-muted-rose/16 hover:border-muted-rose/60'
+const UPLOAD_DROPZONE_CLASS =
+  'rounded-xl border border-dashed border-muted-rose/35 bg-warm-white/70 flex flex-col items-center justify-center text-sm text-warm-gray/75 cursor-pointer transition-colors hover:bg-muted-rose/10 hover:border-muted-rose/55'
+
+type ConvexUploadResponse = {
+  storageId: Id<'_storage'>
+}
+
+async function uploadImageToConvex(
+  uploadUrl: string,
+  file: File,
+): Promise<Id<'_storage'>> {
+  const response = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': file.type,
+    },
+    body: file,
+  })
+
+  if (!response.ok) {
+    throw new Error('Falha no upload da imagem')
+  }
+
+  const result = (await response.json()) as ConvexUploadResponse
+  return result.storageId
+}
+
+async function generateImagePreview(
+  file: File,
+  options: { maxSide: number; quality: number },
+): Promise<string | undefined> {
+  if (!file.type.startsWith('image/')) {
+    return undefined
+  }
+
+  const bitmap = await createImageBitmap(file)
+  const maxSide = options.maxSide
+  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height))
+  const width = Math.max(1, Math.round(bitmap.width * scale))
+  const height = Math.max(1, Math.round(bitmap.height * scale))
+
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const context = canvas.getContext('2d')
+  if (!context) {
+    bitmap.close()
+    return undefined
+  }
+
+  context.imageSmoothingEnabled = true
+  context.imageSmoothingQuality = 'high'
+  context.drawImage(bitmap, 0, 0, width, height)
+  bitmap.close()
+
+  return canvas.toDataURL('image/jpeg', options.quality)
+}
+
+function dataUrlToFile(dataUrl: string, fallbackFilename: string): File {
+  const [meta, base64Data] = dataUrl.split(',')
+  if (!meta || !base64Data || !meta.includes('base64')) {
+    throw new Error('Imagem inválida. Selecione a imagem novamente.')
+  }
+
+  const mimeMatch = meta.match(/data:(.*?);base64/)
+  const mimeType = mimeMatch?.[1] || 'image/jpeg'
+  const binary = atob(base64Data)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i)
+  }
+
+  return new File([bytes], fallbackFilename, { type: mimeType })
+}
+
 function EventCreatePageShell() {
   const navigate = Route.useNavigate()
   const { signIn } = useAuthActions()
   const { isAuthenticated, isLoading: isAuthLoading } = useCurrentUser()
   const createEvent = useMutation(api.events.createEvent)
   const createGift = useMutation(api.gifts.createGift)
+  const generateEventDraftCoverUploadUrl = useMutation(
+    api.events.generateEventDraftCoverUploadUrl,
+  )
+  const generateGiftImageUploadUrl = useMutation(
+    api.gifts.generateGiftImageUploadUrl,
+  )
   const eventTypes = useQuery(api.events.listEventTypes)
 
   const {
@@ -100,6 +193,9 @@ function EventCreatePageShell() {
   const [giftCategory, setGiftCategory] = useState('')
   const [customCategoryInput, setCustomCategoryInput] = useState('')
   const [giftReferenceUrl, setGiftReferenceUrl] = useState('')
+  const [giftImageUrl, setGiftImageUrl] = useState<string | undefined>()
+  const [isPreparingCoverImage, setIsPreparingCoverImage] = useState(false)
+  const [isPreparingGiftImage, setIsPreparingGiftImage] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [createdSlug, setCreatedSlug] = useState<string | null>(null)
@@ -123,6 +219,7 @@ function EventCreatePageShell() {
       location: draftEvent?.location ?? '',
       description: draftEvent?.description ?? '',
       coverImageId: draftEvent?.coverImageId,
+      coverImageUrl: draftEvent?.coverImageUrl,
     }),
     [draftEvent],
   )
@@ -221,6 +318,74 @@ function EventCreatePageShell() {
     [eventData.createdByPartner, eventData.hosts, isPairEventType, updateEvent],
   )
 
+  const validateImageFile = useCallback((file: File | undefined) => {
+    if (!file) {
+      throw new Error('Selecione um arquivo de imagem.')
+    }
+    if (!file.type.startsWith('image/')) {
+      throw new Error('Selecione uma imagem válida (PNG, JPG, WEBP, etc.).')
+    }
+    if (file.size > MAX_IMAGE_FILE_SIZE_BYTES) {
+      throw new Error('A imagem deve ter no máximo 8MB.')
+    }
+  }, [])
+
+  const handleSelectGiftImage = useCallback(
+    async (file: File | undefined) => {
+      try {
+        validateImageFile(file)
+        setError(null)
+        setIsPreparingGiftImage(true)
+        const previewUrl = await generateImagePreview(file!, GIFT_PREVIEW_OPTIONS)
+        setGiftImageUrl(previewUrl)
+      } catch (imageError) {
+        setError(
+          imageError instanceof Error
+            ? imageError.message
+            : 'Não foi possível preparar a imagem do presente.',
+        )
+      } finally {
+        setIsPreparingGiftImage(false)
+      }
+    },
+    [validateImageFile],
+  )
+
+  const handleRemoveGiftImage = useCallback(() => {
+    setGiftImageUrl(undefined)
+  }, [])
+
+  const handleSelectCoverImage = useCallback(
+    async (file: File | undefined) => {
+      try {
+        validateImageFile(file)
+        setError(null)
+        setIsPreparingCoverImage(true)
+        const previewUrl = await generateImagePreview(file!, COVER_PREVIEW_OPTIONS)
+        updateEvent({
+          coverImageId: undefined,
+          coverImageUrl: previewUrl,
+        })
+      } catch (imageError) {
+        setError(
+          imageError instanceof Error
+            ? imageError.message
+            : 'Não foi possível preparar a capa do evento.',
+        )
+      } finally {
+        setIsPreparingCoverImage(false)
+      }
+    },
+    [updateEvent, validateImageFile],
+  )
+
+  const handleRemoveCoverImage = useCallback(() => {
+    updateEvent({
+      coverImageId: undefined,
+      coverImageUrl: undefined,
+    })
+  }, [updateEvent])
+
   const finalizeCreation = useCallback(async () => {
     if (!draftEvent) {
       setError('Preencha os dados do evento antes de publicar.')
@@ -257,6 +422,16 @@ function EventCreatePageShell() {
     setIsPublishing(true)
     setError(null)
     try {
+      let uploadedCoverImageId: Id<'_storage'> | undefined
+      if (draftEvent.coverImageUrl?.startsWith('data:image/')) {
+        const coverUploadUrl = await generateEventDraftCoverUploadUrl({})
+        const coverImageFile = dataUrlToFile(
+          draftEvent.coverImageUrl,
+          `event-cover-${Date.now()}.jpg`,
+        )
+        uploadedCoverImageId = await uploadImageToConvex(coverUploadUrl, coverImageFile)
+      }
+
       const { eventId, slug } = await createEvent({
         name: capitalizeFirst(draftEvent.name),
         eventType: draftEvent.eventType,
@@ -269,15 +444,27 @@ function EventCreatePageShell() {
         description: draftEvent.description
           ? capitalizeFirst(draftEvent.description)
           : undefined,
+        coverImageId: uploadedCoverImageId,
       })
 
       for (const draftGift of draftGifts) {
+        let uploadedImageId: Id<'_storage'> | undefined
+        if (draftGift.imageUrl?.startsWith('data:image/')) {
+          const uploadUrl = await generateGiftImageUploadUrl({ eventId })
+          const imageFile = dataUrlToFile(
+            draftGift.imageUrl,
+            `gift-${draftGift.tempId}.jpg`,
+          )
+          uploadedImageId = await uploadImageToConvex(uploadUrl, imageFile)
+        }
+
         await createGift({
           eventId,
           name: draftGift.name.trim(),
           description: draftGift.description
             ? capitalizeFirst(draftGift.description)
             : undefined,
+          imageId: uploadedImageId,
           category: draftGift.category?.trim() || undefined,
           referenceUrl: draftGift.referenceUrl?.trim() || undefined,
         })
@@ -309,6 +496,8 @@ function EventCreatePageShell() {
     setPendingPublish,
     normalizeHosts,
     isPairEventType,
+    generateEventDraftCoverUploadUrl,
+    generateGiftImageUploadUrl,
   ])
 
   useEffect(() => {
@@ -358,6 +547,7 @@ function EventCreatePageShell() {
       description: giftDescription.trim() || undefined,
       category: normalizedCategory,
       referenceUrl: giftReferenceUrl.trim() || undefined,
+      imageUrl: giftImageUrl,
     })
 
     setGiftName('')
@@ -365,10 +555,12 @@ function EventCreatePageShell() {
     setGiftCategory('')
     setCustomCategoryInput('')
     setGiftReferenceUrl('')
+    setGiftImageUrl(undefined)
   }, [
     addDraftGift,
     giftCategory,
     giftDescription,
+    giftImageUrl,
     giftName,
     giftReferenceUrl,
   ])
@@ -633,6 +825,79 @@ function EventCreatePageShell() {
                 )}
               />
             </div>
+
+            <div className="rounded-xl border border-dashed border-muted-rose/30 bg-blush/6 p-5 space-y-4">
+              <p className="text-sm font-medium text-espresso/85">
+                Imagem de capa do evento (opcional)
+              </p>
+              <p className="text-xs text-warm-gray/60">
+                A capa aparece no topo da página para todos os convidados.
+              </p>
+              <p className="text-[11px] text-warm-gray/60 leading-relaxed max-w-md">
+                Recomendação: JPG/WEBP em 16:9. Ideal 1920×1080 (mínimo 1280×720),
+                até 8MB.
+              </p>
+              {eventData.coverImageUrl ? (
+                <div className="rounded-xl overflow-hidden relative group">
+                  <img
+                    src={eventData.coverImageUrl}
+                    alt="Capa do evento"
+                    className="w-full max-h-[22rem] object-contain"
+                    loading="lazy"
+                  />
+                  <label className="absolute bottom-3 right-3 inline-flex">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={(e) => void handleSelectCoverImage(e.target.files?.[0])}
+                      disabled={isPreparingCoverImage}
+                    />
+                    <span
+                      className={cn(
+                        UPLOAD_CHIP_CLASS,
+                        isPreparingCoverImage && 'opacity-60 cursor-not-allowed',
+                      )}
+                    >
+                      <ImagePlus className="size-3.5" />
+                      Trocar capa
+                    </span>
+                  </label>
+                </div>
+              ) : (
+                <label className={cn(UPLOAD_DROPZONE_CLASS, 'h-36 gap-2')}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={(e) => void handleSelectCoverImage(e.target.files?.[0])}
+                    disabled={isPreparingCoverImage}
+                  />
+                  <ImagePlus className="size-5 text-muted-rose/70" />
+                  <span>
+                    {isPreparingCoverImage ? 'Preparando capa...' : 'Enviar capa'}
+                  </span>
+                </label>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {eventData.coverImageUrl && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive"
+                    onClick={handleRemoveCoverImage}
+                    disabled={isPreparingCoverImage}
+                  >
+                    <Trash2 className="size-4" />
+                    Remover capa
+                  </Button>
+                )}
+              </div>
+              {isPreparingCoverImage && (
+                <p className="text-xs text-warm-gray/60">Preparando capa...</p>
+              )}
+            </div>
           </div>
 
           {/* Live preview */}
@@ -762,12 +1027,80 @@ function EventCreatePageShell() {
                 onChange={(e) => setGiftReferenceUrl(e.target.value)}
                 placeholder="https://..."
               />
+              <div className="md:col-span-2 space-y-2">
+                <p className="text-sm font-medium text-espresso/80 pl-0.5">
+                  Imagem do presente (opcional)
+                </p>
+                <p className="text-[11px] text-warm-gray/60 leading-relaxed max-w-md">
+                  Recomendação: JPG/WEBP em 1:1. Ideal 1200×1200 (mínimo 600×600),
+                  até 8MB.
+                </p>
+                {giftImageUrl ? (
+                  <div className="rounded-xl overflow-hidden border border-border/30 max-w-sm bg-warm-white relative group">
+                    <img
+                      src={giftImageUrl}
+                      alt="Prévia do presente"
+                      className="w-full h-44 object-contain"
+                    />
+                    <label className="absolute bottom-3 right-3 inline-flex">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="sr-only"
+                        onChange={(e) => void handleSelectGiftImage(e.target.files?.[0])}
+                        disabled={isPreparingGiftImage}
+                      />
+                      <span
+                        className={cn(
+                          UPLOAD_CHIP_CLASS,
+                          isPreparingGiftImage && 'opacity-60 cursor-not-allowed',
+                        )}
+                      >
+                        <ImagePlus className="size-3.5" />
+                        Trocar imagem
+                      </span>
+                    </label>
+                  </div>
+                ) : (
+                  <label className={cn(UPLOAD_DROPZONE_CLASS, 'h-28 gap-1.5')}>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={(e) => void handleSelectGiftImage(e.target.files?.[0])}
+                      disabled={isPreparingGiftImage}
+                    />
+                    <ImagePlus className="size-5 text-muted-rose/75" />
+                    <span>
+                      {isPreparingGiftImage ? 'Preparando imagem...' : 'Enviar imagem'}
+                    </span>
+                  </label>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {giftImageUrl && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive"
+                      onClick={handleRemoveGiftImage}
+                      disabled={isPreparingGiftImage}
+                    >
+                      <Trash2 className="size-4" />
+                      Remover imagem
+                    </Button>
+                  )}
+                </div>
+                {isPreparingGiftImage && (
+                  <p className="text-xs text-warm-gray/60">Preparando imagem...</p>
+                )}
+              </div>
             </div>
             <Button
               type="button"
               variant="outline"
               onClick={handleAddGift}
-              disabled={!giftName.trim()}
+              disabled={!giftName.trim() || isPreparingGiftImage}
             >
               <Plus className="size-4" />
               Adicionar presente
@@ -811,6 +1144,18 @@ function EventCreatePageShell() {
                       layout
                       className="rounded-2xl border border-gift-available/20 bg-gift-available/10 p-5 transition-all duration-200 hover:shadow-dreamy flex flex-col min-h-[20rem]"
                     >
+                      <div className="rounded-xl overflow-hidden border border-border/95 mb-3">
+                        {gift.imageUrl ? (
+                          <img
+                            src={gift.imageUrl}
+                            alt={`Imagem do presente ${gift.name}`}
+                            className="w-full h-36 object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <GiftPlaceholderIllustration category={gift.category} />
+                        )}
+                      </div>
                       <div className="flex items-start justify-between gap-2 min-h-12">
                         <h4 className="font-display text-base leading-snug text-espresso">
                           {gift.name}
@@ -910,6 +1255,118 @@ function EventCreatePageShell() {
           </Button>
         </section>
       </div>
+    </div>
+  )
+}
+
+function GiftPlaceholderIllustration({
+  category,
+}: {
+  category?: string | null
+}) {
+  const sp = {
+    stroke: 'currentColor' as const,
+    strokeWidth: '1.5',
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    fill: 'none' as const,
+  }
+
+  const renderIllustration = () => {
+    switch (category) {
+      case 'Cozinha':
+        return (
+          <g {...sp}>
+            <path d="M 28 86 L 92 86" />
+            <path d="M 38 86 L 44 62 L 76 62 L 82 86 Z" />
+            <path d="M 44 62 Q 60 58 76 62" />
+            <path d="M 76 70 Q 93 70 93 78 Q 93 86 76 84" />
+            <path d="M 51 60 Q 47 51 51 43 Q 55 35 51 27" />
+            <path d="M 69 60 Q 65 51 69 43 Q 73 35 69 27" />
+          </g>
+        )
+
+      case 'Quarto':
+        return (
+          <g {...sp}>
+            <rect x="22" y="14" width="76" height="92" rx="6" />
+            <path d="M 22 36 L 98 36" />
+            <rect x="26" y="18" width="30" height="14" rx="5" />
+            <rect x="62" y="18" width="30" height="14" rx="5" />
+            <path d="M 24 58 Q 60 52 96 58" />
+            <path d="M 26 74 L 94 74" strokeOpacity="0.4" />
+            <path d="M 26 88 L 94 88" strokeOpacity="0.4" />
+          </g>
+        )
+
+      case 'Sala':
+        return (
+          <g {...sp}>
+            <rect x="28" y="66" width="64" height="22" rx="4" />
+            <rect x="20" y="56" width="14" height="32" rx="4" />
+            <rect x="86" y="56" width="14" height="32" rx="4" />
+            <rect x="28" y="44" width="64" height="24" rx="4" />
+            <path d="M 60 44 L 60 66" />
+            <path d="M 32 88 L 30 96" />
+            <path d="M 88 88 L 90 96" />
+          </g>
+        )
+
+      case 'Banheiro':
+        return (
+          <g {...sp}>
+            <path d="M 40 30 Q 28 46 28 57 Q 28 72 40 72 Q 52 72 52 57 Q 52 46 40 30" />
+            <rect x="62" y="52" width="34" height="24" rx="5" />
+            <path d="M 69 61 L 88 61" />
+            <path d="M 69 68 L 88 68" />
+            <circle cx="79" cy="44" r="5" />
+            <circle cx="90" cy="38" r="3" />
+          </g>
+        )
+
+      case 'Decoração':
+        return (
+          <g {...sp}>
+            <circle cx="60" cy="60" r="4" />
+            <path d="M 60 56 Q 52 40 56 28 Q 64 40 60 56" />
+            <path d="M 64 62 Q 80 55 92 61 Q 82 72 64 62" />
+            <path d="M 56 62 Q 40 55 28 61 Q 38 72 56 62" />
+          </g>
+        )
+
+      case 'Eletro':
+        return (
+          <g {...sp}>
+            <circle cx="60" cy="46" r="22" />
+            <path d="M 50 50 Q 55 42 60 50 Q 65 58 70 50" />
+            <path d="M 50 66 L 48 80 L 72 80 L 70 66" />
+            <path d="M 50 72 L 70 72" />
+            <path d="M 45 34 Q 41 38 40 45" />
+          </g>
+        )
+
+      default:
+        return (
+          <g {...sp}>
+            <rect x="32" y="66" width="56" height="32" rx="3" />
+            <rect x="28" y="53" width="64" height="15" rx="3" />
+            <path d="M 60 53 L 60 98" />
+            <path d="M 60 53 Q 50 41 40 45 Q 42 57 60 53" />
+            <path d="M 60 53 Q 70 41 80 45 Q 78 57 60 53" />
+          </g>
+        )
+    }
+  }
+
+  return (
+    <div className="h-36 w-full flex items-center justify-center bg-blush/5">
+      <svg
+        viewBox="0 0 120 120"
+        className="w-24 h-24 text-muted-rose/25"
+        aria-hidden="true"
+      >
+        {renderIllustration()}
+      </svg>
     </div>
   )
 }

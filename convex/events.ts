@@ -286,6 +286,19 @@ export const generateEventCoverUploadUrl = mutation({
   },
 })
 
+export const generateEventDraftCoverUploadUrl = mutation({
+  args: {},
+  returns: v.string(),
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) {
+      throw new Error('Unauthorized')
+    }
+
+    return await ctx.storage.generateUploadUrl()
+  },
+})
+
 export const updateEventCoverImage = mutation({
   args: {
     eventId: v.id('events'),
