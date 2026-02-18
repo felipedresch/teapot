@@ -39,6 +39,7 @@ import {
   DialogTitle,
 } from '../components/ui/dialog'
 import { DEFAULT_GIFT_CATEGORIES } from '../constants/giftCategories'
+import { EventHeroMobile } from '../components/EventHeroMobile'
 
 export const Route = createFileRoute('/events/$slug')({
   component: EventGiftsPageShell,
@@ -1053,7 +1054,7 @@ function EventGiftsPageShell() {
       <section
         className={cn(
           'relative overflow-hidden hero-invitation-bg',
-          coverImageUrl ? 'pt-10 pb-24 md:pt-14 md:pb-32' : 'pt-12 pb-24 md:pt-18 md:pb-32 px-6',
+          coverImageUrl ? 'pt-0 pb-0 md:pt-14 md:pb-32' : 'pt-12 pb-24 md:pt-18 md:pb-32 px-6',
         )}
       >
         {/* Edge-only side glows — stays well away from the center content */}
@@ -1099,8 +1100,26 @@ function EventGiftsPageShell() {
 
         <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-8 md:px-12 lg:px-16">
           {coverImageUrl ? (
-            /* ── WITH COVER: photo LEFT + invitation RIGHT, slight overlap ── */
-            <div className="relative flex flex-col md:flex-row items-center md:items-center justify-center gap-6 md:gap-0">
+            /* ── WITH COVER ── */
+            <>
+            {/* Mobile: editorial full-bleed layout */}
+            <EventHeroMobile
+              coverImageUrl={coverImageUrl}
+              eventName={capitalizeFirst(headerEvent.name)}
+              eventTypeLabel={eventTypeLabel}
+              hosts={headerHosts}
+              shouldUsePairLayout={shouldUsePairLayout}
+              location={headerEvent.location}
+              date={headerEvent.date}
+              description={headerEvent.description}
+              onShareClick={() => {
+                setDidCopyShareLink(false)
+                setIsShareDialogOpen(true)
+              }}
+            />
+
+            {/* Desktop: photo LEFT + invitation RIGHT, slight overlap */}
+            <div className="relative hidden md:flex md:flex-row items-center md:items-center justify-center md:gap-0">
 
               {/* ───── POLAROID PHOTOGRAPH ───── */}
               <motion.div
@@ -1291,6 +1310,7 @@ function EventGiftsPageShell() {
                 </div>
               </motion.div>
             </div>
+            </>
           ) : (
             /* ── WITHOUT COVER: centered classic invitation ── */
             <motion.div
