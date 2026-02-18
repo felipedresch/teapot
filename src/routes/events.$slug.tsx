@@ -11,6 +11,7 @@ import {
   Link2,
   MapPin,
   Plus,
+  Share2,
   Settings2,
   Trash2,
   X,
@@ -82,6 +83,8 @@ const UPLOAD_DROPZONE_CLASS =
   'rounded-xl border border-dashed border-muted-rose/35 bg-warm-white/70 flex flex-col items-center justify-center text-sm text-warm-gray/75 cursor-pointer transition-colors hover:bg-muted-rose/10 hover:border-muted-rose/55'
 const PRIMARY_ACTION_CLASS =
   'shadow-dreamy-md hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ring/70'
+const HERO_SHARE_BUTTON_CLASS =
+  'inline-flex items-center gap-2 rounded-full border border-muted-rose/35 bg-[linear-gradient(145deg,rgba(255,255,255,0.97),rgba(251,244,240,0.95)_55%,rgba(237,223,215,0.93))] px-2.5 py-2.5 text-xs sm:text-sm font-medium text-espresso shadow-[0_2px_6px_rgba(61,53,48,0.14),0_8px_20px_rgba(61,53,48,0.12)] transition-all duration-200 hover:translate-y-[-1px] hover:brightness-105 hover:shadow-[0_4px_10px_rgba(61,53,48,0.16),0_14px_28px_rgba(61,53,48,0.14)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/65'
 
 type FloatingDecorKind =
   | 'stem'
@@ -453,6 +456,8 @@ function EventGiftsPageShell() {
   } | null>(null)
   const [isDeletingGift, setIsDeletingGift] = useState(false)
   const [shareLinkTab, setShareLinkTab] = useState<'guest' | 'partner'>('guest')
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
+  const [didCopyShareLink, setDidCopyShareLink] = useState(false)
   const [expandDescriptions, setExpandDescriptions] = useState(false)
   const [editableEvent, setEditableEvent] = useState<{
     _id: Id<'events'>
@@ -501,6 +506,22 @@ function EventGiftsPageShell() {
     () => Boolean(membership && membership.role === 'host'),
     [membership],
   )
+
+  const guestSharePath = `/events/${slug}`
+  const guestShareUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}${guestSharePath}`
+      : guestSharePath
+
+  const handleCopyShareLink = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(guestShareUrl)
+      setDidCopyShareLink(true)
+      window.setTimeout(() => setDidCopyShareLink(false), 1800)
+    } catch {
+      setError('Não foi possível copiar o link agora.')
+    }
+  }, [guestShareUrl])
 
   useEffect(() => {
     if (!event || !isHostView) return
@@ -1143,6 +1164,18 @@ function EventGiftsPageShell() {
                 className="relative z-[2] w-[85%] sm:w-[70%] md:w-[48%] lg:w-[44%] md:ml-[-6%]"
                 style={{ transform: 'rotate(1.8deg)' }}
               >
+                {/* Share button — floats just outside top-right of the invitation */}
+                <button
+                  type="button"
+                  className={cn('absolute -top-8 -right-2 md:-top-10 md:-right-14 z-20', HERO_SHARE_BUTTON_CLASS)}
+                  onClick={() => {
+                    setDidCopyShareLink(false)
+                    setIsShareDialogOpen(true)
+                  }}
+                >
+                  <Share2 className="size-3 text-muted-rose/75" />
+                </button>
+
                 {/* Washi tape — top-right (sage) */}
                 <div
                   className="washi-tape"
@@ -1261,7 +1294,7 @@ function EventGiftsPageShell() {
           ) : (
             /* ── WITHOUT COVER: centered classic invitation ── */
             <motion.div
-              className="max-w-2xl mx-auto text-center px-6"
+              className="relative max-w-2xl mx-auto text-center px-6"
               initial="hidden"
               animate="visible"
               variants={{
@@ -1269,6 +1302,18 @@ function EventGiftsPageShell() {
                 visible: { transition: { staggerChildren: 0.08 } },
               }}
             >
+              {/* Share button — floats just outside top-right of the centered invitation */}
+              <button
+                type="button"
+                className={cn('absolute -top-2 -right-2 md:-right-1 z-20', HERO_SHARE_BUTTON_CLASS)}
+                onClick={() => {
+                  setDidCopyShareLink(false)
+                  setIsShareDialogOpen(true)
+                }}
+              >
+                <Share2 className="size-3 text-muted-rose/75" />
+              </button>
+
               <motion.div variants={fadeUp} className="flex justify-center mb-8">
                 <OrnamentDivider className="w-28 text-muted-rose/25" />
               </motion.div>
@@ -2384,6 +2429,51 @@ function EventGiftsPageShell() {
             >
               <Trash2 className="size-3.5" />
               Excluir
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══ SHARE EVENT DIALOG ═══ */}
+      <Dialog
+        open={isShareDialogOpen}
+        onOpenChange={(open) => {
+          setIsShareDialogOpen(open)
+          if (!open) {
+            setDidCopyShareLink(false)
+          }
+        }}
+      >
+        <DialogContent className="max-w-sm text-center">
+          <DialogTitle className="font-display italic text-2xl text-espresso">
+            Compartilhar convite
+          </DialogTitle>
+          <DialogDescription className="text-sm text-warm-gray/80 leading-relaxed pt-1">
+            Compartilhe este link com seus convidados para eles verem a lista de
+            presentes e escolherem com carinho.
+          </DialogDescription>
+
+          <div className="rounded-xl border border-border/60 bg-warm-white p-3 mt-2">
+            <Input readOnly value={guestShareUrl} />
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+            <Button
+              type="button"
+              size="sm"
+              className={PRIMARY_ACTION_CLASS}
+              onClick={() => void handleCopyShareLink()}
+            >
+              <Share2 className="size-3.5" />
+              {didCopyShareLink ? 'Link copiado!' : 'Copiar link'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsShareDialogOpen(false)}
+            >
+              Fechar
             </Button>
           </div>
         </DialogContent>
