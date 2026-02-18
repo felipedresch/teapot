@@ -1,0 +1,21 @@
+# MyWish — Lista de Presentes Online no Brasil
+
+> MyWish é uma plataforma brasileira para criar e compartilhar listas de presentes para aniversário, casamento, chá de bebê e outras ocasiões especiais.
+
+## Páginas principais
+- [Home](https://mywish.com.br/) — visão geral da plataforma
+- [Create Gift List](https://mywish.com.br/events/create) — criação rápida em poucos minutos
+- [How It Works](https://mywish.com.br/how-it-works) — passo a passo
+- [FAQ](https://mywish.com.br/faq) — perguntas frequentes
+
+## Sobre o produto
+MyWish ajuda anfitriões e convidados a organizarem presentes com mais clareza. Cada evento tem um link único para compartilhamento, com foco em simplicidade, estética e experiência mobile. Os eventos podem ser publicamente acessíveis, ou apenas por link (não listados).
+
+## Público-alvo
+- Pessoas organizando aniversários
+- Casais organizando casamento e chá de panela
+- Famílias organizando chá de bebê e outras celebrações
+
+## Idioma e região
+- Idioma principal: Português (pt-BR)
+- Região: Brasil

@@ -1,9 +1,10 @@
 import { Link, useLocation } from '@tanstack/react-router'
 import { Menu, LogOut } from 'lucide-react'
 import { useAuthActions } from '@convex-dev/auth/react'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { Button } from './ui/button'
+import BrandWordmark from './BrandWordmark'
 import {
   Sheet,
   SheetContent,
@@ -22,20 +23,33 @@ const MOBILE_LINK_BASE =
 const MOBILE_LINK_INACTIVE = `${MOBILE_LINK_BASE} text-espresso hover:bg-blush/20`
 const MOBILE_LINK_ACTIVE = `${MOBILE_LINK_BASE} text-espresso font-medium bg-blush/20`
 
-// TODO: Adicionar rotas quando forem criadas:
-// { label: 'Lista', href: '/lista' },
-// { label: 'Meus Presentes', href: '/meus-presentes' },
-const navItems = [{ label: 'Início', href: '/' as const }]
+// Route paths stay in English; labels stay in Portuguese for users.
+const desktopNavItems = [
+  { label: 'Início', href: '/' as const },
+  { label: 'FAQ', href: '/faq' as const },
+  { label: 'Como funciona', href: '/how-it-works' as const },
+]
 
 export default function Header() {
   const { signIn, signOut } = useAuthActions()
   const { user, isLoading, isAuthenticated } = useCurrentUser()
   const location = useLocation()
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const handleSignIn = useCallback(async () => {
     const returnPath = `${location.pathname}${location.searchStr}${location.hash}`
     await signIn('google', { redirectTo: returnPath })
   }, [location.hash, location.pathname, location.searchStr, signIn])
+
+  const handleMobileSignIn = useCallback(async () => {
+    setIsMobileMenuOpen(false)
+    await handleSignIn()
+  }, [handleSignIn])
+
+  const handleMobileSignOut = useCallback(async () => {
+    setIsMobileMenuOpen(false)
+    await signOut()
+  }, [signOut])
 
   useEffect(() => {
     if (isLoading || !isAuthenticated) {
@@ -57,19 +71,18 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-40 bg-warm-white/70 backdrop-blur-xl border-b border-border/30">
-      <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div className="relative max-w-5xl mx-auto px-6 h-16 flex items-center">
         {/* ── Couple Name / Logo ── */}
         <Link
           to="/"
           className="group font-display text-lg italic tracking-tight transition-colors duration-200"
         >
-          <span className="text-espresso">my</span>
-          <span className="text-primary transition-colors duration-200 group-hover:text-espresso">wish</span>
+          <BrandWordmark casing="lower" />
         </Link>
 
         {/* ── Desktop Navigation ── */}
-        <nav className="hidden md:flex items-center gap-8">
-          {navItems.map((item) => (
+        <nav className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-8">
+          {desktopNavItems.map((item) => (
             <Link
               key={item.href}
               to={item.href}
@@ -79,11 +92,13 @@ export default function Header() {
               {item.label}
             </Link>
           ))}
+        </nav>
 
-          {/* Auth */}
+        {/* ── Desktop Auth ── */}
+        <div className="hidden md:flex items-center gap-3 ml-auto">
           {!isLoading &&
             (isAuthenticated ? (
-              <div className="flex items-center gap-3">
+              <>
                 {user?.image ? (
                   <img
                     src={user.image}
@@ -102,7 +117,7 @@ export default function Header() {
                 >
                   <LogOut className="size-4" />
                 </Button>
-              </div>
+              </>
             ) : (
               <Button
                 variant="secondary"
@@ -112,36 +127,83 @@ export default function Header() {
                 Entrar
               </Button>
             ))}
-        </nav>
+        </div>
 
         {/* ── Mobile Menu Trigger ── */}
-        <div className="md:hidden">
-          <Sheet>
+        <div className="md:hidden ml-auto flex items-center gap-1.5">
+          {!isLoading &&
+            (isAuthenticated ? (
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(true)}
+                aria-label="Abrir menu da conta"
+                className="inline-flex items-center justify-center rounded-full p-0.5 focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                {user?.image ? (
+                  <img
+                    src={user.image}
+                    alt=""
+                    className="size-7 rounded-full object-cover ring-1 ring-border mr-1"
+                  />
+                ) : (
+                  <div className="size-7 rounded-full bg-blush/35 ring-1 ring-border" />
+                )}
+              </button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="px-2.5 text-sm"
+                onClick={() => void handleSignIn()}
+              >
+                Login
+              </Button>
+            ))}
+
+          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon-sm" aria-label="Menu">
                 <Menu className="size-5" />
               </Button>
             </SheetTrigger>
 
-            <SheetContent side="right">
+            <SheetContent side="right" className="w-[72vw] max-w-[18rem] sm:max-w-[18rem]">
               <SheetHeader>
                 <SheetTitle className="font-display italic text-lg">
-                <span className="text-warm-gray">my</span>
-                <span className="text-espresso">wish</span>
-              </SheetTitle>
+                  <BrandWordmark casing="lower" />
+                </SheetTitle>
               </SheetHeader>
 
               <nav className="flex flex-col gap-1 px-2 mt-2">
-                {navItems.map((item) => (
+                {desktopNavItems.map((item) => (
                   <Link
                     key={item.href}
                     to={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
                     className={MOBILE_LINK_INACTIVE}
                     activeProps={{ className: MOBILE_LINK_ACTIVE }}
                   >
                     {item.label}
                   </Link>
                 ))}
+
+                <div className="mx-4 my-2 h-px bg-border/85" />
+
+                <a
+                  href="/events/create"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={MOBILE_LINK_INACTIVE}
+                >
+                  Criar meu evento
+                </a>
+
+                <a
+                  href="/#public-events-search"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={MOBILE_LINK_INACTIVE}
+                >
+                  Procurar eventos públicos
+                </a>
               </nav>
 
               {/* Auth — mobile */}
@@ -171,7 +233,7 @@ export default function Header() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => void signOut()}
+                        onClick={() => void handleMobileSignOut()}
                         className="w-full justify-start"
                       >
                         <LogOut className="size-4" />
@@ -181,7 +243,7 @@ export default function Header() {
                   ) : (
                     <Button
                       size="default"
-                      onClick={() => void handleSignIn()}
+                      onClick={() => void handleMobileSignIn()}
                       className="w-full"
                     >
                       Entrar com Google

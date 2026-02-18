@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { useRef, useState } from 'react'
+import { createFileRoute, Link, useLocation } from '@tanstack/react-router'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, Search, Sparkles, MapPin } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useEventSearch, useMyEventsGrouped } from '../hooks/useEvents'
@@ -7,8 +7,49 @@ import { useCurrentUser } from '../hooks/useCurrentUser'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { capitalizeFirst, getDisplayHostNames } from '../lib/presentation'
+import { SITE_NAME, absoluteUrl } from '../lib/seo'
 
-export const Route = createFileRoute('/')({ component: HomePage })
+export const Route = createFileRoute('/')({
+  head: () => ({
+    meta: [
+      {
+        title: `${SITE_NAME} | Lista de presentes online`,
+      },
+      {
+        name: 'description',
+        content:
+          'Crie e compartilhe lista de presentes online para aniversário, casamento, chá de bebê e outras celebrações.',
+      },
+      {
+        property: 'og:title',
+        content: `${SITE_NAME} | Lista de presentes online`,
+      },
+      {
+        property: 'og:description',
+        content:
+          'Crie e compartilhe lista de presentes online para aniversário, casamento, chá de bebê e outras celebrações.',
+      },
+      {
+        property: 'og:type',
+        content: 'website',
+      },
+      {
+        property: 'og:url',
+        content: absoluteUrl('/'),
+      },
+      {
+        name: 'twitter:title',
+        content: `${SITE_NAME} | Lista de presentes online`,
+      },
+      {
+        name: 'twitter:description',
+        content:
+          'Crie e compartilhe lista de presentes online para aniversário, casamento, chá de bebê e outras celebrações.',
+      },
+    ],
+  }),
+  component: HomePage,
+})
 
 const ease = [0.22, 1, 0.36, 1] as const
 const USE_CASES: Array<string> = [
@@ -35,6 +76,7 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
 const PAIR_EVENT_TYPES = new Set(['wedding', 'bridal-shower'])
 
 function HomePage() {
+  const location = useLocation()
   const [search, setSearch] = useState('')
   const { isAuthenticated, isLoading: isAuthLoading } = useCurrentUser()
   const {
@@ -52,6 +94,18 @@ function HomePage() {
     !isAuthLoading &&
     !isMyEventsLoading &&
     (hosting.length > 0 || attending.length > 0)
+
+  useEffect(() => {
+    if (location.hash !== '#public-events-search') {
+      return
+    }
+
+    const timeout = window.setTimeout(() => {
+      searchRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 80)
+
+    return () => window.clearTimeout(timeout)
+  }, [location.hash])
 
   return (
     <div className="overflow-hidden">
@@ -184,6 +238,14 @@ function HomePage() {
                 Monte tudo sem precisar de login. Adicione presentes,
                 personalize com carinho e compartilhe quando estiver pronto.
               </p>
+              <div className="mt-4 flex flex-wrap gap-4 text-sm">
+                <Link to="/how-it-works" className="text-muted-rose hover:underline">
+                  Como funciona
+                </Link>
+                <Link to="/faq" className="text-muted-rose hover:underline">
+                  FAQ
+                </Link>
+              </div>
               <Button asChild size="lg" className="mt-8">
                 <Link to="/events/create">
                   Começar agora
@@ -196,6 +258,7 @@ function HomePage() {
           {/* ── Search ── */}
           <motion.div
             ref={searchRef}
+            id="public-events-search"
             className="lg:col-span-5 order-1 lg:order-2"
             initial={{ opacity: 0, x: 20 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -347,7 +410,7 @@ function HomePage() {
         <section className="px-6 pb-24">
           <div className="max-w-6xl mx-auto space-y-8">
             <div className="text-center">
-              <p className="font-accent text-2xl text-muted-rose">sua area</p>
+              <p className="font-accent text-2xl text-muted-rose">sua área</p>
               <h2 className="font-display italic text-3xl md:text-4xl text-espresso mt-1">
                 Meus eventos
               </h2>
