@@ -88,7 +88,7 @@ function HomePage() {
           </motion.h1>
 
           <motion.p
-            className="mt-6 md:mt-8 text-warm-gray text-base md:text-lg max-w-sm md:max-w-md mx-auto leading-relaxed"
+            className="mt-12 md:mt-14 text-warm-gray text-base md:text-lg max-w-sm md:max-w-md mx-auto leading-relaxed"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease, delay: 0.25 }}
