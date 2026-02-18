@@ -224,6 +224,7 @@ export const getEventBySlug = query({
       location: v.optional(v.string()),
       description: v.optional(v.string()),
       coverImageId: v.optional(v.id('_storage')),
+      coverImageUrl: v.optional(v.string()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -233,6 +234,10 @@ export const getEventBySlug = query({
       .unique()
 
     if (!event) return null
+    const coverImageUrl = event.coverImageId
+      ? ((await ctx.storage.getUrl(event.coverImageId)) ?? undefined)
+      : undefined
+
     return {
       _id: event._id,
       _creationTime: event._creationTime,
@@ -250,7 +255,77 @@ export const getEventBySlug = query({
       location: event.location,
       description: event.description,
       coverImageId: event.coverImageId,
+      coverImageUrl,
     }
+  },
+})
+
+export const generateEventCoverUploadUrl = mutation({
+  args: {
+    eventId: v.id('events'),
+  },
+  returns: v.string(),
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) {
+      throw new Error('Unauthorized')
+    }
+
+    const membership = await ctx.db
+      .query('eventMembers')
+      .withIndex('by_event_and_user', (q) =>
+        q.eq('eventId', args.eventId).eq('userId', userId),
+      )
+      .unique()
+
+    if (!membership || membership.role !== 'host') {
+      throw new Error('Somente hosts podem fazer upload da capa')
+    }
+
+    return await ctx.storage.generateUploadUrl()
+  },
+})
+
+export const updateEventCoverImage = mutation({
+  args: {
+    eventId: v.id('events'),
+    coverImageId: v.optional(v.union(v.id('_storage'), v.null())),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) {
+      throw new Error('Unauthorized')
+    }
+
+    const event = await ctx.db.get(args.eventId)
+    if (!event) {
+      throw new Error('Evento não encontrado')
+    }
+
+    const membership = await ctx.db
+      .query('eventMembers')
+      .withIndex('by_event_and_user', (q) =>
+        q.eq('eventId', args.eventId).eq('userId', userId),
+      )
+      .unique()
+
+    if (!membership || membership.role !== 'host') {
+      throw new Error('Somente hosts podem editar a capa do evento')
+    }
+
+    const nextCoverImageId =
+      args.coverImageId === null ? undefined : args.coverImageId
+
+    await ctx.db.patch('events', args.eventId, {
+      coverImageId: nextCoverImageId,
+    })
+
+    if (event.coverImageId && event.coverImageId !== nextCoverImageId) {
+      await ctx.storage.delete(event.coverImageId)
+    }
+
+    return null
   },
 })
 
@@ -517,6 +592,9 @@ export const deleteEvent = mutation({
       .collect()
 
     for (const gift of gifts) {
+      if (gift.imageId) {
+        await ctx.storage.delete(gift.imageId)
+      }
       await ctx.db.delete('gifts', gift._id)
     }
 
@@ -536,6 +614,10 @@ export const deleteEvent = mutation({
 
     for (const member of memberships) {
       await ctx.db.delete('eventMembers', member._id)
+    }
+
+    if (event.coverImageId) {
+      await ctx.storage.delete(event.coverImageId)
     }
 
     await ctx.db.delete('events', args.eventId)

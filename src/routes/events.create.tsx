@@ -763,29 +763,22 @@ function EventCreatePageShell() {
               <motion.div
                 key="gift-list"
                 className="space-y-3"
-                initial="hidden"
-                animate="visible"
-                variants={{
-                  hidden: {},
-                  visible: { transition: { staggerChildren: 0.04 } },
-                }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
               >
                 <p className="text-xs text-warm-gray/50 mb-3 pl-1">
                   {draftGifts.length}{' '}
                   {draftGifts.length === 1 ? 'presente' : 'presentes'} na lista
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  <AnimatePresence mode="popLayout">
                   {draftGifts.map((gift) => (
                     <motion.div
                       key={gift.tempId}
-                      variants={{
-                        hidden: { opacity: 0, y: 8 },
-                        visible: {
-                          opacity: 1,
-                          y: 0,
-                          transition: { duration: 0.3, ease },
-                        },
-                      }}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0, transition: { duration: 0.3, ease } }}
+                      exit={{ opacity: 0, y: -10, transition: { duration: 0.25, ease } }}
+                      layout
                       className="rounded-2xl border border-gift-available/20 bg-gift-available/10 p-5 transition-all duration-200 hover:shadow-dreamy flex flex-col min-h-[20rem]"
                     >
                       <div className="flex items-start justify-between gap-2 min-h-12">
@@ -842,6 +835,7 @@ function EventCreatePageShell() {
                       </div>
                     </motion.div>
                   ))}
+                  </AnimatePresence>
                 </div>
               </motion.div>
             )}

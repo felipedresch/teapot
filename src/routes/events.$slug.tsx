@@ -7,10 +7,12 @@ import {
   ChevronDown,
   Gift,
   Heart,
+  ImagePlus,
   Link2,
   MapPin,
   Plus,
   Settings2,
+  Trash2,
   X,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
@@ -29,6 +31,12 @@ import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
 import { Input } from '../components/ui/input'
 import { DatePicker } from '../components/ui/date-picker'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '../components/ui/dialog'
 import { DEFAULT_GIFT_CATEGORIES } from '../constants/giftCategories'
 
 export const Route = createFileRoute('/events/$slug')({
@@ -64,6 +72,71 @@ const fadeUp = {
   },
 }
 
+const MAX_IMAGE_FILE_SIZE_BYTES = 8 * 1024 * 1024
+const COVER_PREVIEW_OPTIONS = {
+  maxSide: 1280,
+  quality: 0.82,
+}
+const GIFT_PREVIEW_OPTIONS = {
+  maxSide: 720,
+  quality: 0.8,
+}
+
+type ConvexUploadResponse = {
+  storageId: Id<'_storage'>
+}
+
+async function uploadImageToConvex(
+  uploadUrl: string,
+  file: File,
+): Promise<Id<'_storage'>> {
+  const response = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': file.type,
+    },
+    body: file,
+  })
+
+  if (!response.ok) {
+    throw new Error('Falha no upload da imagem')
+  }
+
+  const result = (await response.json()) as ConvexUploadResponse
+  return result.storageId
+}
+
+async function generateImagePreview(
+  file: File,
+  options: { maxSide: number; quality: number },
+): Promise<string | undefined> {
+  if (!file.type.startsWith('image/')) {
+    return undefined
+  }
+
+  const bitmap = await createImageBitmap(file)
+  const maxSide = options.maxSide
+  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height))
+  const width = Math.max(1, Math.round(bitmap.width * scale))
+  const height = Math.max(1, Math.round(bitmap.height * scale))
+
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const context = canvas.getContext('2d')
+  if (!context) {
+    bitmap.close()
+    return undefined
+  }
+
+  context.imageSmoothingEnabled = true
+  context.imageSmoothingQuality = 'high'
+  context.drawImage(bitmap, 0, 0, width, height)
+  bitmap.close()
+
+  return canvas.toDataURL('image/jpeg', options.quality)
+}
+
 function EventGiftsPageShell() {
   const { slug } = Route.useParams()
   const { signIn } = useAuthActions()
@@ -76,6 +149,11 @@ function EventGiftsPageShell() {
   const { createGift, reserveGift, updateGift, deleteGift } = useGiftMutations()
   const updateEvent = useMutation(api.events.updateEvent)
   const deleteEvent = useMutation(api.events.deleteEvent)
+  const generateGiftImageUploadUrl = useMutation(api.gifts.generateGiftImageUploadUrl)
+  const generateEventCoverUploadUrl = useMutation(
+    api.events.generateEventCoverUploadUrl,
+  )
+  const updateEventCoverImage = useMutation(api.events.updateEventCoverImage)
 
   const [reservingGiftId, setReservingGiftId] = useState<Id<'gifts'> | null>(
     null,
@@ -84,9 +162,18 @@ function EventGiftsPageShell() {
   const [showReserveLoginPrompt, setShowReserveLoginPrompt] = useState(false)
   const [eventSaving, setEventSaving] = useState(false)
   const [eventDeleting, setEventDeleting] = useState(false)
+  const [isUploadingCover, setIsUploadingCover] = useState(false)
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | undefined>()
   const [editingGiftId, setEditingGiftId] = useState<Id<'gifts'> | null>(null)
   const [isCreatingGift, setIsCreatingGift] = useState(false)
+  const [isUploadingGiftImage, setIsUploadingGiftImage] = useState(false)
+  const [isUploadingEditedGiftImage, setIsUploadingEditedGiftImage] = useState(false)
   const [isHostPanelOpen, setIsHostPanelOpen] = useState(false)
+  const [deleteGiftConfirm, setDeleteGiftConfirm] = useState<{
+    giftId: Id<'gifts'>
+    giftName: string
+  } | null>(null)
+  const [isDeletingGift, setIsDeletingGift] = useState(false)
   const [shareLinkTab, setShareLinkTab] = useState<'guest' | 'partner'>('guest')
   const [expandDescriptions, setExpandDescriptions] = useState(false)
   const [editableEvent, setEditableEvent] = useState<{
@@ -104,22 +191,30 @@ function EventGiftsPageShell() {
   const [giftForm, setGiftForm] = useState<{
     name: string
     description: string
+    imageId?: Id<'_storage'> | null
+    imageUrl?: string
     category: string
     referenceUrl: string
   }>({
     name: '',
     description: '',
+    imageId: undefined,
+    imageUrl: undefined,
     category: '',
     referenceUrl: '',
   })
   const [newGiftForm, setNewGiftForm] = useState<{
     name: string
     description: string
+    imageId?: Id<'_storage'>
+    imageUrl?: string
     category: string
     referenceUrl: string
   }>({
     name: '',
     description: '',
+    imageId: undefined,
+    imageUrl: undefined,
     category: '',
     referenceUrl: '',
   })
@@ -321,6 +416,150 @@ function EventGiftsPageShell() {
     }
   }, [deleteEvent, event, isHostView, navigate])
 
+  const validateImageFile = useCallback((file: File | undefined) => {
+    if (!file) {
+      throw new Error('Selecione um arquivo de imagem.')
+    }
+    if (!file.type.startsWith('image/')) {
+      throw new Error('Selecione uma imagem válida (PNG, JPG, WEBP, etc.).')
+    }
+    if (file.size > MAX_IMAGE_FILE_SIZE_BYTES) {
+      throw new Error('A imagem deve ter no máximo 8MB.')
+    }
+  }, [])
+
+  const handleUploadCoverImage = useCallback(
+    async (file: File | undefined) => {
+      if (!event || !isHostView) return
+      try {
+        validateImageFile(file)
+        setIsUploadingCover(true)
+        setError(null)
+
+        const [previewUrl, uploadUrl] = await Promise.all([
+          generateImagePreview(file!, COVER_PREVIEW_OPTIONS),
+          generateEventCoverUploadUrl({ eventId: event._id }),
+        ])
+
+        setCoverPreviewUrl(previewUrl)
+
+        const storageId = await uploadImageToConvex(uploadUrl, file!)
+        await updateEventCoverImage({
+          eventId: event._id,
+          coverImageId: storageId,
+        })
+
+        setCoverPreviewUrl(undefined)
+      } catch (uploadError) {
+        setError(
+          uploadError instanceof Error
+            ? uploadError.message
+            : 'Não foi possível enviar a capa.',
+        )
+        setCoverPreviewUrl(undefined)
+      } finally {
+        setIsUploadingCover(false)
+      }
+    },
+    [
+      event,
+      generateEventCoverUploadUrl,
+      isHostView,
+      updateEventCoverImage,
+      validateImageFile,
+    ],
+  )
+
+  const handleRemoveCoverImage = useCallback(async () => {
+    if (!event || !isHostView) return
+    setError(null)
+    setIsUploadingCover(true)
+    try {
+      await updateEventCoverImage({
+        eventId: event._id,
+        coverImageId: null,
+      })
+      setCoverPreviewUrl(undefined)
+    } catch (removeError) {
+      setError(
+        removeError instanceof Error
+          ? removeError.message
+          : 'Não foi possível remover a capa.',
+      )
+    } finally {
+      setIsUploadingCover(false)
+    }
+  }, [event, isHostView, updateEventCoverImage])
+
+  const handleUploadGiftImage = useCallback(
+    async (
+      file: File | undefined,
+      mode: 'create' | 'edit',
+    ) => {
+      if (!event || !isHostView || !file) return
+
+      try {
+        validateImageFile(file)
+        setError(null)
+        if (mode === 'create') {
+          setIsUploadingGiftImage(true)
+        } else {
+          setIsUploadingEditedGiftImage(true)
+        }
+
+        const [previewUrl, uploadUrl] = await Promise.all([
+          generateImagePreview(file!, GIFT_PREVIEW_OPTIONS),
+          generateGiftImageUploadUrl({ eventId: event._id }),
+        ])
+        const storageId = await uploadImageToConvex(uploadUrl, file!)
+
+        if (mode === 'create') {
+          setNewGiftForm((current) => ({
+            ...current,
+            imageId: storageId,
+            imageUrl: previewUrl,
+          }))
+          return
+        }
+
+        setGiftForm((current) => ({
+          ...current,
+          imageId: storageId,
+          imageUrl: previewUrl,
+        }))
+      } catch (uploadError) {
+        setError(
+          uploadError instanceof Error
+            ? uploadError.message
+            : 'Não foi possível enviar a imagem do presente.',
+        )
+      } finally {
+        if (mode === 'create') {
+          setIsUploadingGiftImage(false)
+        } else {
+          setIsUploadingEditedGiftImage(false)
+        }
+      }
+    },
+    [event, generateGiftImageUploadUrl, isHostView, validateImageFile],
+  )
+
+  const handleRemoveDraftGiftImage = useCallback(() => {
+    setNewGiftForm((current) => ({
+      ...current,
+      imageId: undefined,
+      imageUrl: undefined,
+    }))
+  }, [])
+
+  const handleRemoveEditingGiftImage = useCallback(() => {
+    setGiftForm((current) => ({
+      ...current,
+      imageId: null,
+      imageUrl: undefined,
+    }))
+  }, [])
+
   const startEditingGift = useCallback(
     (gift: (typeof gifts)[number]) => {
       if (!isHostView) return
@@ -328,6 +567,8 @@ function EventGiftsPageShell() {
       setGiftForm({
         name: gift.name,
         description: gift.description ?? '',
+        imageId: gift.imageId,
+        imageUrl: gift.imageUrl,
         category: gift.category ?? '',
         referenceUrl: gift.referenceUrl ?? '',
       })
@@ -351,12 +592,16 @@ function EventGiftsPageShell() {
         description: newGiftForm.description
           ? capitalizeFirst(newGiftForm.description)
           : undefined,
+        imageId: newGiftForm.imageId,
+        imageUrl: newGiftForm.imageUrl,
         category: newGiftForm.category.trim() || undefined,
         referenceUrl: newGiftForm.referenceUrl.trim() || undefined,
       })
       setNewGiftForm({
         name: '',
         description: '',
+        imageId: undefined,
+        imageUrl: undefined,
         category: '',
         referenceUrl: '',
       })
@@ -381,6 +626,8 @@ function EventGiftsPageShell() {
         description: giftForm.description
           ? capitalizeFirst(giftForm.description)
           : undefined,
+        imageId: giftForm.imageId,
+        imageUrl: giftForm.imageUrl,
         category: giftForm.category.trim() || undefined,
         referenceUrl: giftForm.referenceUrl.trim() || undefined,
       })
@@ -395,25 +642,30 @@ function EventGiftsPageShell() {
   }, [editingGiftId, giftForm, isHostView, updateGift])
 
   const handleDeleteGift = useCallback(
-    async (giftId: Id<'gifts'>) => {
+    (giftId: Id<'gifts'>, giftName: string) => {
       if (!isHostView) return
-      const confirmation = window.confirm(
-        'Tem certeza que deseja excluir este presente?',
-      )
-      if (!confirmation) return
-      setError(null)
-      try {
-        await deleteGift({ giftId })
-      } catch (deleteError) {
-        setError(
-          deleteError instanceof Error
-            ? deleteError.message
-            : 'Não foi possível excluir o presente.',
-        )
-      }
+      setDeleteGiftConfirm({ giftId, giftName })
     },
-    [deleteGift, isHostView],
+    [isHostView],
   )
+
+  const handleConfirmDeleteGift = useCallback(async () => {
+    if (!deleteGiftConfirm) return
+    setIsDeletingGift(true)
+    setError(null)
+    try {
+      await deleteGift({ giftId: deleteGiftConfirm.giftId })
+      setDeleteGiftConfirm(null)
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : 'Não foi possível excluir o presente.',
+      )
+    } finally {
+      setIsDeletingGift(false)
+    }
+  }, [deleteGift, deleteGiftConfirm])
 
   // ── Loading ──
   if (isEventLoading) {
@@ -494,11 +746,23 @@ function EventGiftsPageShell() {
     (gift) => (gift.description?.trim().length ?? 0) > 140,
   )
   const cardSizeClass = expandDescriptions ? 'min-h-[24rem]' : 'min-h-[20rem]'
+  const coverImageUrl = coverPreviewUrl ?? event.coverImageUrl
 
   return (
     <div>
       {/* ═══ HERO — Invitation Style ═══ */}
       <section className="relative py-20 md:py-28 px-6 overflow-hidden">
+        {coverImageUrl && (
+          <div className="absolute inset-0" aria-hidden="true">
+            <img
+              src={coverImageUrl}
+              alt=""
+              className="w-full h-full object-cover opacity-25"
+              loading="lazy"
+            />
+            <div className="absolute inset-0 bg-warm-white/75 backdrop-blur-[1px]" />
+          </div>
+        )}
         <div
           className="pointer-events-none absolute inset-0"
           aria-hidden="true"
@@ -673,7 +937,7 @@ function EventGiftsPageShell() {
                           }
                         />
                       )}
-                      <div className="md:col-span-2 rounded-xl border border-border/35 bg-warm-white/45 p-4 md:p-5 space-y-4">
+                      <div className="md:col-span-2 rounded-xl border border-border/35 bg-warm-white p-4 md:p-5 space-y-4">
                         <div>
                           <p className="text-sm font-medium text-espresso/85">
                             {PAIR_EVENT_TYPES.has(editableEvent.eventType)
@@ -702,7 +966,7 @@ function EventGiftsPageShell() {
                                 placeholder="Nome da pessoa 2"
                               />
                             </div>
-                            <div className="rounded-xl border border-border/25 bg-warm-white/55 p-4">
+                            <div className="rounded-xl border border-border/25 bg-warm-white p-4">
                               <p className="text-sm font-medium text-espresso/80 mb-1">
                                 Qual dos parceiros é você?
                               </p>
@@ -863,6 +1127,72 @@ function EventGiftsPageShell() {
                     </div>
                   )}
 
+                  <div className="rounded-xl border border-border/40 bg-warm-white p-5 space-y-4">
+                    <p className="text-sm font-medium text-espresso/85">
+                      Imagem de capa do evento
+                    </p>
+                    <p className="text-xs text-warm-gray/60">
+                      A capa aparece no topo da página para todos os convidados.
+                    </p>
+                    <p className="text-[11px] text-warm-gray/60 leading-relaxed">
+                      Recomendação: JPG/WEBP em 16:9. Ideal 1920×1080 (mínimo
+                      1280×720), até 8MB.
+                    </p>
+                    {coverImageUrl ? (
+                      <div className="rounded-xl overflow-hidden border border-border/30 bg-warm-white">
+                        <img
+                          src={coverImageUrl}
+                          alt="Capa do evento"
+                          className="w-full max-h-[22rem] object-contain"
+                          loading="lazy"
+                        />
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-border/50 h-36 flex items-center justify-center text-sm text-warm-gray/60">
+                        Sem capa definida
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      <label className="inline-flex">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="sr-only"
+                          onChange={(e) =>
+                            void handleUploadCoverImage(e.target.files?.[0])
+                          }
+                          disabled={isUploadingCover}
+                        />
+                        <span
+                          className={cn(
+                            'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm border cursor-pointer transition-colors',
+                            'border-border bg-warm-white hover:bg-blush/10',
+                            isUploadingCover && 'opacity-60 cursor-not-allowed',
+                          )}
+                        >
+                          <ImagePlus className="size-4" />
+                          {coverImageUrl ? 'Trocar capa' : 'Enviar capa'}
+                        </span>
+                      </label>
+                      {coverImageUrl && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive"
+                          onClick={() => void handleRemoveCoverImage()}
+                          disabled={isUploadingCover}
+                        >
+                          <Trash2 className="size-4" />
+                          Remover capa
+                        </Button>
+                      )}
+                    </div>
+                    {isUploadingCover && (
+                      <p className="text-xs text-warm-gray/60">Enviando imagem...</p>
+                    )}
+                  </div>
+
                   <div className="flex flex-wrap gap-3">
                     <Button
                       type="button"
@@ -885,12 +1215,12 @@ function EventGiftsPageShell() {
                     </Button>
                   </div>
 
-                  <div className="rounded-xl border border-border/40 bg-warm-white/60 p-5 space-y-4">
+                  <div className="rounded-xl border border-border/40 bg-warm-white p-5 space-y-4">
                     <p className="text-sm font-medium text-espresso flex items-center gap-2">
                       <Link2 className="size-4 text-muted-rose/60" />
                       Links para compartilhar
                     </p>
-                    <div className="inline-flex rounded-xl border border-border/50 p-1 bg-warm-white/70">
+                    <div className="inline-flex rounded-xl border border-border/50 p-1 bg-warm-white">
                       <Button
                         type="button"
                         size="sm"
@@ -1037,6 +1367,67 @@ function EventGiftsPageShell() {
                 }
                 placeholder="https://..."
               />
+              <div className="md:col-span-2 space-y-2">
+                <p className="text-sm font-medium text-espresso/80 pl-0.5">
+                  Imagem do presente (opcional)
+                </p>
+                <p className="text-[11px] text-warm-gray/60 leading-relaxed max-w-md">
+                  Recomendação: JPG/WEBP em 1:1. Ideal 1200×1200 (mínimo 600×600),
+                  até 8MB.
+                </p>
+                {newGiftForm.imageUrl ? (
+                  <div className="rounded-xl overflow-hidden border border-border/30 max-w-sm bg-warm-white">
+                    <img
+                      src={newGiftForm.imageUrl}
+                      alt="Prévia do presente"
+                      className="w-full h-44 object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-border/50 h-28 flex items-center justify-center text-sm text-warm-gray/60 max-w-sm">
+                    Sem imagem
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <label className="inline-flex">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={(e) =>
+                        void handleUploadGiftImage(e.target.files?.[0], 'create')
+                      }
+                      disabled={isUploadingGiftImage}
+                    />
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm border cursor-pointer transition-colors',
+                        'border-border bg-warm-white hover:bg-blush/10',
+                        isUploadingGiftImage && 'opacity-60 cursor-not-allowed',
+                      )}
+                    >
+                      <ImagePlus className="size-4" />
+                      {newGiftForm.imageId ? 'Trocar imagem' : 'Enviar imagem'}
+                    </span>
+                  </label>
+                  {newGiftForm.imageId && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive"
+                      onClick={handleRemoveDraftGiftImage}
+                      disabled={isUploadingGiftImage}
+                    >
+                      <Trash2 className="size-4" />
+                      Remover imagem
+                    </Button>
+                  )}
+                </div>
+                {isUploadingGiftImage && (
+                  <p className="text-xs text-warm-gray/60">Enviando imagem...</p>
+                )}
+              </div>
             </div>
             <div className="flex justify-end">
               <Button
@@ -1093,15 +1484,10 @@ function EventGiftsPageShell() {
             </p>
           </div>
         ) : (
-          <motion.div
+          <div
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
-            initial="hidden"
-            animate="visible"
-            variants={{
-              hidden: {},
-              visible: { transition: { staggerChildren: 0.05 } },
-            }}
           >
+            <AnimatePresence mode="popLayout">
             {gifts.map((gift) => {
               const isEditing = editingGiftId === gift._id && isHostView
               const statusStyles = {
@@ -1113,14 +1499,10 @@ function EventGiftsPageShell() {
               return (
                 <motion.div
                   key={gift._id}
-                  variants={{
-                    hidden: { opacity: 0, y: 14 },
-                    visible: {
-                      opacity: 1,
-                      y: 0,
-                      transition: { duration: 0.45, ease },
-                    },
-                  }}
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0, transition: { duration: 0.45, ease } }}
+                  exit={{ opacity: 0, y: -10, transition: { duration: 0.3, ease } }}
+                  layout
                   className={cn(
                     'rounded-2xl border p-5 transition-all duration-200 hover:shadow-dreamy flex flex-col h-full',
                     cardSizeClass,
@@ -1140,6 +1522,68 @@ function EventGiftsPageShell() {
                         }
                         placeholder="Ex.: Jogo de panelas"
                       />
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-espresso/80 pl-0.5">
+                          Imagem
+                        </p>
+                        <p className="text-[11px] text-warm-gray/60 leading-relaxed">
+                          Recomendação: JPG/WEBP em 1:1. Ideal 1200×1200 (mínimo
+                          600×600), até 8MB.
+                        </p>
+                        {giftForm.imageUrl ? (
+                          <div className="rounded-xl overflow-hidden border border-border/30 bg-warm-white">
+                            <img
+                              src={giftForm.imageUrl}
+                              alt="Prévia do presente"
+                              className="w-full h-40 object-contain"
+                            />
+                          </div>
+                        ) : (
+                          <div className="rounded-xl border border-dashed border-border/50 h-24 flex items-center justify-center text-sm text-warm-gray/60">
+                            Sem imagem
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                          <label className="inline-flex">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="sr-only"
+                              onChange={(e) =>
+                                void handleUploadGiftImage(e.target.files?.[0], 'edit')
+                              }
+                              disabled={isUploadingEditedGiftImage}
+                            />
+                            <span
+                              className={cn(
+                                'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm border cursor-pointer transition-colors',
+                                'border-border bg-warm-white hover:bg-blush/10',
+                                isUploadingEditedGiftImage &&
+                                  'opacity-60 cursor-not-allowed',
+                              )}
+                            >
+                              <ImagePlus className="size-4" />
+                              {giftForm.imageId ? 'Trocar imagem' : 'Enviar imagem'}
+                            </span>
+                          </label>
+                          {giftForm.imageId && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive"
+                              onClick={handleRemoveEditingGiftImage}
+                              disabled={isUploadingEditedGiftImage}
+                            >
+                              <Trash2 className="size-4" />
+                              Remover imagem
+                            </Button>
+                          )}
+                        </div>
+                        {isUploadingEditedGiftImage && (
+                          <p className="text-xs text-warm-gray/60">Enviando imagem...</p>
+                        )}
+                      </div>
                       <div className="space-y-1.5">
                         <label className="block text-sm font-medium text-espresso/80 pl-0.5">
                           Categoria
@@ -1218,6 +1662,18 @@ function EventGiftsPageShell() {
                     </div>
                   ) : (
                     <>
+                      <div className="rounded-xl overflow-hidden border border-border/95 mb-3">
+                        {gift.imageUrl ? (
+                          <img
+                            src={gift.imageUrl}
+                            alt={`Imagem do presente ${gift.name}`}
+                            className="w-full h-36 object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <GiftPlaceholderIllustration category={gift.category} />
+                        )}
+                      </div>
                       <div className="flex items-start justify-between gap-2 min-h-12">
                         <h4 className="font-display text-base leading-snug text-espresso">
                           {gift.name}
@@ -1279,7 +1735,7 @@ function EventGiftsPageShell() {
                         {gift.status === 'available' ? (
                           isHostView && !isMembershipLoading ? (
                             <p className="text-xs text-warm-gray/50 text-center py-1">
-                              Convidados verão o botão aqui
+                              Não reservado ainda
                             </p>
                           ) : (
                             <Button
@@ -1323,7 +1779,7 @@ function EventGiftsPageShell() {
                             variant="ghost"
                             size="sm"
                             className="text-destructive"
-                            onClick={() => void handleDeleteGift(gift._id)}
+                            onClick={() => handleDeleteGift(gift._id, gift.name)}
                           >
                             Excluir
                           </Button>
@@ -1334,9 +1790,59 @@ function EventGiftsPageShell() {
                 </motion.div>
               )
             })}
-          </motion.div>
+            </AnimatePresence>
+          </div>
         )}
       </section>
+
+      {/* ═══ DELETE GIFT CONFIRM DIALOG ═══ */}
+      <Dialog
+        open={deleteGiftConfirm !== null}
+        onOpenChange={(open) => !open && !isDeletingGift && setDeleteGiftConfirm(null)}
+      >
+        <DialogContent showCloseButton={false} className="max-w-xs text-center">
+          <DialogTitle className="sr-only">Excluir presente</DialogTitle>
+          <DialogDescription className="sr-only">
+            Confirmação para excluir o presente selecionado da lista.
+          </DialogDescription>
+          <div className="flex justify-center mb-1">
+            <div className="w-12 h-12 rounded-full bg-destructive/8 flex items-center justify-center">
+              <Trash2 className="size-5 text-destructive/70" />
+            </div>
+          </div>
+          <h3 className="font-display italic text-xl text-espresso">
+            Excluir presente?
+          </h3>
+          <p className="text-sm text-warm-gray leading-relaxed">
+            <span className="font-medium text-espresso">
+              {deleteGiftConfirm?.giftName}
+            </span>{' '}
+            será removido permanentemente da lista.
+          </p>
+          <div className="flex gap-3 justify-center pt-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setDeleteGiftConfirm(null)}
+              disabled={isDeletingGift}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-destructive hover:bg-destructive/8"
+              onClick={() => void handleConfirmDeleteGift()}
+              isLoading={isDeletingGift}
+            >
+              <Trash2 className="size-3.5" />
+              Excluir
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -1364,5 +1870,153 @@ const STATUS_LABELS: Record<'available' | 'reserved' | 'received', string> = {
   available: 'Disponível',
   reserved: 'Reservado',
   received: 'Recebido',
+}
+
+function GiftPlaceholderIllustration({
+  category,
+}: {
+  category?: string | null
+}) {
+  const sp = {
+    stroke: 'currentColor' as const,
+    strokeWidth: '1.5',
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    fill: 'none' as const,
+  }
+
+  const renderIllustration = () => {
+    switch (category) {
+      case 'Cozinha':
+        return (
+          <g {...sp}>
+            {/* saucer */}
+            <path d="M 28 86 L 92 86" />
+            {/* cup body (trapezoid) */}
+            <path d="M 38 86 L 44 62 L 76 62 L 82 86 Z" />
+            {/* cup rim arc */}
+            <path d="M 44 62 Q 60 58 76 62" />
+            {/* handle */}
+            <path d="M 76 70 Q 93 70 93 78 Q 93 86 76 84" />
+            {/* steam wisps */}
+            <path d="M 51 60 Q 47 51 51 43 Q 55 35 51 27" />
+            <path d="M 69 60 Q 65 51 69 43 Q 73 35 69 27" />
+          </g>
+        )
+
+      case 'Quarto':
+        return (
+          <g {...sp}>
+            {/* headboard (left, tall) */}
+            <rect x="22" y="34" width="14" height="54" rx="3" />
+            {/* footboard (right, shorter) */}
+            <rect x="84" y="52" width="12" height="36" rx="3" />
+            {/* box spring / frame */}
+            <rect x="36" y="72" width="48" height="16" rx="2" />
+            {/* mattress */}
+            <rect x="36" y="50" width="48" height="22" rx="4" />
+            {/* pillow */}
+            <rect x="40" y="53" width="20" height="14" rx="5" />
+            {/* floor line */}
+            <path d="M 22 88 L 96 88" />
+            {/* legs */}
+            <path d="M 30 88 L 30 96" />
+            <path d="M 88 88 L 88 96" />
+          </g>
+        )
+
+      case 'Sala':
+        return (
+          <g {...sp}>
+            {/* seat cushion base */}
+            <rect x="28" y="66" width="64" height="22" rx="4" />
+            {/* left arm */}
+            <rect x="20" y="56" width="14" height="32" rx="4" />
+            {/* right arm */}
+            <rect x="86" y="56" width="14" height="32" rx="4" />
+            {/* back cushion */}
+            <rect x="28" y="44" width="64" height="24" rx="4" />
+            {/* cushion divider */}
+            <path d="M 60 44 L 60 66" />
+            {/* left leg */}
+            <path d="M 32 88 L 30 96" />
+            {/* right leg */}
+            <path d="M 88 88 L 90 96" />
+          </g>
+        )
+
+      case 'Banheiro':
+        return (
+          <g {...sp}>
+            {/* water droplet (left) */}
+            <path d="M 40 30 Q 28 46 28 57 Q 28 72 40 72 Q 52 72 52 57 Q 52 46 40 30" />
+            {/* soap bar (right) */}
+            <rect x="62" y="52" width="34" height="24" rx="5" />
+            {/* soap lines */}
+            <path d="M 69 61 L 88 61" />
+            <path d="M 69 68 L 88 68" />
+            {/* bubble above soap */}
+            <circle cx="79" cy="44" r="5" />
+            <circle cx="90" cy="38" r="3" />
+          </g>
+        )
+
+      case 'Decoração':
+        return (
+          <g {...sp}>
+            {/* center point */}
+            <circle cx="60" cy="60" r="4" />
+            {/* three petals */}
+            <path d="M 60 56 Q 52 40 56 28 Q 64 40 60 56" />
+            <path d="M 64 62 Q 80 55 92 61 Q 82 72 64 62" />
+            <path d="M 56 62 Q 40 55 28 61 Q 38 72 56 62" />
+          </g>
+        )
+
+      case 'Eletro':
+        return (
+          <g {...sp}>
+            {/* bulb globe */}
+            <circle cx="60" cy="46" r="22" />
+            {/* filament */}
+            <path d="M 50 50 Q 55 42 60 50 Q 65 58 70 50" />
+            {/* base neck */}
+            <path d="M 50 66 L 48 80 L 72 80 L 70 66" />
+            <path d="M 50 72 L 70 72" />
+            {/* shine arc */}
+            <path d="M 45 34 Q 41 38 40 45" />
+          </g>
+        )
+
+      default:
+        // Generic gift box — for no category or 'other'
+        return (
+          <g {...sp}>
+            {/* box body */}
+            <rect x="32" y="66" width="56" height="32" rx="3" />
+            {/* lid */}
+            <rect x="28" y="53" width="64" height="15" rx="3" />
+            {/* vertical ribbon */}
+            <path d="M 60 53 L 60 98" />
+            {/* bow left loop */}
+            <path d="M 60 53 Q 50 41 40 45 Q 42 57 60 53" />
+            {/* bow right loop */}
+            <path d="M 60 53 Q 70 41 80 45 Q 78 57 60 53" />
+          </g>
+        )
+    }
+  }
+
+  return (
+    <div className="h-36 w-full flex items-center justify-center bg-blush/5">
+      <svg
+        viewBox="0 0 120 120"
+        className="w-24 h-24 text-muted-rose/25"
+        aria-hidden="true"
+      >
+        {renderIllustration()}
+      </svg>
+    </div>
+  )
 }
 
