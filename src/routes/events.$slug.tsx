@@ -40,8 +40,25 @@ import {
 } from '../components/ui/dialog'
 import { DEFAULT_GIFT_CATEGORIES } from '../constants/giftCategories'
 import { EventHeroMobile } from '../components/EventHeroMobile'
+import { SITE_NAME, absoluteUrl, toJsonLd } from '../lib/seo'
 
 export const Route = createFileRoute('/events/$slug')({
+  head: () => ({
+    meta: [
+      {
+        title: `Lista de presentes | ${SITE_NAME}`,
+      },
+      {
+        name: 'description',
+        content:
+          'Veja uma lista de presentes online e participe da celebração com um presente especial.',
+      },
+      {
+        property: 'og:type',
+        content: 'website',
+      },
+    ],
+  }),
   component: EventGiftsPageShell,
 })
 
@@ -439,6 +456,9 @@ function EventGiftsPageShell() {
   const [reservingGiftId, setReservingGiftId] = useState<Id<'gifts'> | null>(
     null,
   )
+  const [locallyReservedGiftIds, setLocallyReservedGiftIds] = useState<
+    Set<Id<'gifts'>>
+  >(new Set())
   const [error, setError] = useState<string | null>(null)
   const [showReserveLoginPrompt, setShowReserveLoginPrompt] = useState(false)
   const [eventSaving, setEventSaving] = useState(false)
@@ -551,6 +571,11 @@ function EventGiftsPageShell() {
       setError(null)
       try {
         await reserveGift({ giftId })
+        setLocallyReservedGiftIds((current) => {
+          const next = new Set(current)
+          next.add(giftId)
+          return next
+        })
       } catch (reserveError) {
         setError(
           reserveError instanceof Error
@@ -1047,9 +1072,56 @@ function EventGiftsPageShell() {
   )
   const cardSizeClass = expandDescriptions ? 'min-h-[24rem]' : 'min-h-[20rem]'
   const coverImageUrl = coverPreviewUrl ?? event.coverImageUrl
+  const eventSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Event',
+    name: capitalizeFirst(headerEvent.name),
+    eventAttendanceMode: 'https://schema.org/OnlineEventAttendanceMode',
+    eventStatus: 'https://schema.org/EventScheduled',
+    startDate: headerEvent.date || undefined,
+    location: headerEvent.location
+      ? {
+          '@type': 'VirtualLocation',
+          url: absoluteUrl(`/events/${slug}`),
+        }
+      : undefined,
+    description: headerEvent.description || `Lista de presentes para ${headerEvent.name}.`,
+    image: coverImageUrl ? [coverImageUrl] : undefined,
+    organizer: {
+      '@type': 'Organization',
+      name: SITE_NAME,
+      url: absoluteUrl('/'),
+    },
+    url: absoluteUrl(`/events/${slug}`),
+    inLanguage: 'pt-BR',
+  }
+  const giftListSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: `Lista de presentes - ${headerEvent.name}`,
+    itemListElement: gifts.slice(0, 100).map((gift, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      item: {
+        '@type': 'Product',
+        name: gift.name,
+        description: gift.description || undefined,
+        image: gift.imageUrl ? [gift.imageUrl] : undefined,
+        url: absoluteUrl(`/events/${slug}`),
+      },
+    })),
+  }
 
   return (
     <div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: toJsonLd(eventSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: toJsonLd(giftListSchema) }}
+      />
       {/* ═══ HERO — Invitation Style ═══ */}
       <section
         className={cn(
@@ -1166,7 +1238,7 @@ function EventGiftsPageShell() {
                   </div>
 
                   {/* Handwritten caption on the white matte border */}
-                  <p className="font-accent text-base sm:text-lg md:text-xl text-warm-gray/35 text-center mt-4 sm:mt-5 tracking-wide">
+                  <p className="font-accent text-xl sm:text-2xl md:text-[1.6rem] text-espresso/60 text-center mt-4 sm:mt-5 tracking-wide leading-tight">
                     {capitalizeFirst(headerEvent.name)}
                   </p>
                 </div>
@@ -1219,9 +1291,6 @@ function EventGiftsPageShell() {
                   <div
                     className="paper-card relative text-center px-7 py-10 sm:px-9 sm:py-12 md:px-10 md:py-14"
                   >
-                    {/* Dog-ear fold — bottom-left corner */}
-                    <div className="paper-fold-corner" aria-hidden="true" />
-
                     {/* Subtle letterpress-style top border mark */}
                     <div
                       className="absolute top-5 left-1/2 -translate-x-1/2 w-12 sm:w-14"
@@ -2329,14 +2398,13 @@ function EventGiftsPageShell() {
                             href={gift.referenceUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-muted-rose hover:underline"
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-espresso/85 hover:text-espresso hover:underline underline-offset-2"
                           >
                             Ver referência
                             <ArrowRight className="size-3" />
                           </a>
                         ) : (
-                          <span className="text-xs text-warm-gray/45">
-                            Sem link de referência
+                          <span className="text-xs font-medium text-espresso/70">
                           </span>
                         )}
                       </div>
@@ -2344,7 +2412,7 @@ function EventGiftsPageShell() {
                       <div className="mt-auto h-10 flex items-center">
                         {gift.status === 'available' ? (
                           isHostView && !isMembershipLoading ? (
-                            <p className="text-xs text-warm-gray/50 text-center py-1">
+                            <p className="text-xs font-semibold text-espresso/70 text-center py-1">
                               Não reservado ainda
                             </p>
                           ) : (
@@ -2361,10 +2429,32 @@ function EventGiftsPageShell() {
                             </Button>
                           )
                         ) : gift.status === 'reserved' ? (
-                          <p className="text-xs text-muted-rose/80 text-center py-1">
-                            {isHostView && gift.reservedByName
-                              ? `Reservado por ${gift.reservedByName}`
-                              : 'Alguém já escolheu este mimo'}
+                          <p className="text-xs font-semibold text-center py-1">
+                            {(() => {
+                              const isReservedByCurrentGuest =
+                                gift.reservedByCurrentUser ||
+                                locallyReservedGiftIds.has(gift._id)
+
+                              if (isHostView && gift.reservedByName) {
+                                return (
+                                  <>
+                                    <span className="text-muted-rose/95">Reservado por </span>
+                                    <span className="text-espresso/70">{gift.reservedByName}</span>
+                                  </>
+                                )
+                              }
+
+                              if (isReservedByCurrentGuest) {
+                                return (
+                                  <>
+                                    <span className="text-muted-rose/95">Reservado por </span>
+                                    <span className="text-espresso">você</span>
+                                  </>
+                                )
+                              }
+
+                              return <span className="text-muted-rose/95">Alguém já escolheu este mimo</span>
+                            })()}
                           </p>
                         ) : (
                           <p className="text-center py-1 font-accent text-sm text-warm-gray">
@@ -2375,7 +2465,7 @@ function EventGiftsPageShell() {
                       </div>
 
                       {isHostView && (
-                        <div className="flex justify-end gap-2 pt-3 mt-3 border-t border-border/20">
+                        <div className="flex justify-end gap-2 pt-3 mt-3 border-t border-border/70">
                           <Button
                             type="button"
                             variant="ghost"
@@ -2562,21 +2652,19 @@ function GiftPlaceholderIllustration({
       case 'Quarto':
         return (
           <g {...sp}>
-            {/* headboard (left, tall) */}
-            <rect x="22" y="34" width="14" height="54" rx="3" />
-            {/* footboard (right, shorter) */}
-            <rect x="84" y="52" width="12" height="36" rx="3" />
-            {/* box spring / frame */}
-            <rect x="36" y="72" width="48" height="16" rx="2" />
-            {/* mattress */}
-            <rect x="36" y="50" width="48" height="22" rx="4" />
-            {/* pillow */}
-            <rect x="40" y="53" width="20" height="14" rx="5" />
-            {/* floor line */}
-            <path d="M 22 88 L 96 88" />
-            {/* legs */}
-            <path d="M 30 88 L 30 96" />
-            <path d="M 88 88 L 88 96" />
+            {/* bed frame — top-down view */}
+            <rect x="22" y="14" width="76" height="92" rx="6" />
+            {/* headboard band at the top */}
+            <path d="M 22 36 L 98 36" />
+            {/* left pillow */}
+            <rect x="26" y="18" width="30" height="14" rx="5" />
+            {/* right pillow */}
+            <rect x="62" y="18" width="30" height="14" rx="5" />
+            {/* blanket fold curve */}
+            <path d="M 24 58 Q 60 52 96 58" />
+            {/* blanket lower folds */}
+            <path d="M 26 74 L 94 74" strokeOpacity="0.4" />
+            <path d="M 26 88 L 94 88" strokeOpacity="0.4" />
           </g>
         )
 

@@ -148,9 +148,6 @@ export function EventHeroMobile({
           }}
         >
           <div className="paper-card relative text-center px-7 py-10 sm:px-9 sm:py-12">
-            {/* Dog-ear fold */}
-            <div className="paper-fold-corner" aria-hidden="true" />
-
             {/* Letterpress top mark */}
             <div
               className="absolute top-5 left-1/2 -translate-x-1/2 w-12 sm:w-14"
