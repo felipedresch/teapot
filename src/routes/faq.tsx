@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { Fragment } from 'react'
 import { SITE_NAME, absoluteUrl, toJsonLd } from '../lib/seo'
 import BrandWordmark from '../components/BrandWordmark'
 

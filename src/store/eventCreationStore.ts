@@ -19,6 +19,7 @@ type DraftGift = {
   category?: string
   referenceUrl?: string
   imageId?: Id<'_storage'>
+  imageUrl?: string
 }
 
 type DraftEvent = {
@@ -32,6 +33,7 @@ type DraftEvent = {
   location?: string
   description?: string
   coverImageId?: Id<'_storage'>
+  coverImageUrl?: string
 }
 
 type EventCreationState = {
