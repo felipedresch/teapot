@@ -14,8 +14,38 @@ import { cn } from '@/lib/utils'
 import { Badge } from '../components/ui/badge'
 import { DatePicker } from '../components/ui/date-picker'
 import { DEFAULT_GIFT_CATEGORIES } from '../constants/giftCategories'
+import { SITE_NAME, absoluteUrl } from '../lib/seo'
 
 export const Route = createFileRoute('/events/create')({
+  head: () => ({
+    meta: [
+      {
+        title: `Criar lista de presentes | ${SITE_NAME}`,
+      },
+      {
+        name: 'description',
+        content:
+          'Crie sua lista de presentes online em poucos minutos e compartilhe com convidados.',
+      },
+      {
+        property: 'og:title',
+        content: `Criar lista de presentes | ${SITE_NAME}`,
+      },
+      {
+        property: 'og:description',
+        content:
+          'Monte seu evento e compartilhe sua lista de presentes com um link único.',
+      },
+      {
+        property: 'og:type',
+        content: 'website',
+      },
+      {
+        property: 'og:url',
+        content: absoluteUrl('/events/create'),
+      },
+    ],
+  }),
   component: EventCreatePageShell,
 })
 

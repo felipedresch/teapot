@@ -22,12 +22,23 @@ export const listGiftsForEvent = query({
         v.literal('reserved'),
         v.literal('received'),
       ),
-      reservedBy: v.optional(v.id('users')),
       reservedAt: v.optional(v.number()),
+      reservedByCurrentUser: v.boolean(),
       reservedByName: v.optional(v.string()),
     }),
   ),
   handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx)
+    const membership = userId
+      ? await ctx.db
+          .query('eventMembers')
+          .withIndex('by_event_and_user', (q) =>
+            q.eq('eventId', args.eventId).eq('userId', userId),
+          )
+          .unique()
+      : null
+    const isHostView = membership?.role === 'host'
+
     const gifts = await ctx.db
       .query('gifts')
       .withIndex('by_event', (q) => q.eq('eventId', args.eventId))
@@ -38,8 +49,12 @@ export const listGiftsForEvent = query({
     for (const gift of gifts) {
       let reservedByName: string | undefined
       let imageUrl: string | undefined
+      const reservedByCurrentUser =
+        !!userId &&
+        !!gift.reservedBy &&
+        String(gift.reservedBy) === String(userId)
 
-      if (gift.reservedBy) {
+      if (isHostView && gift.reservedBy) {
         const user = await ctx.db.get(gift.reservedBy)
         const name = user?.name?.trim()
         if (name) {
@@ -52,8 +67,18 @@ export const listGiftsForEvent = query({
       }
 
       giftsWithNames.push({
-        ...gift,
+        _id: gift._id,
+        _creationTime: gift._creationTime,
+        eventId: gift.eventId,
+        name: gift.name,
+        description: gift.description,
+        imageId: gift.imageId,
         imageUrl,
+        category: gift.category,
+        referenceUrl: gift.referenceUrl,
+        status: gift.status,
+        reservedAt: gift.reservedAt,
+        reservedByCurrentUser,
         reservedByName,
       })
     }

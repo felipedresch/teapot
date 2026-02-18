@@ -1,6 +1,6 @@
 {
-  "short_name": "TanStack App",
-  "name": "Create TanStack App Sample",
+  "short_name": "MyWish",
+  "name": "MyWish - Lista de presentes online",
   "icons": [
     {
       "src": "favicon.svg",
@@ -20,6 +20,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#c3829e",
+  "background_color": "#fdf9f6"
 }
