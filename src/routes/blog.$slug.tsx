@@ -4,7 +4,11 @@ import { useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { SITE_NAME, absoluteUrl, toJsonLd } from '../lib/seo'
-import { fetchSlopMachineArticle, getSafeFaqSchema } from '../lib/slopMachine'
+import {
+  fetchSlopMachineArticle,
+  fetchSlopMachineList,
+  getSafeFaqSchema,
+} from '../lib/slopMachine'
 
 const getBlogArticle = createServerFn({ method: 'GET' })
   .inputValidator((input: { slug: string }) => input)
@@ -12,21 +16,38 @@ const getBlogArticle = createServerFn({ method: 'GET' })
     return fetchSlopMachineArticle(data.slug)
   })
 
+const getBlogList = createServerFn({ method: 'GET' }).handler(async () => {
+  return fetchSlopMachineList()
+})
+
 export const Route = createFileRoute('/blog/$slug')({
   loader: async ({ params }) => {
     try {
-      return await getBlogArticle({ data: { slug: params.slug } })
+      const [article, allPosts] = await Promise.all([
+        getBlogArticle({ data: { slug: params.slug } }),
+        getBlogList(),
+      ])
+
+      const relatedPosts = allPosts
+        .filter((post) => post.slug !== params.slug)
+        .slice(0, 3)
+
+      return {
+        article,
+        relatedPosts,
+      }
     } catch {
       throw notFound()
     }
   },
   head: ({ loaderData, params }) => {
-    const title = loaderData?.title || `Blog | ${SITE_NAME}`
+    const article = loaderData?.article
+    const title = article?.title || `Blog | ${SITE_NAME}`
     const description =
-      loaderData?.description ||
+      article?.description ||
       'Conteúdo sobre lista de presentes online para ocasiões especiais.'
-    const publishedAt = loaderData?.publishedAt || ''
-    const updatedAt = loaderData?.updatedAt || ''
+    const publishedAt = article?.publishedAt || ''
+    const updatedAt = article?.updatedAt || ''
 
     return {
       meta: [
@@ -68,7 +89,7 @@ export const Route = createFileRoute('/blog/$slug')({
 })
 
 function BlogPostPage() {
-  const article = Route.useLoaderData()
+  const { article, relatedPosts } = Route.useLoaderData()
   const faqSchema = getSafeFaqSchema(article.faqSchema)
 
   useEffect(() => {
@@ -136,6 +157,49 @@ function BlogPostPage() {
           {article.markdown}
         </ReactMarkdown>
       </div>
+
+      <section className="pt-8 space-y-4">
+        <h2 className="text-3xl text-espresso">Artigos relacionados</h2>
+        {relatedPosts.length === 0 ? (
+          <p className="text-warm-gray">Em breve, mais conteúdos relacionados por aqui.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {relatedPosts.map((post) => (
+              <article
+                key={post.slug}
+                className="rounded-2xl border border-border/50 bg-warm-white p-5 shadow-dreamy"
+              >
+                <p className="text-xs uppercase tracking-wide text-muted-rose">
+                  {new Date(post.updatedAt).toLocaleDateString('pt-BR')}
+                </p>
+                <h3 className="text-xl mt-2 text-espresso leading-snug">{post.title}</h3>
+                <p className="text-sm text-warm-gray mt-2 line-clamp-3">{post.description}</p>
+                <Link
+                  to="/blog/$slug"
+                  params={{ slug: post.slug }}
+                  className="inline-flex mt-3 text-sm text-muted-rose hover:underline"
+                >
+                  Ler artigo
+                </Link>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-border/50 bg-warm-white p-6 shadow-dreamy">
+        <h2 className="text-3xl text-espresso">Crie sua lista de presentes</h2>
+        <p className="text-warm-gray mt-2 leading-relaxed">
+          Monte sua lista em poucos minutos, compartilhe com convidados e organize tudo em um só
+          lugar.
+        </p>
+        <Link
+          to="/events/create"
+          className="inline-flex mt-4 text-sm text-muted-rose hover:underline"
+        >
+          Começar agora
+        </Link>
+      </section>
     </article>
   )
 }
