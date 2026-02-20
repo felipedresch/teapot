@@ -26,6 +26,7 @@ const MOBILE_LINK_ACTIVE = `${MOBILE_LINK_BASE} text-espresso font-medium bg-blu
 // Route paths stay in English; labels stay in Portuguese for users.
 const desktopNavItems = [
   { label: 'Início', href: '/' as const },
+  { label: 'Blog', href: '/blog' as const },
   { label: 'FAQ', href: '/faq' as const },
   { label: 'Como funciona', href: '/how-it-works' as const },
 ]
