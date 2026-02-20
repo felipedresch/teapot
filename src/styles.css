@@ -725,3 +725,51 @@ body::after {
     scroll-behavior: smooth;
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   BLOG MARKDOWN
+   ═══════════════════════════════════════════════════════ */
+
+.blog-markdown {
+  color: var(--warm-gray);
+  line-height: 1.75;
+}
+
+.blog-markdown > * + * {
+  margin-top: 1rem;
+}
+
+.blog-markdown h1,
+.blog-markdown h2,
+.blog-markdown h3,
+.blog-markdown h4 {
+  margin-top: 2rem;
+  color: var(--espresso);
+}
+
+.blog-markdown ul,
+.blog-markdown ol {
+  padding-left: 1.2rem;
+}
+
+.blog-markdown li + li {
+  margin-top: 0.35rem;
+}
+
+.blog-markdown a {
+  color: var(--muted-rose);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.blog-markdown blockquote {
+  border-left: 3px solid var(--blush);
+  padding-left: 1rem;
+  color: var(--stone);
+}
+
+.blog-markdown code {
+  background: rgba(197, 209, 200, 0.3);
+  padding: 0.12rem 0.35rem;
+  border-radius: 0.35rem;
+}

@@ -11,11 +11,16 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as FaqRouteImport } from './routes/faq'
+import { Route as BlogRouteImport } from './routes/blog'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BlogIndexRouteImport } from './routes/blog.index'
+import { Route as SitemapXmlRouteImport } from './routes/sitemap.xml'
 import { Route as EventsCreateRouteImport } from './routes/events.create'
 import { Route as EventsSlugRouteImport } from './routes/events.$slug'
 import { Route as DemoPosthogRouteImport } from './routes/demo/posthog'
 import { Route as DemoConvexRouteImport } from './routes/demo/convex'
+import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
+import { Route as ApiSlopRevalidateRouteImport } from './routes/api.slop.revalidate'
 
 const HowItWorksRoute = HowItWorksRouteImport.update({
   id: '/how-it-works',
@@ -27,9 +32,24 @@ const FaqRoute = FaqRouteImport.update({
   path: '/faq',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogRoute = BlogRouteImport.update({
+  id: '/blog',
+  path: '/blog',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogIndexRoute = BlogIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => BlogRoute,
+} as any)
+const SitemapXmlRoute = SitemapXmlRouteImport.update({
+  id: '/sitemap/xml',
+  path: '/sitemap/xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EventsCreateRoute = EventsCreateRouteImport.update({
@@ -52,73 +72,114 @@ const DemoConvexRoute = DemoConvexRouteImport.update({
   path: '/demo/convex',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => BlogRoute,
+} as any)
+const ApiSlopRevalidateRoute = ApiSlopRevalidateRouteImport.update({
+  id: '/api/slop/revalidate',
+  path: '/api/slop/revalidate',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/blog': typeof BlogRouteWithChildren
   '/faq': typeof FaqRoute
   '/how-it-works': typeof HowItWorksRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/demo/convex': typeof DemoConvexRoute
   '/demo/posthog': typeof DemoPosthogRoute
   '/events/$slug': typeof EventsSlugRoute
   '/events/create': typeof EventsCreateRoute
+  '/sitemap/xml': typeof SitemapXmlRoute
+  '/blog/': typeof BlogIndexRoute
+  '/api/slop/revalidate': typeof ApiSlopRevalidateRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/faq': typeof FaqRoute
   '/how-it-works': typeof HowItWorksRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/demo/convex': typeof DemoConvexRoute
   '/demo/posthog': typeof DemoPosthogRoute
   '/events/$slug': typeof EventsSlugRoute
   '/events/create': typeof EventsCreateRoute
+  '/sitemap/xml': typeof SitemapXmlRoute
+  '/blog': typeof BlogIndexRoute
+  '/api/slop/revalidate': typeof ApiSlopRevalidateRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/blog': typeof BlogRouteWithChildren
   '/faq': typeof FaqRoute
   '/how-it-works': typeof HowItWorksRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/demo/convex': typeof DemoConvexRoute
   '/demo/posthog': typeof DemoPosthogRoute
   '/events/$slug': typeof EventsSlugRoute
   '/events/create': typeof EventsCreateRoute
+  '/sitemap/xml': typeof SitemapXmlRoute
+  '/blog/': typeof BlogIndexRoute
+  '/api/slop/revalidate': typeof ApiSlopRevalidateRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/blog'
     | '/faq'
     | '/how-it-works'
+    | '/blog/$slug'
     | '/demo/convex'
     | '/demo/posthog'
     | '/events/$slug'
     | '/events/create'
+    | '/sitemap/xml'
+    | '/blog/'
+    | '/api/slop/revalidate'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/faq'
     | '/how-it-works'
+    | '/blog/$slug'
     | '/demo/convex'
     | '/demo/posthog'
     | '/events/$slug'
     | '/events/create'
+    | '/sitemap/xml'
+    | '/blog'
+    | '/api/slop/revalidate'
   id:
     | '__root__'
     | '/'
+    | '/blog'
     | '/faq'
     | '/how-it-works'
+    | '/blog/$slug'
     | '/demo/convex'
     | '/demo/posthog'
     | '/events/$slug'
     | '/events/create'
+    | '/sitemap/xml'
+    | '/blog/'
+    | '/api/slop/revalidate'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BlogRoute: typeof BlogRouteWithChildren
   FaqRoute: typeof FaqRoute
   HowItWorksRoute: typeof HowItWorksRoute
   DemoConvexRoute: typeof DemoConvexRoute
   DemoPosthogRoute: typeof DemoPosthogRoute
   EventsSlugRoute: typeof EventsSlugRoute
   EventsCreateRoute: typeof EventsCreateRoute
+  SitemapXmlRoute: typeof SitemapXmlRoute
+  ApiSlopRevalidateRoute: typeof ApiSlopRevalidateRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -137,11 +198,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FaqRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blog': {
+      id: '/blog'
+      path: '/blog'
+      fullPath: '/blog'
+      preLoaderRoute: typeof BlogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/': {
+      id: '/blog/'
+      path: '/'
+      fullPath: '/blog/'
+      preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof BlogRoute
+    }
+    '/sitemap/xml': {
+      id: '/sitemap/xml'
+      path: '/sitemap/xml'
+      fullPath: '/sitemap/xml'
+      preLoaderRoute: typeof SitemapXmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/events/create': {
@@ -172,17 +254,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoConvexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
+      parentRoute: typeof BlogRoute
+    }
+    '/api/slop/revalidate': {
+      id: '/api/slop/revalidate'
+      path: '/api/slop/revalidate'
+      fullPath: '/api/slop/revalidate'
+      preLoaderRoute: typeof ApiSlopRevalidateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface BlogRouteChildren {
+  BlogSlugRoute: typeof BlogSlugRoute
+  BlogIndexRoute: typeof BlogIndexRoute
+}
+
+const BlogRouteChildren: BlogRouteChildren = {
+  BlogSlugRoute: BlogSlugRoute,
+  BlogIndexRoute: BlogIndexRoute,
+}
+
+const BlogRouteWithChildren = BlogRoute._addFileChildren(BlogRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BlogRoute: BlogRouteWithChildren,
   FaqRoute: FaqRoute,
   HowItWorksRoute: HowItWorksRoute,
   DemoConvexRoute: DemoConvexRoute,
   DemoPosthogRoute: DemoPosthogRoute,
   EventsSlugRoute: EventsSlugRoute,
   EventsCreateRoute: EventsCreateRoute,
+  SitemapXmlRoute: SitemapXmlRoute,
+  ApiSlopRevalidateRoute: ApiSlopRevalidateRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

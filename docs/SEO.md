@@ -271,3 +271,41 @@ Anote se você é mencionado, em que posição, e o que os concorrentes falam. I
 ---
 
 O domínio `mywish.com.br` é excelente — curto, memorável, .com.br pesa bem para SEO local. O grande trabalho agora é construir conteúdo e autoridade em cima dessa base técnica. Quer ajuda com algum passo específico, como gerar os schemas, rascunhar artigos ou estruturar as páginas de ocasião?
+
+---
+
+## Implementação atual no Teapot (Slop Machine + SEO técnico)
+
+Para garantir indexação consistente das páginas de conteúdo geradas externamente (Slop Machine), a base do Teapot foi ajustada com as seguintes regras:
+
+1. **Rotas indexáveis de conteúdo**
+  - Lista: `/blog`
+  - Artigo: `/blog/:slug`
+
+2. **Sitemap dinâmico (fonte única de verdade)**
+  - `GET /sitemap-index.xml` agora é gerado dinamicamente no servidor.
+  - Inclui URLs estáticas principais + URLs de artigos vindas do endpoint de sitemap do Slop Machine.
+  - Isso evita sitemap estático desatualizado quando novos conteúdos são publicados.
+
+3. **Webhook de revalidação**
+  - `POST /api/slop/revalidate`
+  - Ao receber evento válido do Slop Machine, limpa cache local para refletir novos artigos mais rápido.
+  - Valida `Authorization: Bearer <secret>` e ignora payload de `projectSlug` diferente do projeto atual.
+
+4. **SEO por página de artigo**
+  - Meta tags dinâmicas (`title`, `description`, Open Graph).
+  - Propriedades de artigo com data (`article:published_time`, `article:modified_time`).
+  - JSON-LD `Article` por post.
+  - JSON-LD `FAQPage` injetado quando o conteúdo possui `faqSchema`.
+
+5. **Canônica e descoberta**
+  - Canonical já é aplicada no layout raiz para todas as rotas.
+  - `robots.txt` aponta para `https://mywish.com.br/sitemap-index.xml`.
+
+### Checklist operacional (sempre que mudar ambiente)
+
+- Configurar `SLOP_MACHINE_BASE_URL` corretamente.
+- Confirmar `SLOP_MACHINE_PROJECT_SLUG=mywish-app`.
+- Configurar `SLOP_MACHINE_WEBHOOK_SECRET` igual ao emissor do webhook.
+- Validar `/sitemap-index.xml` em produção e confirmar presença de URLs `/blog/...`.
+- Reenviar sitemap no Google Search Console e Bing Webmaster Tools.
