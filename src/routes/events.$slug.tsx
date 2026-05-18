@@ -1980,16 +1980,6 @@ function EventGiftsPageShell() {
       )}
 
       {/* ═══ ERROR ═══ */}
-      {showReserveLoginPrompt && (
-        <div className="px-6 max-w-5xl mx-auto pb-4">
-          <div className="text-sm text-espresso bg-sage/15 border border-sage/25 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-            <span>Faca login para reservar um presente.</span>
-            <Button size="sm" variant="outline" onClick={() => void handleSignInToReserve()}>
-              Fazer login
-            </Button>
-          </div>
-        </div>
-      )}
       {error && (
         <div className="px-6 max-w-5xl mx-auto pb-4">
           <p className="text-sm text-destructive bg-destructive/8 border border-destructive/20 rounded-xl px-4 py-3">
@@ -2623,6 +2613,44 @@ function EventGiftsPageShell() {
             >
               <Trash2 className="size-3.5" />
               Excluir
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══ LOGIN TO RESERVE DIALOG ═══ */}
+      <Dialog
+        open={showReserveLoginPrompt}
+        onOpenChange={(open) => setShowReserveLoginPrompt(open)}
+      >
+        <DialogContent className="max-w-sm text-center">
+          <div className="flex justify-center mb-1">
+            <div className="size-12 rounded-full bg-sage/20 flex items-center justify-center">
+              <Gift className="size-5 text-sage" />
+            </div>
+          </div>
+          <DialogTitle className="font-display italic text-2xl text-espresso">
+            Entre para reservar
+          </DialogTitle>
+          <DialogDescription className="text-sm text-warm-gray/80 leading-relaxed pt-1">
+            Faça login para escolher e reservar um presente. É rapidinho!
+          </DialogDescription>
+          <div className="flex flex-col gap-2 pt-2">
+            <Button
+              type="button"
+              className={PRIMARY_ACTION_CLASS}
+              onClick={() => void handleSignInToReserve()}
+            >
+              Entrar com Google
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-warm-gray/60"
+              onClick={() => setShowReserveLoginPrompt(false)}
+            >
+              Agora não
             </Button>
           </div>
         </DialogContent>
