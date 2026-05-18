@@ -1,12 +1,14 @@
 import { getAuthUserId } from '@convex-dev/auth/server'
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
+import { paginationOptsValidator, paginationResultValidator } from 'convex/server'
 
-export const listGiftsForEvent = query({
+export const listGiftCatalogForEvent = query({
   args: {
     eventId: v.id('events'),
+    paginationOpts: paginationOptsValidator,
   },
-  returns: v.array(
+  returns: paginationResultValidator(
     v.object({
       _id: v.id('gifts'),
       _creationTime: v.number(),
@@ -23,32 +25,92 @@ export const listGiftsForEvent = query({
         v.literal('received'),
       ),
       reservedAt: v.optional(v.number()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const giftsPage = await ctx.db
+      .query('gifts')
+      .withIndex('by_event', (q) => q.eq('eventId', args.eventId))
+      .paginate(args.paginationOpts)
+
+    const giftCatalog = []
+
+    for (const gift of giftsPage.page) {
+      let imageUrl: string | undefined
+
+      if (gift.imageId) {
+        imageUrl = (await ctx.storage.getUrl(gift.imageId)) ?? undefined
+      }
+
+      giftCatalog.push({
+        _id: gift._id,
+        _creationTime: gift._creationTime,
+        eventId: gift.eventId,
+        name: gift.name,
+        description: gift.description,
+        imageId: gift.imageId,
+        imageUrl,
+        category: gift.category,
+        referenceUrl: gift.referenceUrl,
+        status: gift.status,
+        reservedAt: gift.reservedAt,
+      })
+    }
+
+    giftCatalog.sort((a, b) => a._creationTime - b._creationTime)
+
+    return {
+      ...giftsPage,
+      page: giftCatalog,
+    }
+  },
+})
+
+export const listGiftStatusesForGiftIds = query({
+  args: {
+    giftIds: v.array(v.id('gifts')),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id('gifts'),
+      status: v.union(
+        v.literal('available'),
+        v.literal('reserved'),
+        v.literal('received'),
+      ),
+      reservedAt: v.optional(v.number()),
       reservedByCurrentUser: v.boolean(),
       reservedByName: v.optional(v.string()),
     }),
   ),
   handler: async (ctx, args) => {
+    if (args.giftIds.length === 0) {
+      return []
+    }
+
     const userId = await getAuthUserId(ctx)
-    const membership = userId
-      ? await ctx.db
-          .query('eventMembers')
-          .withIndex('by_event_and_user', (q) =>
-            q.eq('eventId', args.eventId).eq('userId', userId),
-          )
-          .unique()
-      : null
-    const isHostView = membership?.role === 'host'
+    const gifts = await Promise.all(args.giftIds.map((giftId) => ctx.db.get(giftId)))
+    const existingGifts = gifts.filter((gift) => gift !== null)
+    if (existingGifts.length === 0) {
+      return []
+    }
 
-    const gifts = await ctx.db
-      .query('gifts')
-      .withIndex('by_event', (q) => q.eq('eventId', args.eventId))
-      .collect()
+    const eventId = existingGifts[0].eventId
+    const isHostView = userId
+      ? (
+          await ctx.db
+            .query('eventMembers')
+            .withIndex('by_event_and_user', (q) =>
+              q.eq('eventId', eventId).eq('userId', userId),
+            )
+            .unique()
+        )?.role === 'host'
+      : false
 
-    const giftsWithNames = []
+    const statuses = []
 
-    for (const gift of gifts) {
+    for (const gift of existingGifts) {
       let reservedByName: string | undefined
-      let imageUrl: string | undefined
       const reservedByCurrentUser =
         !!userId &&
         !!gift.reservedBy &&
@@ -62,20 +124,8 @@ export const listGiftsForEvent = query({
         }
       }
 
-      if (gift.imageId) {
-        imageUrl = (await ctx.storage.getUrl(gift.imageId)) ?? undefined
-      }
-
-      giftsWithNames.push({
+      statuses.push({
         _id: gift._id,
-        _creationTime: gift._creationTime,
-        eventId: gift.eventId,
-        name: gift.name,
-        description: gift.description,
-        imageId: gift.imageId,
-        imageUrl,
-        category: gift.category,
-        referenceUrl: gift.referenceUrl,
         status: gift.status,
         reservedAt: gift.reservedAt,
         reservedByCurrentUser,
@@ -83,9 +133,7 @@ export const listGiftsForEvent = query({
       })
     }
 
-    giftsWithNames.sort((a, b) => a._creationTime - b._creationTime)
-
-    return giftsWithNames
+    return statuses
   },
 })
 
@@ -293,4 +341,3 @@ export const deleteGift = mutation({
     return null
   },
 })
-

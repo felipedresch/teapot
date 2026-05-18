@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { useMutation } from 'convex/react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowRight,
   ChevronDown,
@@ -435,12 +435,35 @@ async function generateImagePreview(
   return canvas.toDataURL('image/jpeg', options.quality)
 }
 
+function dataUrlToFile(dataUrl: string, fallbackFilename: string): File {
+  const [meta, base64Data] = dataUrl.split(',')
+  if (!meta || !base64Data || !meta.includes('base64')) {
+    throw new Error('Imagem inválida. Selecione a imagem novamente.')
+  }
+
+  const mimeMatch = meta.match(/data:(.*?);base64/)
+  const mimeType = mimeMatch?.[1] || 'image/jpeg'
+  const binary = atob(base64Data)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i)
+  }
+
+  return new File([bytes], fallbackFilename, { type: mimeType })
+}
+
 function EventGiftsPageShell() {
   const { slug } = Route.useParams()
   const { signIn } = useAuthActions()
   const { isAuthenticated } = useCurrentUser()
   const { event, isLoading: isEventLoading } = useEventBySlug(slug)
-  const { gifts, isLoading: isGiftsLoading } = useGifts(event?._id)
+  const {
+    gifts,
+    isLoading: isGiftsLoading,
+    hasMore: hasMoreGifts,
+    isLoadingMore: isLoadingMoreGifts,
+    loadMore: loadMoreGifts,
+  } = useGifts(event?._id)
   const { membership, isLoading: isMembershipLoading } = useEventMembership(
     event?._id as Id<'events'> | undefined,
   )
@@ -480,6 +503,7 @@ function EventGiftsPageShell() {
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [didCopyShareLink, setDidCopyShareLink] = useState(false)
   const [expandDescriptions, setExpandDescriptions] = useState(false)
+  const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null)
   const [editableEvent, setEditableEvent] = useState<{
     _id: Id<'events'>
     name: string
@@ -612,6 +636,34 @@ function EventGiftsPageShell() {
       setShowReserveLoginPrompt(false)
     }
   }, [isAuthenticated])
+
+  useEffect(() => {
+    if (!hasMoreGifts || isLoadingMoreGifts) {
+      return
+    }
+
+    const target = loadMoreTriggerRef.current
+    if (!target) {
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const firstEntry = entries[0]
+        if (!firstEntry?.isIntersecting) {
+          return
+        }
+        loadMoreGifts(24)
+      },
+      {
+        rootMargin: '900px 0px 280px 0px',
+        threshold: 0.01,
+      },
+    )
+
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [hasMoreGifts, isLoadingMoreGifts, loadMoreGifts])
 
   const isPairEventType = useCallback((eventType: string) => {
     return PAIR_EVENT_TYPES.has(eventType)
@@ -766,9 +818,17 @@ function EventGiftsPageShell() {
           generateEventCoverUploadUrl({ eventId: event._id }),
         ])
 
+        if (!previewUrl) {
+          throw new Error('Não foi possível processar a imagem da capa.')
+        }
+
         setCoverPreviewUrl(previewUrl)
 
-        const storageId = await uploadImageToConvex(uploadUrl, file!)
+        const optimizedCoverFile = dataUrlToFile(
+          previewUrl,
+          `event-cover-${event._id}.jpg`,
+        )
+        const storageId = await uploadImageToConvex(uploadUrl, optimizedCoverFile)
         await updateEventCoverImage({
           eventId: event._id,
           coverImageId: storageId,
@@ -836,7 +896,16 @@ function EventGiftsPageShell() {
           generateImagePreview(file!, GIFT_PREVIEW_OPTIONS),
           generateGiftImageUploadUrl({ eventId: event._id }),
         ])
-        const storageId = await uploadImageToConvex(uploadUrl, file!)
+
+        if (!previewUrl) {
+          throw new Error('Não foi possível processar a imagem do presente.')
+        }
+
+        const optimizedGiftFile = dataUrlToFile(
+          previewUrl,
+          `gift-${Date.now()}.jpg`,
+        )
+        const storageId = await uploadImageToConvex(uploadUrl, optimizedGiftFile)
 
         if (mode === 'create') {
           setNewGiftForm((current) => ({
@@ -2163,11 +2232,10 @@ function EventGiftsPageShell() {
             </p>
           </div>
         ) : (
-          <div
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
-          >
-            <AnimatePresence mode="popLayout">
-            {gifts.map((gift) => {
+          <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              <AnimatePresence mode="popLayout">
+              {gifts.map((gift) => {
               const isEditing = editingGiftId === gift._id && isHostView
               const statusStyles = {
                 available: 'bg-gift-available/10 border-gift-available/20',
@@ -2489,8 +2557,24 @@ function EventGiftsPageShell() {
                   )}
                 </motion.div>
               )
-            })}
-            </AnimatePresence>
+              })}
+              </AnimatePresence>
+            </div>
+
+            {(hasMoreGifts || isLoadingMoreGifts) && (
+              <div ref={loadMoreTriggerRef} className="h-1 w-full" />
+            )}
+
+            {isLoadingMoreGifts && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-5">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={`gifts-loading-more-${i}`}
+                    className="h-44 rounded-2xl bg-blush/25 animate-pulse"
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </section>
@@ -2762,4 +2846,3 @@ function GiftPlaceholderIllustration({
     </div>
   )
 }
-
