@@ -434,6 +434,14 @@ export const listGiftCatalogForEvent = query({
   args: {
     eventId: v.id('events'),
     paginationOpts: paginationOptsValidator,
+    sortOrder: v.optional(v.union(v.literal('asc'), v.literal('desc'))),
+    statusFilter: v.optional(
+      v.union(
+        v.literal('available'),
+        v.literal('reserved'),
+        v.literal('received'),
+      ),
+    ),
   },
   returns: paginationResultValidator(
     v.object({
@@ -455,9 +463,21 @@ export const listGiftCatalogForEvent = query({
     }),
   ),
   handler: async (ctx, args) => {
-    const giftsPage = await ctx.db
-      .query('gifts')
-      .withIndex('by_event', (q) => q.eq('eventId', args.eventId))
+    const sortOrder = args.sortOrder ?? 'asc'
+    const baseQuery = args.statusFilter
+      ? ctx.db
+          .query('gifts')
+          .withIndex('by_event_and_status', (q) =>
+            q
+              .eq('eventId', args.eventId)
+              .eq('status', args.statusFilter as 'available' | 'reserved' | 'received'),
+          )
+      : ctx.db
+          .query('gifts')
+          .withIndex('by_event', (q) => q.eq('eventId', args.eventId))
+
+    const giftsPage = await baseQuery
+      .order(sortOrder)
       .paginate(args.paginationOpts)
 
     const giftCatalog = []
@@ -484,12 +504,27 @@ export const listGiftCatalogForEvent = query({
       })
     }
 
-    giftCatalog.sort((a, b) => a._creationTime - b._creationTime)
-
     return {
       ...giftsPage,
       page: giftCatalog,
     }
+  },
+})
+
+export const listGiftCategoriesForEvent = query({
+  args: { eventId: v.id('events') },
+  returns: v.array(v.string()),
+  handler: async (ctx, args) => {
+    const gifts = await ctx.db
+      .query('gifts')
+      .withIndex('by_event', (q) => q.eq('eventId', args.eventId))
+      .collect()
+    const set = new Set<string>()
+    for (const gift of gifts) {
+      const trimmed = gift.category?.trim()
+      if (trimmed) set.add(trimmed)
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'))
   },
 })
 
@@ -794,6 +829,7 @@ export const createGift = mutation({
 export const reserveGift = mutation({
   args: {
     giftId: v.id('gifts'),
+    message: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -830,12 +866,212 @@ export const reserveGift = mutation({
       membership = await ctx.db.get(membershipId)
     }
 
+    const trimmedMessage = args.message?.trim()
     await ctx.db.patch('gifts', args.giftId, {
       status: 'reserved',
       reservedBy: userId,
       reservedAt: Date.now(),
+      reservationMessage: trimmedMessage ? trimmedMessage : undefined,
     })
 
+    return null
+  },
+})
+
+export const listGiftReservationsForHost = query({
+  args: {
+    eventId: v.id('events'),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id('gifts'),
+      name: v.string(),
+      status: v.union(
+        v.literal('available'),
+        v.literal('reserved'),
+        v.literal('received'),
+      ),
+      reservedAt: v.optional(v.number()),
+      reservationMessage: v.optional(v.string()),
+      guestUserId: v.optional(v.id('users')),
+      guestName: v.optional(v.string()),
+      guestImageUrl: v.optional(v.string()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) return []
+
+    const membership = await ctx.db
+      .query('eventMembers')
+      .withIndex('by_event_and_user', (q) =>
+        q.eq('eventId', args.eventId).eq('userId', userId),
+      )
+      .unique()
+
+    if (!membership || membership.role !== 'host') return []
+
+    const reserved = await ctx.db
+      .query('gifts')
+      .withIndex('by_event_and_status', (q) =>
+        q.eq('eventId', args.eventId).eq('status', 'reserved'),
+      )
+      .collect()
+
+    const received = await ctx.db
+      .query('gifts')
+      .withIndex('by_event_and_status', (q) =>
+        q.eq('eventId', args.eventId).eq('status', 'received'),
+      )
+      .collect()
+
+    const gifts = [...reserved, ...received].sort(
+      (a, b) => (b.reservedAt ?? 0) - (a.reservedAt ?? 0),
+    )
+
+    const out: Array<{
+      _id: Id<'gifts'>
+      name: string
+      status: 'available' | 'reserved' | 'received'
+      reservedAt?: number
+      reservationMessage?: string
+      guestUserId?: Id<'users'>
+      guestName?: string
+      guestImageUrl?: string
+    }> = []
+
+    for (const gift of gifts) {
+      let guestName: string | undefined
+      let guestImageUrl: string | undefined
+      if (gift.reservedBy) {
+        const guest = await ctx.db.get(gift.reservedBy)
+        guestName = guest?.name?.trim() || undefined
+        if (guest?.imageStorageId) {
+          guestImageUrl =
+            (await ctx.storage.getUrl(guest.imageStorageId)) ?? undefined
+        } else if (guest?.image) {
+          guestImageUrl = guest.image
+        }
+      }
+      out.push({
+        _id: gift._id,
+        name: gift.name,
+        status: gift.status,
+        reservedAt: gift.reservedAt,
+        reservationMessage: gift.reservationMessage,
+        guestUserId: gift.reservedBy,
+        guestName,
+        guestImageUrl,
+      })
+    }
+
+    return out
+  },
+})
+
+export const listMyReservations = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      _id: v.id('gifts'),
+      name: v.string(),
+      status: v.union(
+        v.literal('available'),
+        v.literal('reserved'),
+        v.literal('received'),
+      ),
+      imageUrl: v.optional(v.string()),
+      reservedAt: v.optional(v.number()),
+      reservationMessage: v.optional(v.string()),
+      eventId: v.id('events'),
+      eventName: v.string(),
+      eventSlug: v.string(),
+    }),
+  ),
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) return []
+
+    const gifts = await ctx.db
+      .query('gifts')
+      .withIndex('by_reserved_by', (q) => q.eq('reservedBy', userId))
+      .collect()
+
+    gifts.sort((a, b) => (b.reservedAt ?? 0) - (a.reservedAt ?? 0))
+
+    const results: Array<{
+      _id: Id<'gifts'>
+      name: string
+      status: 'available' | 'reserved' | 'received'
+      imageUrl?: string
+      reservedAt?: number
+      reservationMessage?: string
+      eventId: Id<'events'>
+      eventName: string
+      eventSlug: string
+    }> = []
+
+    for (const gift of gifts) {
+      const event = await ctx.db.get(gift.eventId)
+      if (!event) continue
+      const imageUrl = gift.imageId
+        ? ((await ctx.storage.getUrl(gift.imageId)) ?? undefined)
+        : undefined
+      results.push({
+        _id: gift._id,
+        name: gift.name,
+        status: gift.status,
+        imageUrl,
+        reservedAt: gift.reservedAt,
+        reservationMessage: gift.reservationMessage,
+        eventId: gift.eventId,
+        eventName: event.name,
+        eventSlug: event.slug,
+      })
+    }
+
+    return results
+  },
+})
+
+export const setGiftStatus = mutation({
+  args: {
+    giftId: v.id('gifts'),
+    status: v.union(
+      v.literal('available'),
+      v.literal('reserved'),
+      v.literal('received'),
+    ),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) throw new Error('Unauthorized')
+
+    const gift = await ctx.db.get(args.giftId)
+    if (!gift) throw new Error('Presente não encontrado')
+
+    const membership = await ctx.db
+      .query('eventMembers')
+      .withIndex('by_event_and_user', (q) =>
+        q.eq('eventId', gift.eventId).eq('userId', userId),
+      )
+      .unique()
+
+    if (!membership || membership.role !== 'host') {
+      throw new Error('Somente anfitriões podem atualizar o status do presente')
+    }
+
+    if (args.status === 'available') {
+      await ctx.db.patch('gifts', args.giftId, {
+        status: 'available',
+        reservedBy: undefined,
+        reservedAt: undefined,
+        reservationMessage: undefined,
+      })
+    } else {
+      await ctx.db.patch('gifts', args.giftId, { status: args.status })
+    }
     return null
   },
 })

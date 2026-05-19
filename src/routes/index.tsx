@@ -1,7 +1,9 @@
 import { createFileRoute, Link, useLocation } from '@tanstack/react-router'
-import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, Search, Sparkles, MapPin } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowRight, Gift, Search, Sparkles, MapPin } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
+import { useQuery } from 'convex/react'
+import { api } from '../../convex/_generated/api'
 import { useEventSearch, useMyEventsGrouped } from '../hooks/useEvents'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { Button } from '../components/ui/button'
@@ -87,6 +89,18 @@ function HomePage() {
     attending,
     isLoading: isMyEventsLoading,
   } = useMyEventsGrouped()
+  const myReservations = useQuery(
+    api.gifts.listMyReservations,
+    isAuthenticated ? {} : 'skip',
+  )
+  const reservationCountByEventId = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const reservation of myReservations ?? []) {
+      const key = String(reservation.eventId)
+      map.set(key, (map.get(key) ?? 0) + 1)
+    }
+    return map
+  }, [myReservations])
   const normalizedSearch = search.trim()
   const shouldSearch = normalizedSearch.length >= 2
   const { events, isLoading } = useEventSearch(normalizedSearch, shouldSearch)
@@ -437,6 +451,7 @@ function HomePage() {
                       eventType={event.eventType}
                       customEventType={event.customEventType}
                       hosts={event.hosts}
+                      role="host"
                     />
                   ))}
                 </div>
@@ -445,9 +460,17 @@ function HomePage() {
 
             {attending.length > 0 && (
               <div className="space-y-3">
-                <p className="text-sm font-medium text-espresso/80">
-                  Eventos que voce participa como convidado
-                </p>
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="text-sm font-medium text-espresso/80">
+                    Eventos que voce participa como convidado
+                  </p>
+                  <Link
+                    to="/my-gifts"
+                    className="text-xs text-muted-rose hover:underline"
+                  >
+                    Ver meus presentes →
+                  </Link>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {attending.map((event) => (
                     <MyEventCard
@@ -457,6 +480,10 @@ function HomePage() {
                       eventType={event.eventType}
                       customEventType={event.customEventType}
                       hosts={event.hosts}
+                      role="guest"
+                      reservationCount={
+                        reservationCountByEventId.get(String(event.eventId)) ?? 0
+                      }
                     />
                   ))}
                 </div>
@@ -475,18 +502,23 @@ function MyEventCard({
   eventType,
   customEventType,
   hosts,
+  role,
+  reservationCount,
 }: {
   slug: string
   name: string
   eventType: string
   customEventType?: string
   hosts: Array<string>
+  role: 'host' | 'guest'
+  reservationCount?: number
 }) {
   const displayHosts = getDisplayHostNames(hosts)
   const hostsName = displayHosts.join(' • ')
   const eventTypeLabel = customEventType || EVENT_TYPE_LABELS[eventType] || 'Evento'
   const isPairEvent =
     PAIR_EVENT_TYPES.has(eventType) && displayHosts.length === 2
+  const roleLabel = role === 'host' ? 'Você é anfitrião' : 'Você é convidado'
 
   return (
     <Link
@@ -495,9 +527,20 @@ function MyEventCard({
       className="group flex items-start justify-between gap-3 rounded-xl border border-border/40 bg-warm-white/80 px-4 py-4 transition-all duration-200 hover:shadow-dreamy hover:border-muted-rose/30 hover:-translate-y-px"
     >
       <div className="min-w-0 flex-1 space-y-1.5">
-        <p className="text-sm font-medium text-espresso">
-          {capitalizeFirst(name || 'Evento sem nome')}
-        </p>
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-sm font-medium text-espresso">
+            {capitalizeFirst(name || 'Evento sem nome')}
+          </p>
+          <span
+            className={
+              role === 'host'
+                ? 'shrink-0 rounded-full bg-sage/15 px-2 py-0.5 text-[10px] font-medium text-sage'
+                : 'shrink-0 rounded-full bg-muted-rose/15 px-2 py-0.5 text-[10px] font-medium text-muted-rose'
+            }
+          >
+            {roleLabel}
+          </span>
+        </div>
         <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs">
           <span className="text-muted-rose/80">{eventTypeLabel}</span>
           <span className="text-muted-rose/35">•</span>
@@ -511,6 +554,21 @@ function MyEventCard({
             <span className="text-warm-gray/70">{hostsName || 'Anfitrioes nao informados'}</span>
           )}
         </div>
+        {role === 'guest' && (
+          <div className="flex items-center gap-1.5 text-[11px] text-warm-gray/75">
+            <Gift className="size-3 text-muted-rose/70" />
+            {reservationCount && reservationCount > 0 ? (
+              <span>
+                Você reservou {reservationCount} presente
+                {reservationCount === 1 ? '' : 's'}
+              </span>
+            ) : (
+              <span className="text-warm-gray/55">
+                Você ainda não reservou nenhum presente
+              </span>
+            )}
+          </div>
+        )}
       </div>
       <ArrowRight className="size-3.5 text-warm-gray/30 group-hover:text-muted-rose transition-colors shrink-0 mt-0.5" />
     </Link>

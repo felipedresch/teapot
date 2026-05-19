@@ -8,6 +8,8 @@ const schema = defineSchema({
   users: defineTable({
     name: v.optional(v.string()),
     image: v.optional(v.string()),
+    imageStorageId: v.optional(v.id('_storage')),
+    imageSourceUrl: v.optional(v.string()),
     email: v.optional(v.string()),
     emailVerificationTime: v.optional(v.number()),
     phone: v.optional(v.string()),
@@ -95,9 +97,11 @@ const schema = defineSchema({
     ),
     reservedBy: v.optional(v.id('users')),
     reservedAt: v.optional(v.number()),
+    reservationMessage: v.optional(v.string()),
   })
     .index('by_event', ['eventId'])
     .index('by_event_and_status', ['eventId', 'status'])
+    .index('by_reserved_by', ['reservedBy'])
     .index('by_image_id', ['imageId']),
 
   temporaryGiftImages: defineTable({

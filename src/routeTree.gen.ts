@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as MyGiftsRouteImport } from './routes/my-gifts'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as BlogRouteImport } from './routes/blog'
@@ -23,6 +24,11 @@ import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as EventsSlugConviteParceiroRouteImport } from './routes/events.$slug_.convite-parceiro'
 import { Route as ApiSlopRevalidateRouteImport } from './routes/api.slop.revalidate'
 
+const MyGiftsRoute = MyGiftsRouteImport.update({
+  id: '/my-gifts',
+  path: '/my-gifts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HowItWorksRoute = HowItWorksRouteImport.update({
   id: '/how-it-works',
   path: '/how-it-works',
@@ -95,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/blog': typeof BlogRouteWithChildren
   '/faq': typeof FaqRoute
   '/how-it-works': typeof HowItWorksRoute
+  '/my-gifts': typeof MyGiftsRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/demo/convex': typeof DemoConvexRoute
   '/demo/posthog': typeof DemoPosthogRoute
@@ -109,6 +116,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/faq': typeof FaqRoute
   '/how-it-works': typeof HowItWorksRoute
+  '/my-gifts': typeof MyGiftsRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/demo/convex': typeof DemoConvexRoute
   '/demo/posthog': typeof DemoPosthogRoute
@@ -125,6 +133,7 @@ export interface FileRoutesById {
   '/blog': typeof BlogRouteWithChildren
   '/faq': typeof FaqRoute
   '/how-it-works': typeof HowItWorksRoute
+  '/my-gifts': typeof MyGiftsRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/demo/convex': typeof DemoConvexRoute
   '/demo/posthog': typeof DemoPosthogRoute
@@ -142,6 +151,7 @@ export interface FileRouteTypes {
     | '/blog'
     | '/faq'
     | '/how-it-works'
+    | '/my-gifts'
     | '/blog/$slug'
     | '/demo/convex'
     | '/demo/posthog'
@@ -156,6 +166,7 @@ export interface FileRouteTypes {
     | '/'
     | '/faq'
     | '/how-it-works'
+    | '/my-gifts'
     | '/blog/$slug'
     | '/demo/convex'
     | '/demo/posthog'
@@ -171,6 +182,7 @@ export interface FileRouteTypes {
     | '/blog'
     | '/faq'
     | '/how-it-works'
+    | '/my-gifts'
     | '/blog/$slug'
     | '/demo/convex'
     | '/demo/posthog'
@@ -187,6 +199,7 @@ export interface RootRouteChildren {
   BlogRoute: typeof BlogRouteWithChildren
   FaqRoute: typeof FaqRoute
   HowItWorksRoute: typeof HowItWorksRoute
+  MyGiftsRoute: typeof MyGiftsRoute
   DemoConvexRoute: typeof DemoConvexRoute
   DemoPosthogRoute: typeof DemoPosthogRoute
   EventsSlugRoute: typeof EventsSlugRoute
@@ -198,6 +211,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/my-gifts': {
+      id: '/my-gifts'
+      path: '/my-gifts'
+      fullPath: '/my-gifts'
+      preLoaderRoute: typeof MyGiftsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/how-it-works': {
       id: '/how-it-works'
       path: '/how-it-works'
@@ -309,6 +329,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogRoute: BlogRouteWithChildren,
   FaqRoute: FaqRoute,
   HowItWorksRoute: HowItWorksRoute,
+  MyGiftsRoute: MyGiftsRoute,
   DemoConvexRoute: DemoConvexRoute,
   DemoPosthogRoute: DemoPosthogRoute,
   EventsSlugRoute: EventsSlugRoute,

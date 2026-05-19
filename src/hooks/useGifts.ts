@@ -5,14 +5,30 @@ import { usePaginatedQuery, useQuery, useMutation } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 
-export function useGifts(eventId: Id<'events'> | undefined) {
+export type GiftStatusFilter = 'all' | 'available' | 'reserved' | 'received'
+export type GiftSortOrder = 'asc' | 'desc'
+
+export function useGifts(
+  eventId: Id<'events'> | undefined,
+  options?: { statusFilter?: GiftStatusFilter; sortOrder?: GiftSortOrder },
+) {
+  const statusFilter = options?.statusFilter ?? 'all'
+  const sortOrder = options?.sortOrder ?? 'asc'
+  const queryArgs = eventId
+    ? {
+        eventId,
+        sortOrder,
+        ...(statusFilter !== 'all' ? { statusFilter } : {}),
+      }
+    : 'skip'
+
   const {
     results: giftCatalog,
     status: paginationStatus,
     loadMore,
   } = usePaginatedQuery(
     api.gifts.listGiftCatalogForEvent,
-    eventId ? { eventId } : 'skip',
+    queryArgs,
     { initialNumItems: 24 },
   )
   const loadedGiftIds = giftCatalog.map((gift) => gift._id)
@@ -51,6 +67,7 @@ export function useGiftMutations() {
   const reserveGiftMutation = useMutation(api.gifts.reserveGift)
   const updateGiftMutation = useMutation(api.gifts.updateGift)
   const deleteGiftMutation = useMutation(api.gifts.deleteGift)
+  const setGiftStatusMutation = useMutation(api.gifts.setGiftStatus)
 
   const createGift = useCallback(
     async (args: {
@@ -70,7 +87,7 @@ export function useGiftMutations() {
   )
 
   const reserveGift = useCallback(
-    async (args: { giftId: Id<'gifts'> }) => {
+    async (args: { giftId: Id<'gifts'>; message?: string }) => {
       await reserveGiftMutation(args)
     },
     [reserveGiftMutation],
@@ -99,10 +116,21 @@ export function useGiftMutations() {
     [deleteGiftMutation],
   )
 
+  const setGiftStatus = useCallback(
+    async (args: {
+      giftId: Id<'gifts'>
+      status: 'available' | 'reserved' | 'received'
+    }) => {
+      await setGiftStatusMutation(args)
+    },
+    [setGiftStatusMutation],
+  )
+
   return {
     createGift,
     reserveGift,
     updateGift,
     deleteGift,
+    setGiftStatus,
   }
 }
