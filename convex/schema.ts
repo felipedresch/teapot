@@ -57,6 +57,20 @@ const schema = defineSchema({
     .index('by_event', ['eventId'])
     .index('by_event_and_user', ['eventId', 'userId']),
 
+  // Convites para co-anfitriões via link (in-house, sem email/sms)
+  eventInvites: defineTable({
+    eventId: v.id('events'),
+    token: v.string(),
+    role: v.literal('host'),
+    createdByUserId: v.id('users'),
+    createdAt: v.number(),
+    usedByUserId: v.optional(v.id('users')),
+    usedAt: v.optional(v.number()),
+    revokedAt: v.optional(v.number()),
+  })
+    .index('by_token', ['token'])
+    .index('by_event', ['eventId']),
+
   // Configurações por evento
   eventConfig: defineTable({
     eventId: v.id('events'),
@@ -83,7 +97,16 @@ const schema = defineSchema({
     reservedAt: v.optional(v.number()),
   })
     .index('by_event', ['eventId'])
-    .index('by_event_and_status', ['eventId', 'status']),
+    .index('by_event_and_status', ['eventId', 'status'])
+    .index('by_image_id', ['imageId']),
+
+  temporaryGiftImages: defineTable({
+    imageId: v.id('_storage'),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index('by_image_id', ['imageId'])
+    .index('by_expires_at', ['expiresAt']),
 
   // Configurações do site (textos, nomes, etc.)
   config: defineTable({

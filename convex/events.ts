@@ -463,6 +463,76 @@ export const searchPublicEvents = query({
   },
 })
 
+export const listRecentPublicEvents = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id('events'),
+      _creationTime: v.number(),
+      slug: v.string(),
+      name: v.string(),
+      eventType: v.string(),
+      customEventType: v.optional(v.string()),
+      hosts: v.array(v.string()),
+      location: v.optional(v.string()),
+      date: v.optional(v.string()),
+      coverImageUrl: v.string(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const limit = Math.max(1, Math.min(args.limit ?? 5, 12))
+    // Fetch a buffer larger than the requested limit so we can drop events
+    // without a cover image (the showcase only displays events with photos).
+    const candidates = await ctx.db
+      .query('events')
+      .withIndex('by_is_public', (q) => q.eq('isPublic', true))
+      .order('desc')
+      .take(limit * 4)
+
+    const results: Array<{
+      _id: Id<'events'>
+      _creationTime: number
+      slug: string
+      name: string
+      eventType: string
+      customEventType?: string
+      hosts: Array<string>
+      location?: string
+      date?: string
+      coverImageUrl: string
+    }> = []
+
+    for (const event of candidates) {
+      if (!event.coverImageId) continue
+      const coverImageUrl = await ctx.storage.getUrl(event.coverImageId)
+      if (!coverImageUrl) continue
+
+      results.push({
+        _id: event._id,
+        _creationTime: event._creationTime,
+        slug: event.slug,
+        name: event.name,
+        eventType: getEventTypeValue(event.eventType),
+        customEventType: normalizeOptionalText(event.customEventType),
+        hosts: getEventHosts(
+          event.hosts,
+          event.partnerOneName,
+          event.partnerTwoName,
+        ),
+        location: event.location,
+        date: event.date,
+        coverImageUrl,
+      })
+
+      if (results.length >= limit) break
+    }
+
+    return results
+  },
+})
+
 export const getMembershipForCurrentUserAndEvent = query({
   args: {
     eventId: v.id('events'),

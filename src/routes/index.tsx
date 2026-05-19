@@ -6,6 +6,9 @@ import { useEventSearch, useMyEventsGrouped } from '../hooks/useEvents'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
+import { EventInvitationHero } from '../components/EventInvitationHero'
+import { OrnamentDivider } from '../components/OrnamentDivider'
+import { PublicEventsCarousel } from '../components/PublicEventsCarousel'
 import { capitalizeFirst, getDisplayHostNames } from '../lib/presentation'
 import { SITE_NAME, absoluteUrl } from '../lib/seo'
 
@@ -210,6 +213,12 @@ function HomePage() {
           <OrnamentDivider className="w-24 text-muted-rose/25" />
         </motion.div>
       </section>
+
+      {/* ═══ SHOWCASE — example invitation with fake data ═══ */}
+      <InvitationShowcase />
+
+      {/* ═══ PUBLIC EVENTS CAROUSEL ═══ */}
+      <PublicEventsCarousel />
 
       {/* ═══ CONTENT ═══ */}
       <section className="px-6 pb-28 md:pb-36">
@@ -508,21 +517,74 @@ function MyEventCard({
   )
 }
 
-function OrnamentDivider({ className }: { className?: string }) {
+const SHOWCASE_EVENT = {
+  coverImageUrl:
+    'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&auto=format&fit=crop&q=80',
+  eventName: 'Nosso novo lar',
+  eventTypeLabel: 'Chá de casa nova',
+  hosts: ['Mariana', 'Lucas'],
+  location: 'São Paulo, SP',
+  date: '2026-08-23',
+  description:
+    'Depois de muito sonhar, recebemos vocês no nosso primeiro lar. Venham tomar um café e brindar essa nova fase com a gente.',
+}
+
+function InvitationShowcase() {
   return (
-    <svg
-      viewBox="0 0 120 24"
-      fill="none"
-      className={className}
-      aria-hidden="true"
-    >
-      <path
-        d="M0 12 C20 4, 40 20, 60 12 C80 4, 100 20, 120 12"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
+    <div className="relative">
+      <motion.div
+        className="text-center px-6 pt-6 md:pt-10"
+        initial={{ opacity: 0, y: 12 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-80px' }}
+        transition={{ duration: 0.6, ease }}
+      >
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-muted-rose/30 bg-warm-white/70 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-muted-rose/85">
+          <Sparkles className="size-3" />
+          exemplo
+        </span>
+        <p className="font-accent text-2xl text-muted-rose mt-4">
+          veja como fica
+        </p>
+        <h2 className="font-display italic text-3xl md:text-4xl text-espresso mt-1 leading-[1.1]">
+          O seu convite, com a sua história
+        </h2>
+        <p className="text-sm md:text-base text-warm-gray/70 mt-4 max-w-md mx-auto leading-relaxed">
+          Foto, nomes, data e local — tudo num cartão que celebra o momento.
+          Abaixo, um exemplo ilustrativo do que dá pra criar.
+        </p>
+      </motion.div>
+
+      <EventInvitationHero
+        coverImageUrl={SHOWCASE_EVENT.coverImageUrl}
+        eventName={SHOWCASE_EVENT.eventName}
+        eventTypeLabel={SHOWCASE_EVENT.eventTypeLabel}
+        hosts={SHOWCASE_EVENT.hosts}
+        shouldUsePairLayout
+        location={SHOWCASE_EVENT.location}
+        date={SHOWCASE_EVENT.date}
+        description={SHOWCASE_EVENT.description}
+        showFloatingDecor={false}
+        showBackground={false}
       />
-      <circle cx="60" cy="12" r="2" fill="currentColor" opacity="0.5" />
-    </svg>
+
+      <motion.div
+        className="text-center px-6 pb-12 md:pb-16 -mt-4 md:-mt-8"
+        initial={{ opacity: 0, y: 12 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-60px' }}
+        transition={{ duration: 0.6, ease }}
+      >
+        <Button asChild size="lg">
+          <Link to="/events/create">
+            <Sparkles className="size-4" />
+            Criar o meu convite
+          </Link>
+        </Button>
+        <p className="text-xs text-warm-gray/55 mt-3">
+          Grátis e sem cadastro pra começar.
+        </p>
+      </motion.div>
+    </div>
   )
 }

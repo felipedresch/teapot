@@ -1,19 +1,48 @@
 // Hooks relacionados aos presentes (gifts) de um evento
 
 import { useCallback } from 'react'
-import { useQuery, useMutation } from 'convex/react'
+import { usePaginatedQuery, useQuery, useMutation } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 
 export function useGifts(eventId: Id<'events'> | undefined) {
-  const gifts = useQuery(
-    api.gifts.listGiftsForEvent,
+  const {
+    results: giftCatalog,
+    status: paginationStatus,
+    loadMore,
+  } = usePaginatedQuery(
+    api.gifts.listGiftCatalogForEvent,
     eventId ? { eventId } : 'skip',
+    { initialNumItems: 24 },
+  )
+  const loadedGiftIds = giftCatalog.map((gift) => gift._id)
+  const giftStatuses = useQuery(
+    api.gifts.listGiftStatusesForGiftIds,
+    eventId && loadedGiftIds.length > 0 ? { giftIds: loadedGiftIds } : 'skip',
   )
 
+  const statusMap = new Map((giftStatuses ?? []).map((status) => [status._id, status]))
+  const gifts = giftCatalog.map((gift) => {
+    const status = statusMap.get(gift._id)
+    return {
+      ...gift,
+      status: status?.status ?? gift.status,
+      reservedAt: status?.reservedAt ?? gift.reservedAt,
+      reservedByCurrentUser: status?.reservedByCurrentUser ?? false,
+      reservedByName: status?.reservedByName,
+    }
+  })
+
   return {
-    gifts: gifts ?? [],
-    isLoading: !!eventId && gifts === undefined,
+    gifts,
+    isLoading:
+      !!eventId &&
+      (paginationStatus === 'LoadingFirstPage' ||
+        (giftCatalog.length > 0 && giftStatuses === undefined)),
+    paginationStatus,
+    hasMore: paginationStatus === 'CanLoadMore',
+    isLoadingMore: paginationStatus === 'LoadingMore',
+    loadMore,
   }
 }
 

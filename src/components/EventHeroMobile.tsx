@@ -2,6 +2,7 @@ import { motion } from 'motion/react'
 import { MapPin, Share2 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { capitalizeFirst, formatDatePtBrFromIso } from '../lib/presentation'
+import { OrnamentDivider } from './OrnamentDivider'
 
 const ease = [0.22, 1, 0.36, 1] as const
 
@@ -14,25 +15,6 @@ const fadeUp = {
   },
 }
 
-function OrnamentDividerMobile({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 120 24"
-      fill="none"
-      className={className}
-      aria-hidden="true"
-    >
-      <path
-        d="M0 12 C20 4, 40 20, 60 12 C80 4, 100 20, 120 12"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <circle cx="60" cy="12" r="2" fill="currentColor" opacity="0.5" />
-    </svg>
-  )
-}
-
 type EventHeroMobileProps = {
   coverImageUrl: string
   eventName: string
@@ -42,7 +24,7 @@ type EventHeroMobileProps = {
   location?: string
   date?: string
   description?: string
-  onShareClick: () => void
+  onShareClick?: () => void
 }
 
 /**
@@ -109,23 +91,25 @@ export function EventHeroMobile({
           />
 
           {/* Share button — anchored top-right over the photo */}
-          <button
-            type="button"
-            className={cn(
-              'absolute top-4 right-4 z-20',
-              'inline-flex items-center justify-center',
-              'size-10 rounded-full',
-              'bg-white/80 backdrop-blur-md',
-              'border border-white/50',
-              'shadow-[0_2px_8px_rgba(61,53,48,0.14),0_8px_24px_rgba(61,53,48,0.10)]',
-              'transition-all duration-200',
-              'hover:bg-white/95 hover:scale-105',
-              'active:scale-95',
-            )}
-            onClick={onShareClick}
-          >
-            <Share2 className="size-4 text-espresso/70" />
-          </button>
+          {onShareClick && (
+            <button
+              type="button"
+              className={cn(
+                'absolute top-4 right-4 z-20',
+                'inline-flex items-center justify-center',
+                'size-10 rounded-full',
+                'bg-white/80 backdrop-blur-md',
+                'border border-white/50',
+                'shadow-[0_2px_8px_rgba(61,53,48,0.14),0_8px_24px_rgba(61,53,48,0.10)]',
+                'transition-all duration-200',
+                'hover:bg-white/95 hover:scale-105',
+                'active:scale-95',
+              )}
+              onClick={onShareClick}
+            >
+              <Share2 className="size-4 text-espresso/70" />
+            </button>
+          )}
         </div>
       </motion.div>
 
@@ -161,7 +145,7 @@ export function EventHeroMobile({
 
             {/* Top flourish */}
             <motion.div variants={fadeUp} className="mt-4">
-              <OrnamentDividerMobile className="w-16 sm:w-20 mx-auto text-muted-rose/18" />
+              <OrnamentDivider className="w-16 sm:w-20 mx-auto text-muted-rose/18" />
             </motion.div>
 
             {/* Event type */}
@@ -229,7 +213,7 @@ export function EventHeroMobile({
 
             {/* Bottom flourish */}
             <motion.div variants={fadeUp} className="mt-4 sm:mt-5">
-              <OrnamentDividerMobile className="w-16 sm:w-20 mx-auto text-muted-rose/18" />
+              <OrnamentDivider className="w-16 sm:w-20 mx-auto text-muted-rose/18" />
             </motion.div>
 
             {/* Letterpress bottom mark */}

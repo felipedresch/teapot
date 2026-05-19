@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useAuthActions } from '@convex-dev/auth/react'
-import { useMutation } from 'convex/react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useAction, useMutation, useQuery } from 'convex/react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowRight,
   ChevronDown,
@@ -9,7 +9,7 @@ import {
   Heart,
   ImagePlus,
   Link2,
-  MapPin,
+  Loader2,
   Plus,
   Share2,
   Settings2,
@@ -19,11 +19,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react'
 import type { Id } from '../../convex/_generated/dataModel'
 import { cn } from '../lib/utils'
-import {
-  capitalizeFirst,
-  formatDatePtBrFromIso,
-  getDisplayHostNames,
-} from '../lib/presentation'
+import { capitalizeFirst, getDisplayHostNames } from '../lib/presentation'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { useEventBySlug, useEventMembership } from '../hooks/useEvents'
 import { useGiftMutations, useGifts } from '../hooks/useGifts'
@@ -39,7 +35,8 @@ import {
   DialogTitle,
 } from '../components/ui/dialog'
 import { DEFAULT_GIFT_CATEGORIES } from '../constants/giftCategories'
-import { EventHeroMobile } from '../components/EventHeroMobile'
+import { EventInvitationHero } from '../components/EventInvitationHero'
+import { OrnamentDivider } from '../components/OrnamentDivider'
 import { SITE_NAME, absoluteUrl, toJsonLd } from '../lib/seo'
 
 export const Route = createFileRoute('/events/$slug')({
@@ -82,293 +79,30 @@ const EVENT_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'other', label: 'Outro' },
 ]
 const PAIR_EVENT_TYPES = new Set(['wedding', 'bridal-shower'])
-const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease },
-  },
-}
 
 const FORM_SELECT_CLASS =
-  'flex w-full appearance-none rounded-xl border border-border/80 bg-warm-white px-4 py-3 pr-10 text-base text-espresso transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent'
+  'flex w-full appearance-none rounded-xl border border-muted-rose/20 bg-warm-white px-4 py-3 pr-10 text-base text-espresso transition-all duration-200 hover:border-muted-rose/40 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent shadow-[inset_0_1px_2px_rgba(61,53,48,0.03)]'
 const FORM_TEXTAREA_CLASS =
-  'flex w-full rounded-xl border border-border/80 bg-warm-white px-4 py-3 text-base text-espresso placeholder:text-warm-gray/55 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent'
+  'flex w-full rounded-xl border border-muted-rose/20 bg-warm-white px-4 py-3 text-base text-espresso placeholder:text-warm-gray/55 transition-all duration-200 hover:border-muted-rose/40 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent shadow-[inset_0_1px_2px_rgba(61,53,48,0.03)]'
 const UPLOAD_CHIP_CLASS =
-  'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs border cursor-pointer transition-colors shadow-sm border-muted-rose/35 bg-warm-white text-espresso hover:bg-muted-rose/16 hover:border-muted-rose/60'
+  'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs border cursor-pointer transition-colors shadow-sm border-muted-rose/35 bg-warm-white/95 backdrop-blur-sm text-espresso hover:bg-muted-rose/16 hover:border-muted-rose/60'
 const UPLOAD_DROPZONE_CLASS =
-  'rounded-xl border border-dashed border-muted-rose/35 bg-warm-white/70 flex flex-col items-center justify-center text-sm text-warm-gray/75 cursor-pointer transition-colors hover:bg-muted-rose/10 hover:border-muted-rose/55'
+  'rounded-xl border border-dashed border-muted-rose/40 bg-warm-white/80 flex flex-col items-center justify-center text-sm text-warm-gray/75 cursor-pointer transition-all duration-200 hover:bg-muted-rose/8 hover:border-muted-rose/60 hover:shadow-dreamy'
 const PRIMARY_ACTION_CLASS =
   'shadow-dreamy-md hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ring/70'
-const HERO_SHARE_BUTTON_CLASS =
-  'inline-flex items-center gap-2 rounded-full border border-muted-rose/35 bg-[linear-gradient(145deg,rgba(255,255,255,0.97),rgba(251,244,240,0.95)_55%,rgba(237,223,215,0.93))] px-2.5 py-2.5 text-xs sm:text-sm font-medium text-espresso shadow-[0_2px_6px_rgba(61,53,48,0.14),0_8px_20px_rgba(61,53,48,0.12)] transition-all duration-200 hover:translate-y-[-1px] hover:brightness-105 hover:shadow-[0_4px_10px_rgba(61,53,48,0.16),0_14px_28px_rgba(61,53,48,0.14)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/65'
 
-type FloatingDecorKind =
-  | 'stem'
-  | 'sprig'
-  | 'flower'
-  | 'compass'
-  | 'diamond'
-  | 'dot'
-
-type FloatingDecorItem = {
-  top: string
-  drift: 'gentle' | 'slow' | 'drift' | 'sway'
-  kind: FloatingDecorKind
-  toneClass: string
-  sizeClass: string
-  appearDelay: number
-  animationDelay: number
-  rotateDeg?: number
-}
-
-type FloatingDecorColumn = {
-  side: 'left' | 'right'
-  offset: string
-  items: Array<FloatingDecorItem>
-}
-
-const FLOATING_DECOR_COLUMNS: Array<FloatingDecorColumn> = [
-  {
-    side: 'left',
-    offset: '0.6%',
-    items: [
-      { top: '4%', drift: 'gentle', kind: 'stem', toneClass: 'text-sage/45', sizeClass: 'w-14 h-20', appearDelay: 0.45, animationDelay: 0.6, rotateDeg: -6 },
-      { top: '24%', drift: 'slow', kind: 'flower', toneClass: 'text-blush/52', sizeClass: 'w-10 h-10', appearDelay: 0.9, animationDelay: 2.2, rotateDeg: 10 },
-      { top: '52%', drift: 'drift', kind: 'diamond', toneClass: 'text-warm-gray/30', sizeClass: 'w-4 h-4', appearDelay: 1.5, animationDelay: 5.8, rotateDeg: -8 },
-      { top: '74%', drift: 'sway', kind: 'sprig', toneClass: 'text-sage/34', sizeClass: 'w-10 h-14', appearDelay: 1.9, animationDelay: 3.4, rotateDeg: 5 },
-    ],
-  },
-  {
-    side: 'left',
-    offset: '4.2%',
-    items: [
-      { top: '10%', drift: 'drift', kind: 'dot', toneClass: 'text-soft-terracotta/30', sizeClass: 'w-3.5 h-3.5', appearDelay: 0.8, animationDelay: 4.1 },
-      { top: '30%', drift: 'sway', kind: 'compass', toneClass: 'text-muted-rose/42', sizeClass: 'w-10 h-10', appearDelay: 1.1, animationDelay: 1.4, rotateDeg: -6 },
-      { top: '57%', drift: 'gentle', kind: 'flower', toneClass: 'text-blush/46', sizeClass: 'w-9 h-9', appearDelay: 1.6, animationDelay: 6.3, rotateDeg: 14 },
-      { top: '84%', drift: 'slow', kind: 'dot', toneClass: 'text-sage/26', sizeClass: 'w-4 h-4', appearDelay: 2.2, animationDelay: 8.8 },
-    ],
-  },
-  {
-    side: 'left',
-    offset: '7.9%',
-    items: [
-      { top: '6%', drift: 'sway', kind: 'sprig', toneClass: 'text-sage/38', sizeClass: 'w-11 h-[3.75rem]', appearDelay: 0.7, animationDelay: 2.7, rotateDeg: -10 },
-      { top: '35%', drift: 'gentle', kind: 'diamond', toneClass: 'text-muted-rose/34', sizeClass: 'w-5 h-5', appearDelay: 1.2, animationDelay: 0.9, rotateDeg: 7 },
-      { top: '63%', drift: 'drift', kind: 'stem', toneClass: 'text-sage/30', sizeClass: 'w-10 h-14', appearDelay: 1.7, animationDelay: 4.9, rotateDeg: 4 },
-      { top: '80%', drift: 'slow', kind: 'dot', toneClass: 'text-blush/26', sizeClass: 'w-3 h-3', appearDelay: 2.4, animationDelay: 7.5 },
-    ],
-  },
-  {
-    side: 'left',
-    offset: '11.6%',
-    items: [
-      { top: '14%', drift: 'gentle', kind: 'flower', toneClass: 'text-muted-rose/46', sizeClass: 'w-8 h-8', appearDelay: 0.9, animationDelay: 3.2, rotateDeg: -12 },
-      { top: '40%', drift: 'slow', kind: 'sprig', toneClass: 'text-sage/32', sizeClass: 'w-10 h-14', appearDelay: 1.3, animationDelay: 1.8, rotateDeg: 8 },
-      { top: '58%', drift: 'sway', kind: 'dot', toneClass: 'text-warm-gray/26', sizeClass: 'w-3.5 h-3.5', appearDelay: 1.9, animationDelay: 5.1 },
-      { top: '88%', drift: 'drift', kind: 'diamond', toneClass: 'text-soft-terracotta/24', sizeClass: 'w-4 h-4', appearDelay: 2.6, animationDelay: 8.2 },
-    ],
-  },
-  {
-    side: 'left',
-    offset: '15.3%',
-    items: [
-      { top: '8%', drift: 'drift', kind: 'compass', toneClass: 'text-muted-rose/36', sizeClass: 'w-9 h-9', appearDelay: 1.0, animationDelay: 2.1, rotateDeg: 6 },
-      { top: '27%', drift: 'gentle', kind: 'dot', toneClass: 'text-sage/28', sizeClass: 'w-3 h-3', appearDelay: 1.4, animationDelay: 4.4 },
-      { top: '50%', drift: 'slow', kind: 'flower', toneClass: 'text-blush/44', sizeClass: 'w-8 h-8', appearDelay: 1.8, animationDelay: 6.7, rotateDeg: 9 },
-      { top: '72%', drift: 'sway', kind: 'sprig', toneClass: 'text-sage/30', sizeClass: 'w-9 h-[3.25rem]', appearDelay: 2.3, animationDelay: 3.7, rotateDeg: -5 },
-    ],
-  },
-  {
-    side: 'left',
-    offset: '18.8%',
-    items: [
-      { top: '18%', drift: 'slow', kind: 'diamond', toneClass: 'text-warm-gray/24', sizeClass: 'w-4 h-4', appearDelay: 1.2, animationDelay: 1.1, rotateDeg: 12 },
-      { top: '37%', drift: 'drift', kind: 'sprig', toneClass: 'text-sage/28', sizeClass: 'w-9 h-12', appearDelay: 1.7, animationDelay: 5.4, rotateDeg: 7 },
-      { top: '60%', drift: 'gentle', kind: 'dot', toneClass: 'text-muted-rose/24', sizeClass: 'w-3.5 h-3.5', appearDelay: 2.1, animationDelay: 7.9 },
-      { top: '84%', drift: 'sway', kind: 'flower', toneClass: 'text-blush/34', sizeClass: 'w-7 h-7', appearDelay: 2.8, animationDelay: 2.8, rotateDeg: -8 },
-    ],
-  },
-  {
-    side: 'right',
-    offset: '0.6%',
-    items: [
-      { top: '6%', drift: 'sway', kind: 'stem', toneClass: 'text-sage/44', sizeClass: 'w-[3.25rem] h-[4.75rem]', appearDelay: 0.55, animationDelay: 0.8, rotateDeg: 8 },
-      { top: '28%', drift: 'gentle', kind: 'flower', toneClass: 'text-blush/50', sizeClass: 'w-10 h-10', appearDelay: 1.0, animationDelay: 2.9, rotateDeg: -11 },
-      { top: '53%', drift: 'drift', kind: 'diamond', toneClass: 'text-warm-gray/28', sizeClass: 'w-5 h-5', appearDelay: 1.6, animationDelay: 6.1, rotateDeg: 9 },
-      { top: '76%', drift: 'slow', kind: 'sprig', toneClass: 'text-sage/34', sizeClass: 'w-10 h-14', appearDelay: 2.0, animationDelay: 4.2, rotateDeg: -6 },
-    ],
-  },
-  {
-    side: 'right',
-    offset: '4.3%',
-    items: [
-      { top: '12%', drift: 'drift', kind: 'dot', toneClass: 'text-soft-terracotta/30', sizeClass: 'w-4 h-4', appearDelay: 0.95, animationDelay: 3.6 },
-      { top: '33%', drift: 'sway', kind: 'compass', toneClass: 'text-muted-rose/40', sizeClass: 'w-10 h-10', appearDelay: 1.35, animationDelay: 1.7, rotateDeg: 7 },
-      { top: '57%', drift: 'gentle', kind: 'flower', toneClass: 'text-blush/44', sizeClass: 'w-9 h-9', appearDelay: 1.85, animationDelay: 6.9, rotateDeg: -13 },
-      { top: '86%', drift: 'slow', kind: 'dot', toneClass: 'text-sage/24', sizeClass: 'w-3.5 h-3.5', appearDelay: 2.5, animationDelay: 8.4 },
-    ],
-  },
-  {
-    side: 'right',
-    offset: '8.0%',
-    items: [
-      { top: '4%', drift: 'gentle', kind: 'sprig', toneClass: 'text-sage/36', sizeClass: 'w-11 h-[3.75rem]', appearDelay: 0.75, animationDelay: 2.3, rotateDeg: 9 },
-      { top: '37%', drift: 'drift', kind: 'diamond', toneClass: 'text-muted-rose/32', sizeClass: 'w-4 h-4', appearDelay: 1.25, animationDelay: 5.3, rotateDeg: -8 },
-      { top: '61%', drift: 'sway', kind: 'stem', toneClass: 'text-sage/30', sizeClass: 'w-10 h-14', appearDelay: 1.95, animationDelay: 3.8, rotateDeg: -5 },
-      { top: '81%', drift: 'slow', kind: 'dot', toneClass: 'text-blush/26', sizeClass: 'w-3 h-3', appearDelay: 2.35, animationDelay: 7.6 },
-    ],
-  },
-  {
-    side: 'right',
-    offset: '11.7%',
-    items: [
-      { top: '16%', drift: 'gentle', kind: 'flower', toneClass: 'text-muted-rose/44', sizeClass: 'w-8 h-8', appearDelay: 0.85, animationDelay: 3.1, rotateDeg: 11 },
-      { top: '42%', drift: 'slow', kind: 'sprig', toneClass: 'text-sage/30', sizeClass: 'w-9 h-[3.25rem]', appearDelay: 1.45, animationDelay: 1.5, rotateDeg: -7 },
-      { top: '63%', drift: 'drift', kind: 'dot', toneClass: 'text-warm-gray/24', sizeClass: 'w-3.5 h-3.5', appearDelay: 2.05, animationDelay: 5.0 },
-      { top: '88%', drift: 'sway', kind: 'diamond', toneClass: 'text-soft-terracotta/24', sizeClass: 'w-4 h-4', appearDelay: 2.75, animationDelay: 8.0 },
-    ],
-  },
-  {
-    side: 'right',
-    offset: '15.4%',
-    items: [
-      { top: '9%', drift: 'sway', kind: 'compass', toneClass: 'text-muted-rose/34', sizeClass: 'w-9 h-9', appearDelay: 1.05, animationDelay: 2.0, rotateDeg: -6 },
-      { top: '30%', drift: 'drift', kind: 'dot', toneClass: 'text-sage/26', sizeClass: 'w-3 h-3', appearDelay: 1.6, animationDelay: 4.7 },
-      { top: '51%', drift: 'gentle', kind: 'flower', toneClass: 'text-blush/42', sizeClass: 'w-8 h-8', appearDelay: 2.0, animationDelay: 6.6, rotateDeg: -9 },
-      { top: '73%', drift: 'slow', kind: 'sprig', toneClass: 'text-sage/28', sizeClass: 'w-9 h-[3.25rem]', appearDelay: 2.45, animationDelay: 3.4, rotateDeg: 6 },
-    ],
-  },
-  {
-    side: 'right',
-    offset: '18.9%',
-    items: [
-      { top: '20%', drift: 'slow', kind: 'diamond', toneClass: 'text-warm-gray/22', sizeClass: 'w-4 h-4', appearDelay: 1.15, animationDelay: 1.2, rotateDeg: -11 },
-      { top: '38%', drift: 'sway', kind: 'sprig', toneClass: 'text-sage/26', sizeClass: 'w-8 h-12', appearDelay: 1.8, animationDelay: 5.6, rotateDeg: -8 },
-      { top: '62%', drift: 'drift', kind: 'dot', toneClass: 'text-muted-rose/22', sizeClass: 'w-3.5 h-3.5', appearDelay: 2.2, animationDelay: 7.7 },
-      { top: '83%', drift: 'gentle', kind: 'flower', toneClass: 'text-blush/34', sizeClass: 'w-7 h-7', appearDelay: 2.9, animationDelay: 2.6, rotateDeg: 7 },
-    ],
-  },
-]
-
-function FloatingDecorGlyph({
-  kind,
-  toneClass,
-  sizeClass,
-  rotateDeg,
-}: {
-  kind: FloatingDecorKind
-  toneClass: string
-  sizeClass: string
-  rotateDeg?: number
-}) {
-  const style = rotateDeg ? { transform: `rotate(${rotateDeg}deg)` } : undefined
-
-  switch (kind) {
-    case 'stem':
-      return (
-        <svg
-          viewBox="0 0 60 90"
-          className={cn(sizeClass, toneClass)}
-          style={style}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.2"
-          strokeLinecap="round"
-        >
-          <path d="M30 85 Q30 58 26 42 Q22 26 30 8" />
-          <path d="M26 42 Q16 36 9 43 Q15 31 26 42" />
-          <path d="M28 62 Q19 57 13 65 Q18 53 28 62" />
-          <path d="M28 28 Q38 23 44 31 Q36 20 28 28" />
-          <path d="M29 52 Q39 47 45 55 Q37 44 29 52" />
-          <path d="M27 74 Q18 70 14 78 Q19 67 27 74" />
-        </svg>
-      )
-    case 'sprig':
-      return (
-        <svg
-          viewBox="0 0 52 66"
-          className={cn(sizeClass, toneClass)}
-          style={style}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.1"
-          strokeLinecap="round"
-        >
-          <path d="M26 62 Q26 42 23 30 Q20 18 26 6" />
-          <path d="M23 30 Q14 26 9 33 Q15 22 23 30" />
-          <path d="M24 45 Q15 41 11 49 Q16 37 24 45" />
-          <path d="M25 20 Q34 16 39 24 Q31 13 25 20" />
-          <path d="M25 56 Q17 53 14 60 Q18 49 25 56" />
-        </svg>
-      )
-    case 'flower':
-      return (
-        <svg
-          viewBox="0 0 46 46"
-          className={cn(sizeClass, toneClass)}
-          style={style}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.3"
-          strokeLinecap="round"
-        >
-          <path d="M23 4 Q28 14 23 23 Q18 14 23 4Z" />
-          <path d="M4 23 Q14 18 23 23 Q14 28 4 23Z" />
-          <path d="M23 42 Q18 32 23 23 Q28 32 23 42Z" />
-          <path d="M42 23 Q32 28 23 23 Q32 18 42 23Z" />
-          <circle cx="23" cy="23" r="3" fill="currentColor" opacity="0.42" />
-        </svg>
-      )
-    case 'compass':
-      return (
-        <svg
-          viewBox="0 0 44 44"
-          className={cn(sizeClass, toneClass)}
-          style={style}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.2"
-          strokeLinecap="round"
-        >
-          <circle cx="22" cy="22" r="5.2" />
-          <path d="M22 16.8 Q22 10.5 22 5.5" />
-          <path d="M22 27.2 Q22 33.5 22 38.5" />
-          <path d="M16.8 22 Q10.5 22 5.5 22" />
-          <path d="M27.2 22 Q33.5 22 38.5 22" />
-          <path d="M18.5 18.5 Q14 14 11 11" />
-          <path d="M25.5 25.5 Q30 30 33 33" />
-          <path d="M25.5 18.5 Q30 14 33 11" />
-          <path d="M18.5 25.5 Q14 30 11 33" />
-        </svg>
-      )
-    case 'diamond':
-      return (
-        <svg
-          viewBox="0 0 20 20"
-          className={cn(sizeClass, toneClass)}
-          style={style}
-          fill="currentColor"
-        >
-          <path d="M10 1 L13 8 L19 10 L13 12 L10 19 L7 12 L1 10 L7 8Z" />
-        </svg>
-      )
-    case 'dot':
-      return (
-        <svg
-          viewBox="0 0 16 16"
-          className={cn(sizeClass, toneClass)}
-          style={style}
-          fill="currentColor"
-        >
-          <circle cx="8" cy="8" r="4.6" />
-        </svg>
-      )
-    default:
-      return null
-  }
-}
+// ── Panel shells & sub-section cards (host + add-gift panels) ──
+const PANEL_SHELL_CLASS =
+  'relative rounded-3xl border border-muted-rose/20 bg-warm-white/90 shadow-dreamy overflow-hidden backdrop-blur-[2px]'
+const PANEL_HEADER_BASE_CLASS =
+  'w-full flex items-center justify-between gap-4 px-5 sm:px-6 md:px-7 py-5 md:py-6 transition-colors duration-200 cursor-pointer text-left'
+const PANEL_BODY_WRAPPER_CLASS =
+  'overflow-hidden border-t border-dashed border-muted-rose/25'
+const SECTION_BLOCK_CLASS = 'space-y-4'
+const SECTION_EYEBROW_CLASS =
+  'flex items-center gap-2 text-[10.5px] uppercase tracking-[0.22em] text-muted-rose/80 font-medium'
+const SECTION_HAIRLINE_CLASS =
+  'h-px w-full bg-gradient-to-r from-transparent via-muted-rose/25 to-transparent'
 
 const MAX_IMAGE_FILE_SIZE_BYTES = 8 * 1024 * 1024
 const COVER_PREVIEW_OPTIONS = {
@@ -435,23 +169,63 @@ async function generateImagePreview(
   return canvas.toDataURL('image/jpeg', options.quality)
 }
 
+function dataUrlToFile(dataUrl: string, fallbackFilename: string): File {
+  const [meta, base64Data] = dataUrl.split(',')
+  if (!meta || !base64Data || !meta.includes('base64')) {
+    throw new Error('Imagem inválida. Selecione a imagem novamente.')
+  }
+
+  const mimeMatch = meta.match(/data:(.*?);base64/)
+  const mimeType = mimeMatch?.[1] || 'image/jpeg'
+  const binary = atob(base64Data)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i)
+  }
+
+  return new File([bytes], fallbackFilename, { type: mimeType })
+}
+
+function isValidReferenceUrl(value: string) {
+  try {
+    const parsed = new URL(value)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 function EventGiftsPageShell() {
   const { slug } = Route.useParams()
   const { signIn } = useAuthActions()
   const { isAuthenticated } = useCurrentUser()
   const { event, isLoading: isEventLoading } = useEventBySlug(slug)
-  const { gifts, isLoading: isGiftsLoading } = useGifts(event?._id)
+  const {
+    gifts,
+    isLoading: isGiftsLoading,
+    hasMore: hasMoreGifts,
+    isLoadingMore: isLoadingMoreGifts,
+    loadMore: loadMoreGifts,
+  } = useGifts(event?._id)
   const { membership, isLoading: isMembershipLoading } = useEventMembership(
     event?._id as Id<'events'> | undefined,
   )
   const { createGift, reserveGift, updateGift, deleteGift } = useGiftMutations()
   const updateEvent = useMutation(api.events.updateEvent)
   const deleteEvent = useMutation(api.events.deleteEvent)
+  const ensurePartnerInvite = useMutation(api.eventInvites.ensurePartnerInvite)
+  const rotatePartnerInvite = useMutation(api.eventInvites.rotatePartnerInvite)
+  const revokePartnerInvite = useMutation(api.eventInvites.revokePartnerInvite)
   const generateGiftImageUploadUrl = useMutation(api.gifts.generateGiftImageUploadUrl)
   const generateEventCoverUploadUrl = useMutation(
     api.events.generateEventCoverUploadUrl,
   )
   const updateEventCoverImage = useMutation(api.events.updateEventCoverImage)
+  const extractGiftImageFromReferenceUrl = useAction(
+    api.gifts.extractGiftImageFromReferenceUrl,
+  )
+  const registerUploadedGiftImage = useMutation(api.gifts.registerUploadedGiftImage)
+  const discardTemporaryGiftImage = useMutation(api.gifts.discardTemporaryGiftImage)
 
   const [reservingGiftId, setReservingGiftId] = useState<Id<'gifts'> | null>(
     null,
@@ -466,9 +240,19 @@ function EventGiftsPageShell() {
   const [isUploadingCover, setIsUploadingCover] = useState(false)
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | undefined>()
   const [editingGiftId, setEditingGiftId] = useState<Id<'gifts'> | null>(null)
+  const [editingOriginalImageId, setEditingOriginalImageId] = useState<
+    Id<'_storage'> | undefined
+  >()
   const [isCreatingGift, setIsCreatingGift] = useState(false)
   const [isUploadingGiftImage, setIsUploadingGiftImage] = useState(false)
   const [isUploadingEditedGiftImage, setIsUploadingEditedGiftImage] = useState(false)
+  const [isExtractingNewGiftImage, setIsExtractingNewGiftImage] = useState(false)
+  const [isExtractingEditedGiftImage, setIsExtractingEditedGiftImage] = useState(false)
+  const [newGiftReferenceImageError, setNewGiftReferenceImageError] = useState<
+    string | null
+  >(null)
+  const [editedGiftReferenceImageError, setEditedGiftReferenceImageError] =
+    useState<string | null>(null)
   const [isHostPanelOpen, setIsHostPanelOpen] = useState(false)
   const [isAddGiftPanelOpen, setIsAddGiftPanelOpen] = useState(true)
   const [deleteGiftConfirm, setDeleteGiftConfirm] = useState<{
@@ -477,9 +261,24 @@ function EventGiftsPageShell() {
   } | null>(null)
   const [isDeletingGift, setIsDeletingGift] = useState(false)
   const [shareLinkTab, setShareLinkTab] = useState<'guest' | 'partner'>('guest')
+  const [copiedInviteToken, setCopiedInviteToken] = useState<string | null>(
+    null,
+  )
+  const [isRotatingInvite, setIsRotatingInvite] = useState(false)
+  const [isGeneratingInvite, setIsGeneratingInvite] = useState(false)
+  const [revokingInviteId, setRevokingInviteId] =
+    useState<Id<'eventInvites'> | null>(null)
+  const [partnerInviteError, setPartnerInviteError] = useState<string | null>(
+    null,
+  )
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [didCopyShareLink, setDidCopyShareLink] = useState(false)
   const [expandDescriptions, setExpandDescriptions] = useState(false)
+  const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null)
+  const newGiftExtractionIdRef = useRef(0)
+  const editedGiftExtractionIdRef = useRef(0)
+  const [newGiftReferenceTouched, setNewGiftReferenceTouched] = useState(false)
+  const [editingGiftReferenceTouched, setEditingGiftReferenceTouched] = useState(false)
   const [editableEvent, setEditableEvent] = useState<{
     _id: Id<'events'>
     name: string
@@ -543,6 +342,233 @@ function EventGiftsPageShell() {
       setError('Não foi possível copiar o link agora.')
     }
   }, [guestShareUrl])
+
+  const isHostMembership = Boolean(membership && membership.role === 'host')
+  const partnerInvites = useQuery(
+    api.eventInvites.listPartnerInvites,
+    event && isHostMembership ? { eventId: event._id } : 'skip',
+  )
+
+  const buildInviteUrl = useCallback(
+    (token: string) =>
+      absoluteUrl(
+        `/events/${slug}/convite-parceiro?t=${encodeURIComponent(token)}`,
+      ),
+    [slug],
+  )
+
+  const activePartnerInvite = useMemo(
+    () => partnerInvites?.find((invite) => invite.status === 'active') ?? null,
+    [partnerInvites],
+  )
+  const hasUsedPartnerInvite = useMemo(
+    () => Boolean(partnerInvites?.some((invite) => invite.status === 'used')),
+    [partnerInvites],
+  )
+
+  const handleGeneratePartnerInvite = useCallback(async () => {
+    if (!event) return
+    setPartnerInviteError(null)
+    setIsGeneratingInvite(true)
+    try {
+      await ensurePartnerInvite({ eventId: event._id })
+    } catch (caught) {
+      setPartnerInviteError(
+        caught instanceof Error
+          ? caught.message
+          : 'Não foi possível gerar o convite agora.',
+      )
+    } finally {
+      setIsGeneratingInvite(false)
+    }
+  }, [ensurePartnerInvite, event])
+
+  const handleCopyInvite = useCallback(
+    async (token: string) => {
+      const url = buildInviteUrl(token)
+      try {
+        await navigator.clipboard.writeText(url)
+        setCopiedInviteToken(token)
+        window.setTimeout(() => {
+          setCopiedInviteToken((current) => (current === token ? null : current))
+        }, 1800)
+      } catch {
+        setPartnerInviteError('Não foi possível copiar o link agora.')
+      }
+    },
+    [buildInviteUrl],
+  )
+
+  const handleRotatePartnerInvite = useCallback(async () => {
+    if (!event) return
+    setPartnerInviteError(null)
+    setIsRotatingInvite(true)
+    try {
+      await rotatePartnerInvite({ eventId: event._id })
+    } catch (caught) {
+      setPartnerInviteError(
+        caught instanceof Error
+          ? caught.message
+          : 'Não foi possível gerar um novo link agora.',
+      )
+    } finally {
+      setIsRotatingInvite(false)
+    }
+  }, [event, rotatePartnerInvite])
+
+  const handleRevokePartnerInvite = useCallback(
+    async (inviteId: Id<'eventInvites'>) => {
+      setPartnerInviteError(null)
+      setRevokingInviteId(inviteId)
+      try {
+        await revokePartnerInvite({ inviteId })
+      } catch (caught) {
+        setPartnerInviteError(
+          caught instanceof Error
+            ? caught.message
+            : 'Não foi possível revogar o convite agora.',
+        )
+      } finally {
+        setRevokingInviteId(null)
+      }
+    },
+    [revokePartnerInvite],
+  )
+
+  useEffect(() => {
+    if (!isHostView || !newGiftReferenceTouched) {
+      setIsExtractingNewGiftImage(false)
+      return
+    }
+
+    const normalizedUrl = newGiftForm.referenceUrl.trim()
+    if (!normalizedUrl || !isValidReferenceUrl(normalizedUrl)) {
+      setIsExtractingNewGiftImage(false)
+      setNewGiftReferenceImageError(null)
+      return
+    }
+
+    setIsExtractingNewGiftImage(true)
+    setNewGiftReferenceImageError(null)
+
+    const timeout = window.setTimeout(() => {
+      const extractionId = newGiftExtractionIdRef.current + 1
+      newGiftExtractionIdRef.current = extractionId
+
+      void extractGiftImageFromReferenceUrl({
+        referenceUrl: normalizedUrl,
+      })
+        .then((result) => {
+          if (newGiftExtractionIdRef.current !== extractionId) return
+          if (!result.success || !result.imageId || !result.imageUrl) {
+            setNewGiftReferenceImageError(
+              result.error ??
+                'Não conseguimos extrair a imagem automaticamente desse link.',
+            )
+            return
+          }
+          setNewGiftReferenceImageError(null)
+          setNewGiftForm((current) => {
+            if (current.imageId && current.imageId !== result.imageId) {
+              void discardTemporaryGiftImage({ imageId: current.imageId })
+            }
+            return {
+              ...current,
+              imageId: result.imageId,
+              imageUrl: result.imageUrl,
+            }
+          })
+        })
+        .catch(() => {
+          if (newGiftExtractionIdRef.current !== extractionId) return
+          setNewGiftReferenceImageError(
+            'Não foi possível extrair a imagem automaticamente desse link.',
+          )
+        })
+        .finally(() => {
+          if (newGiftExtractionIdRef.current !== extractionId) return
+          setIsExtractingNewGiftImage(false)
+        })
+    }, 500)
+
+    return () => {
+      window.clearTimeout(timeout)
+    }
+  }, [
+    discardTemporaryGiftImage,
+    extractGiftImageFromReferenceUrl,
+    isHostView,
+    newGiftForm.referenceUrl,
+    newGiftReferenceTouched,
+  ])
+
+  useEffect(() => {
+    if (!isHostView || !editingGiftId || !editingGiftReferenceTouched) {
+      setIsExtractingEditedGiftImage(false)
+      return
+    }
+
+    const normalizedUrl = giftForm.referenceUrl.trim()
+    if (!normalizedUrl || !isValidReferenceUrl(normalizedUrl)) {
+      setIsExtractingEditedGiftImage(false)
+      setEditedGiftReferenceImageError(null)
+      return
+    }
+
+    setIsExtractingEditedGiftImage(true)
+    setEditedGiftReferenceImageError(null)
+
+    const timeout = window.setTimeout(() => {
+      const extractionId = editedGiftExtractionIdRef.current + 1
+      editedGiftExtractionIdRef.current = extractionId
+
+      void extractGiftImageFromReferenceUrl({
+        referenceUrl: normalizedUrl,
+      })
+        .then((result) => {
+          if (editedGiftExtractionIdRef.current !== extractionId) return
+          if (!result.success || !result.imageId || !result.imageUrl) {
+            setEditedGiftReferenceImageError(
+              result.error ??
+                'Não conseguimos extrair a imagem automaticamente desse link.',
+            )
+            return
+          }
+          setEditedGiftReferenceImageError(null)
+          setGiftForm((current) => {
+            if (current.imageId && current.imageId !== result.imageId) {
+              void discardTemporaryGiftImage({ imageId: current.imageId })
+            }
+            return {
+              ...current,
+              imageId: result.imageId,
+              imageUrl: result.imageUrl,
+            }
+          })
+        })
+        .catch(() => {
+          if (editedGiftExtractionIdRef.current !== extractionId) return
+          setEditedGiftReferenceImageError(
+            'Não foi possível extrair a imagem automaticamente desse link.',
+          )
+        })
+        .finally(() => {
+          if (editedGiftExtractionIdRef.current !== extractionId) return
+          setIsExtractingEditedGiftImage(false)
+        })
+    }, 500)
+
+    return () => {
+      window.clearTimeout(timeout)
+    }
+  }, [
+    discardTemporaryGiftImage,
+    editingGiftId,
+    editingGiftReferenceTouched,
+    extractGiftImageFromReferenceUrl,
+    giftForm.referenceUrl,
+    isHostView,
+  ])
 
   useEffect(() => {
     if (!event || !isHostView) return
@@ -612,6 +638,34 @@ function EventGiftsPageShell() {
       setShowReserveLoginPrompt(false)
     }
   }, [isAuthenticated])
+
+  useEffect(() => {
+    if (!hasMoreGifts || isLoadingMoreGifts) {
+      return
+    }
+
+    const target = loadMoreTriggerRef.current
+    if (!target) {
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const firstEntry = entries[0]
+        if (!firstEntry?.isIntersecting) {
+          return
+        }
+        loadMoreGifts(24)
+      },
+      {
+        rootMargin: '900px 0px 280px 0px',
+        threshold: 0.01,
+      },
+    )
+
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [hasMoreGifts, isLoadingMoreGifts, loadMoreGifts])
 
   const isPairEventType = useCallback((eventType: string) => {
     return PAIR_EVENT_TYPES.has(eventType)
@@ -766,9 +820,17 @@ function EventGiftsPageShell() {
           generateEventCoverUploadUrl({ eventId: event._id }),
         ])
 
+        if (!previewUrl) {
+          throw new Error('Não foi possível processar a imagem da capa.')
+        }
+
         setCoverPreviewUrl(previewUrl)
 
-        const storageId = await uploadImageToConvex(uploadUrl, file!)
+        const optimizedCoverFile = dataUrlToFile(
+          previewUrl,
+          `event-cover-${event._id}.jpg`,
+        )
+        const storageId = await uploadImageToConvex(uploadUrl, optimizedCoverFile)
         await updateEventCoverImage({
           eventId: event._id,
           coverImageId: storageId,
@@ -828,30 +890,53 @@ function EventGiftsPageShell() {
         setError(null)
         if (mode === 'create') {
           setIsUploadingGiftImage(true)
+          setNewGiftReferenceImageError(null)
         } else {
           setIsUploadingEditedGiftImage(true)
+          setEditedGiftReferenceImageError(null)
         }
 
         const [previewUrl, uploadUrl] = await Promise.all([
           generateImagePreview(file!, GIFT_PREVIEW_OPTIONS),
           generateGiftImageUploadUrl({ eventId: event._id }),
         ])
-        const storageId = await uploadImageToConvex(uploadUrl, file!)
+
+        if (!previewUrl) {
+          throw new Error('Não foi possível processar a imagem do presente.')
+        }
+
+        const optimizedGiftFile = dataUrlToFile(
+          previewUrl,
+          `gift-${Date.now()}.jpg`,
+        )
+        const storageId = await uploadImageToConvex(uploadUrl, optimizedGiftFile)
+        await registerUploadedGiftImage({
+          eventId: event._id,
+          imageId: storageId,
+        })
 
         if (mode === 'create') {
+          if (newGiftForm.imageId && newGiftForm.imageId !== storageId) {
+            await discardTemporaryGiftImage({ imageId: newGiftForm.imageId })
+          }
           setNewGiftForm((current) => ({
             ...current,
             imageId: storageId,
             imageUrl: previewUrl,
           }))
+          setNewGiftReferenceTouched(false)
           return
         }
 
+        if (giftForm.imageId && giftForm.imageId !== storageId) {
+          await discardTemporaryGiftImage({ imageId: giftForm.imageId })
+        }
         setGiftForm((current) => ({
           ...current,
           imageId: storageId,
           imageUrl: previewUrl,
         }))
+        setEditingGiftReferenceTouched(false)
       } catch (uploadError) {
         setError(
           uploadError instanceof Error
@@ -866,29 +951,49 @@ function EventGiftsPageShell() {
         }
       }
     },
-    [event, generateGiftImageUploadUrl, isHostView, validateImageFile],
+    [
+      discardTemporaryGiftImage,
+      event,
+      generateGiftImageUploadUrl,
+      giftForm.imageId,
+      isHostView,
+      newGiftForm.imageId,
+      registerUploadedGiftImage,
+      validateImageFile,
+    ],
   )
 
   const handleRemoveDraftGiftImage = useCallback(() => {
+    if (newGiftForm.imageId) {
+      void discardTemporaryGiftImage({ imageId: newGiftForm.imageId })
+    }
     setNewGiftForm((current) => ({
       ...current,
       imageId: undefined,
       imageUrl: undefined,
     }))
-  }, [])
+    setNewGiftReferenceImageError(null)
+  }, [discardTemporaryGiftImage, newGiftForm.imageId])
 
   const handleRemoveEditingGiftImage = useCallback(() => {
+    if (giftForm.imageId) {
+      void discardTemporaryGiftImage({ imageId: giftForm.imageId })
+    }
     setGiftForm((current) => ({
       ...current,
       imageId: null,
       imageUrl: undefined,
     }))
-  }, [])
+    setEditedGiftReferenceImageError(null)
+  }, [discardTemporaryGiftImage, giftForm.imageId])
 
   const startEditingGift = useCallback(
     (gift: (typeof gifts)[number]) => {
       if (!isHostView) return
       setEditingGiftId(gift._id)
+      setEditingOriginalImageId(gift.imageId)
+      setEditingGiftReferenceTouched(false)
+      setEditedGiftReferenceImageError(null)
       setGiftForm({
         name: gift.name,
         description: gift.description ?? '',
@@ -930,6 +1035,8 @@ function EventGiftsPageShell() {
         category: '',
         referenceUrl: '',
       })
+      setNewGiftReferenceTouched(false)
+      setNewGiftReferenceImageError(null)
     } catch (createError) {
       setError(
         createError instanceof Error
@@ -957,6 +1064,9 @@ function EventGiftsPageShell() {
         referenceUrl: giftForm.referenceUrl.trim() || undefined,
       })
       setEditingGiftId(null)
+      setEditingOriginalImageId(undefined)
+      setEditingGiftReferenceTouched(false)
+      setEditedGiftReferenceImageError(null)
     } catch (updateError) {
       setError(
         updateError instanceof Error
@@ -991,6 +1101,10 @@ function EventGiftsPageShell() {
       setIsDeletingGift(false)
     }
   }, [deleteGift, deleteGiftConfirm])
+
+  const isNewGiftImageProcessing = isUploadingGiftImage || isExtractingNewGiftImage
+  const isEditedGiftImageProcessing =
+    isUploadingEditedGiftImage || isExtractingEditedGiftImage
 
   // ── Loading ──
   if (isEventLoading) {
@@ -1123,384 +1237,71 @@ function EventGiftsPageShell() {
         dangerouslySetInnerHTML={{ __html: toJsonLd(giftListSchema) }}
       />
       {/* ═══ HERO — Invitation Style ═══ */}
-      <section
-        className={cn(
-          'relative overflow-hidden hero-invitation-bg',
-          coverImageUrl ? 'pt-0 pb-0 md:pt-14 md:pb-32' : 'pt-12 pb-24 md:pt-18 md:pb-32 px-6',
-        )}
-      >
-        {/* Edge-only side glows — stays well away from the center content */}
-        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-          <div className="absolute top-0 -left-16 w-64 h-full bg-sage/8 rounded-full blur-[100px]" />
-          <div className="absolute top-0 -right-16 w-64 h-full bg-blush/10 rounded-full blur-[100px]" />
-        </div>
+      <EventInvitationHero
+        coverImageUrl={coverImageUrl}
+        eventName={capitalizeFirst(headerEvent.name)}
+        eventTypeLabel={eventTypeLabel}
+        hosts={headerHosts}
+        shouldUsePairLayout={shouldUsePairLayout}
+        location={headerEvent.location}
+        date={headerEvent.date}
+        description={headerEvent.description}
+        onShareClick={() => {
+          setDidCopyShareLink(false)
+          setIsShareDialogOpen(true)
+        }}
+      />
 
-        {/* ───── FLOATING DECORATIVE ELEMENTS (desktop only) ───── */}
-        <div className="pointer-events-none absolute inset-0 hidden lg:block" aria-hidden="true">
-          {FLOATING_DECOR_COLUMNS.map((column, columnIndex) => (
-            <div
-              key={`${column.side}-${column.offset}-${columnIndex}`}
-              className="absolute inset-y-0"
-              style={column.side === 'left' ? { left: column.offset } : { right: column.offset }}
-            >
-              {column.items.map((item, itemIndex) => (
-                <motion.div
-                  key={`${column.side}-${columnIndex}-${itemIndex}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 2.4, delay: item.appearDelay }}
-                  className={cn(
-                    'absolute',
-                    item.drift === 'gentle' && 'animate-float-gentle',
-                    item.drift === 'slow' && 'animate-float-slow',
-                    item.drift === 'drift' && 'animate-float-drift',
-                    item.drift === 'sway' && 'animate-float-sway',
-                  )}
-                  style={{ top: item.top, animationDelay: `${item.animationDelay}s` }}
-                >
-                  <FloatingDecorGlyph
-                    kind={item.kind}
-                    toneClass={item.toneClass}
-                    sizeClass={item.sizeClass}
-                    rotateDeg={item.rotateDeg}
-                  />
-                </motion.div>
-              ))}
-            </div>
-          ))}
-        </div>
-
-        <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-8 md:px-12 lg:px-16">
-          {coverImageUrl ? (
-            /* ── WITH COVER ── */
-            <>
-            {/* Mobile: editorial full-bleed layout */}
-            <EventHeroMobile
-              coverImageUrl={coverImageUrl}
-              eventName={capitalizeFirst(headerEvent.name)}
-              eventTypeLabel={eventTypeLabel}
-              hosts={headerHosts}
-              shouldUsePairLayout={shouldUsePairLayout}
-              location={headerEvent.location}
-              date={headerEvent.date}
-              description={headerEvent.description}
-              onShareClick={() => {
-                setDidCopyShareLink(false)
-                setIsShareDialogOpen(true)
-              }}
-            />
-
-            {/* Desktop: photo LEFT + invitation RIGHT, slight overlap */}
-            <div className="relative hidden md:flex md:flex-row items-center md:items-center justify-center md:gap-0">
-
-              {/* ───── POLAROID PHOTOGRAPH ───── */}
-              <motion.div
-                initial={{ opacity: 0, y: 24, rotate: -4 }}
-                animate={{ opacity: 1, y: 0, rotate: -2.5 }}
-                transition={{ duration: 1.1, ease }}
-                className="relative w-[85%] sm:w-[70%] md:w-[48%] lg:w-[44%] shrink-0 z-[1] md:mr-[-6%]"
-              >
-                {/* Washi tape — top-left (sage) */}
-                <div
-                  className="washi-tape"
-                  style={{ top: '-0.55rem', left: '8%', transform: 'rotate(-14deg)' }}
-                  aria-hidden="true"
-                />
-
-                {/* Washi tape — bottom-right (rose) */}
-                <div
-                  className="washi-tape-rose"
-                  style={{ bottom: '2rem', right: '-1.2rem', transform: 'rotate(18deg)' }}
-                  aria-hidden="true"
-                />
-
-                {/* The printed photograph matte */}
-                <div
-                  className="photo-print relative p-3 pb-12 sm:p-4 sm:pb-14 md:p-5 md:pb-16"
-                  style={{
-                    boxShadow:
-                      '0 2px 4px rgba(61,53,48,0.12), 0 8px 24px rgba(61,53,48,0.12), 0 20px 60px rgba(61,53,48,0.16), 0 40px 80px rgba(61,53,48,0.06)',
-                  }}
-                >
-                  {/* Photo image with grain + vignette layers */}
-                  <div className="relative overflow-hidden">
-                    <img
-                      src={coverImageUrl}
-                      alt=""
-                      className="relative w-full object-cover"
-                      style={{ filter: 'saturate(0.92) contrast(1.03) brightness(1.01)' }}
-                      loading="eager"
-                    />
-                    {/* Film grain overlay */}
-                    <div className="photo-print-grain absolute inset-0" aria-hidden="true" />
-                    {/* Vignette */}
-                    <div className="photo-vignette absolute inset-0" aria-hidden="true" />
-                  </div>
-
-                  {/* Handwritten caption on the white matte border */}
-                  <p className="font-accent text-xl sm:text-2xl md:text-[1.6rem] text-espresso/60 text-center mt-4 sm:mt-5 tracking-wide leading-tight">
-                    {capitalizeFirst(headerEvent.name)}
-                  </p>
-                </div>
-              </motion.div>
-
-              {/* ───── HANDMADE PAPER INVITATION ───── */}
-              <motion.div
-                initial="hidden"
-                animate="visible"
-                variants={{
-                  hidden: {},
-                  visible: { transition: { staggerChildren: 0.06, delayChildren: 0.4 } },
-                }}
-                className="relative z-[2] w-[85%] sm:w-[70%] md:w-[48%] lg:w-[44%] md:ml-[-6%]"
-                style={{ transform: 'rotate(1.8deg)' }}
-              >
-                {/* Share button — floats just outside top-right of the invitation */}
-                <button
-                  type="button"
-                  className={cn('absolute -top-8 -right-2 md:-top-10 md:-right-14 z-20', HERO_SHARE_BUTTON_CLASS)}
-                  onClick={() => {
-                    setDidCopyShareLink(false)
-                    setIsShareDialogOpen(true)
-                  }}
-                >
-                  <Share2 className="size-3 text-muted-rose/75" />
-                </button>
-
-                {/* Washi tape — top-right (sage) */}
-                <div
-                  className="washi-tape"
-                  style={{ top: '-0.5rem', right: '12%', transform: 'rotate(8deg)' }}
-                  aria-hidden="true"
-                />
-
-                {/* Washi tape — bottom-left (rose) */}
-                <div
-                  className="washi-tape-rose"
-                  style={{ bottom: '1.5rem', left: '-1rem', transform: 'rotate(-12deg)' }}
-                  aria-hidden="true"
-                />
-
-                {/* Deckled-edge wrapper — drop-shadow filter so shadow is visible through clip-path */}
-                <div
-                  className="deckled-edge"
-                  style={{
-                    filter: 'drop-shadow(0 4px 8px rgba(61,53,48,0.12)) drop-shadow(0 12px 32px rgba(61,53,48,0.14)) drop-shadow(0 28px 64px rgba(61,53,48,0.10))',
-                  }}
-                >
-                  <div
-                    className="paper-card relative text-center px-7 py-10 sm:px-9 sm:py-12 md:px-10 md:py-14"
-                  >
-                    {/* Subtle letterpress-style top border mark */}
-                    <div
-                      className="absolute top-5 left-1/2 -translate-x-1/2 w-12 sm:w-14"
-                      aria-hidden="true"
-                    >
-                      <div className="h-px bg-muted-rose/15" />
-                      <div className="flex justify-center mt-1.5">
-                        <div className="size-1 rounded-full bg-muted-rose/15" />
-                      </div>
-                    </div>
-
-                    {/* Decorative flourish */}
-                    <motion.div variants={fadeUp} className="mt-4">
-                      <OrnamentDivider className="w-16 sm:w-20 mx-auto text-muted-rose/18" />
-                    </motion.div>
-
-                    <motion.p
-                      variants={fadeUp}
-                      className="font-accent text-lg sm:text-xl md:text-2xl text-muted-rose tracking-wide mt-4 sm:mt-5"
-                    >
-                      {eventTypeLabel}
-                    </motion.p>
-
-                    <motion.div variants={fadeUp} className="mt-4 sm:mt-5 md:mt-6">
-                      {shouldUsePairLayout ? (
-                        <>
-                          <p className="font-display italic text-2xl sm:text-3xl md:text-4xl text-espresso leading-[0.9]">
-                            {headerHosts[0]}
-                          </p>
-                          <p className="font-accent text-xl sm:text-2xl md:text-3xl text-muted-rose/50 my-1 md:my-1.5 inline-block -rotate-6">
-                            &
-                          </p>
-                          <p className="font-display italic text-2xl sm:text-3xl md:text-4xl text-espresso leading-[0.9]">
-                            {headerHosts[1]}
-                          </p>
-                        </>
-                      ) : (
-                        <p className="font-display italic text-2xl sm:text-3xl md:text-4xl lg:text-[2.75rem] text-espresso leading-[0.95]">
-                          {headerHosts.join(' • ')}
-                        </p>
-                      )}
-                    </motion.div>
-
-                    {(headerEvent.location || headerEvent.date) && (
-                      <motion.div
-                        variants={fadeUp}
-                        className="mt-3 sm:mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs sm:text-sm text-warm-gray/55"
-                      >
-                        {headerEvent.location && (
-                          <span className="inline-flex items-center gap-1">
-                            <MapPin className="size-2.5 sm:size-3" />
-                            {capitalizeFirst(headerEvent.location)}
-                          </span>
-                        )}
-                        {headerEvent.date && (
-                          <span>{formatDatePtBrFromIso(headerEvent.date)}</span>
-                        )}
-                      </motion.div>
-                    )}
-
-                    {headerEvent.description && (
-                      <motion.p
-                        variants={fadeUp}
-                        className="mt-3 text-xs sm:text-sm text-warm-gray/65 leading-relaxed max-w-xs mx-auto"
-                      >
-                        {capitalizeFirst(headerEvent.description)}
-                      </motion.p>
-                    )}
-
-                    {/* Bottom flourish */}
-                    <motion.div variants={fadeUp} className="mt-5 sm:mt-6">
-                      <OrnamentDivider className="w-16 sm:w-20 mx-auto text-muted-rose/18" />
-                    </motion.div>
-
-                    {/* Subtle letterpress-style bottom border mark */}
-                    <div
-                      className="absolute bottom-5 left-1/2 -translate-x-1/2 w-12 sm:w-14"
-                      aria-hidden="true"
-                    >
-                      <div className="flex justify-center mb-1.5">
-                        <div className="size-1 rounded-full bg-muted-rose/15" />
-                      </div>
-                      <div className="h-px bg-muted-rose/15" />
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-            </>
-          ) : (
-            /* ── WITHOUT COVER: centered classic invitation ── */
-            <motion.div
-              className="relative max-w-2xl mx-auto text-center px-6"
-              initial="hidden"
-              animate="visible"
-              variants={{
-                hidden: {},
-                visible: { transition: { staggerChildren: 0.08 } },
-              }}
-            >
-              {/* Share button — floats just outside top-right of the centered invitation */}
-              <button
-                type="button"
-                className={cn('absolute -top-2 -right-2 md:-right-1 z-20', HERO_SHARE_BUTTON_CLASS)}
-                onClick={() => {
-                  setDidCopyShareLink(false)
-                  setIsShareDialogOpen(true)
-                }}
-              >
-                <Share2 className="size-3 text-muted-rose/75" />
-              </button>
-
-              <motion.div variants={fadeUp} className="flex justify-center mb-8">
-                <OrnamentDivider className="w-28 text-muted-rose/25" />
-              </motion.div>
-
-              <motion.p
-                variants={fadeUp}
-                className="font-accent text-xl md:text-2xl text-muted-rose"
-              >
-                {eventTypeLabel}
-              </motion.p>
-
-              <motion.div variants={fadeUp} className="mt-6 md:mt-8">
-                {shouldUsePairLayout ? (
-                  <>
-                    <p className="font-display italic text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-espresso leading-[0.9]">
-                      {headerHosts[0]}
-                    </p>
-                    <p className="font-accent text-3xl md:text-4xl text-muted-rose/60 my-2 md:my-3 inline-block -rotate-6">
-                      &
-                    </p>
-                    <p className="font-display italic text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-espresso leading-[0.9]">
-                      {headerHosts[1]}
-                    </p>
-                  </>
-                ) : (
-                  <p className="font-display italic text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-espresso leading-[0.95]">
-                    {headerHosts.join(' • ')}
-                  </p>
-                )}
-              </motion.div>
-
-              <motion.p
-                variants={fadeUp}
-                className="mt-6 text-warm-gray text-lg"
-              >
-                {capitalizeFirst(headerEvent.name)}
-              </motion.p>
-
-              {(headerEvent.location || headerEvent.date) && (
-                <motion.div
-                  variants={fadeUp}
-                  className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-warm-gray/70"
-                >
-                  {headerEvent.location && (
-                    <span className="inline-flex items-center gap-1.5">
-                      <MapPin className="size-3.5" />
-                      {capitalizeFirst(headerEvent.location)}
-                    </span>
-                  )}
-                  {headerEvent.date && (
-                    <span>{formatDatePtBrFromIso(headerEvent.date)}</span>
-                  )}
-                </motion.div>
-              )}
-
-              {headerEvent.description && (
-                <motion.p
-                  variants={fadeUp}
-                  className="mt-4 text-warm-gray leading-relaxed max-w-lg mx-auto"
-                >
-                  {capitalizeFirst(headerEvent.description)}
-                </motion.p>
-              )}
-
-              <motion.div variants={fadeUp} className="flex justify-center mt-8">
-                <OrnamentDivider className="w-28 text-muted-rose/25" />
-              </motion.div>
-            </motion.div>
-          )}
-        </div>
-      </section>
 
       {/* ═══ HOST PANEL — Collapsible ═══ */}
       {isHostView && (
-        <section className="px-6 pb-6 pt-6 max-w-5xl mx-auto">
-          <div className="rounded-2xl border border-muted-rose/25 bg-blush/8 overflow-hidden">
+        <section className="px-4 sm:px-6 pb-6 pt-8 md:pt-10 max-w-5xl mx-auto">
+          <div className={PANEL_SHELL_CLASS}>
+            {/* Decorative top hairline — muted-rose gradient */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-muted-rose/45 to-transparent"
+            />
             <button
               type="button"
               onClick={() => setIsHostPanelOpen((prev) => !prev)}
-              className="w-full flex items-center justify-between gap-3 px-5 py-4 transition-all duration-200 hover:bg-blush/15 cursor-pointer"
+              className={cn(
+                PANEL_HEADER_BASE_CLASS,
+                'hover:bg-blush/14',
+                isHostPanelOpen && 'bg-blush/10',
+              )}
             >
-              <div className="flex items-center gap-3">
-                <Settings2 className="size-4 text-muted-rose/70" />
-                <div className="text-left">
-                  <p className="text-sm font-medium text-espresso">
-                    Painel do anfitrião
+              <div className="flex items-center gap-4 min-w-0">
+                <span
+                  aria-hidden
+                  className="relative inline-flex items-center justify-center size-11 sm:size-12 rounded-2xl bg-gradient-to-br from-blush via-blush/75 to-muted-rose/40 ring-1 ring-warm-white/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_2px_6px_rgba(201,169,166,0.25)] shrink-0"
+                >
+                  <Settings2
+                    className="size-5 text-espresso/80"
+                    strokeWidth={1.6}
+                  />
+                </span>
+                <div className="min-w-0">
+                  <p className={SECTION_EYEBROW_CLASS}>
+                    <span className="inline-block h-px w-5 bg-muted-rose/40" />
+                    Para você
                   </p>
-                  <p className="text-xs text-warm-gray/70">
+                  <h3 className="font-display italic text-xl sm:text-[1.4rem] text-espresso mt-1.5 leading-tight">
+                    Painel do anfitrião
+                  </h3>
+                  <p className="text-xs sm:text-[13px] text-warm-gray/75 mt-1 leading-snug">
                     Edite o evento, gerencie presentes e compartilhe.
                   </p>
                 </div>
               </div>
-              <ChevronDown
+              <span
                 className={cn(
-                  'size-4 text-warm-gray transition-transform duration-300',
-                  isHostPanelOpen && 'rotate-180',
+                  'inline-flex items-center justify-center size-9 rounded-full bg-warm-white/80 border border-muted-rose/25 shadow-sm transition-all duration-300 shrink-0',
+                  isHostPanelOpen && 'rotate-180 bg-blush/40 border-muted-rose/50',
                 )}
-              />
+              >
+                <ChevronDown className="size-4 text-espresso/70" strokeWidth={1.8} />
+              </span>
             </button>
 
             <AnimatePresence>
@@ -1509,12 +1310,22 @@ function EventGiftsPageShell() {
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.35, ease }}
-                  className="overflow-hidden border-t border-muted-rose/20"
+                  transition={{ duration: 0.4, ease }}
+                  className={PANEL_BODY_WRAPPER_CLASS}
                 >
-                  <div className="p-5 md:p-6 space-y-8 bg-warm-white/45">
+                  <div className="p-6 sm:p-8 md:p-10 space-y-8 md:space-y-10 bg-gradient-to-b from-cream/40 via-warm-white/60 to-warm-white/40">
                   {editableEvent && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+                    <section className={SECTION_BLOCK_CLASS}>
+                      <div>
+                        <p className={SECTION_EYEBROW_CLASS}>
+                          <span className="inline-block h-px w-5 bg-muted-rose/40" />
+                          Detalhes
+                        </p>
+                        <h4 className="font-display italic text-lg text-espresso mt-1 leading-tight">
+                          Sobre o evento
+                        </h4>
+                      </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-5">
                       <Input
                         label="Nome do evento"
                         value={editableEvent.name}
@@ -1542,9 +1353,11 @@ function EventGiftsPageShell() {
                               </option>
                             ))}
                           </select>
-                          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-warm-gray/60 text-xs">
-                            ▼
-                          </span>
+                          <ChevronDown
+                            aria-hidden
+                            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-warm-gray/55"
+                            strokeWidth={1.8}
+                          />
                         </div>
                       </div>
                       {editableEvent.eventType === 'other' && (
@@ -1563,14 +1376,20 @@ function EventGiftsPageShell() {
                           }
                         />
                       )}
-                      <div className="md:col-span-2 rounded-xl border border-dashed border-muted-rose/30 bg-blush/6 p-4 md:p-5 space-y-4">
+                      <div className="md:col-span-2 space-y-4 pt-2">
                         <div>
-                          <p className="text-sm font-medium text-espresso/85">
+                          <p className={SECTION_EYEBROW_CLASS}>
+                            <span className="inline-block h-px w-5 bg-muted-rose/40" />
                             {PAIR_EVENT_TYPES.has(editableEvent.eventType)
-                              ? 'Anfitriões do casal'
+                              ? 'Casal'
                               : 'Anfitriões'}
                           </p>
-                          <p className="text-xs text-warm-gray/60 mt-1">
+                          <h4 className="font-display italic text-base text-espresso mt-1 leading-tight">
+                            {PAIR_EVENT_TYPES.has(editableEvent.eventType)
+                              ? 'Quem está se casando'
+                              : 'Quem está organizando'}
+                          </h4>
+                          <p className="text-[11.5px] text-warm-gray/65 mt-1 leading-snug">
                             {PAIR_EVENT_TYPES.has(editableEvent.eventType)
                               ? 'Defina os nomes do casal e quem está gerenciando o evento.'
                               : 'Adicione até 5 anfitriões para este evento.'}
@@ -1592,11 +1411,11 @@ function EventGiftsPageShell() {
                                 placeholder="Nome da pessoa 2"
                               />
                             </div>
-                            <div className="rounded-xl border border-dashed border-muted-rose/25 bg-warm-white/55 p-4">
-                              <p className="text-sm font-medium text-espresso/80 mb-1">
+                            <div className="pt-1">
+                              <p className="text-sm font-medium text-espresso/85">
                                 Qual dos parceiros é você?
                               </p>
-                              <p className="text-xs text-warm-gray/60 mb-3">
+                              <p className="text-[11.5px] text-warm-gray/65 mb-3 leading-snug">
                                 Você pode convidar o outro parceiro depois.
                               </p>
                               <div className="flex flex-wrap gap-2">
@@ -1751,25 +1570,34 @@ function EventGiftsPageShell() {
                         </p>
                       </div>
                     </div>
+                    </section>
                   )}
 
-                  <div className="rounded-xl border border-dashed border-muted-rose/30 bg-blush/6 p-5 space-y-4">
-                    <p className="text-sm font-medium text-espresso/85">
-                      Imagem de capa do evento
-                    </p>
-                    <p className="text-xs text-warm-gray/60">
-                      A capa aparece no topo da página para todos os convidados.
-                    </p>
-                    <p className="text-[11px] text-warm-gray/60 leading-relaxed">
-                      Recomendação: JPG/WEBP em 16:9. Ideal 1920x1080 (mínimo
-                      1280x720), até 8MB.
+                  <div className={SECTION_HAIRLINE_CLASS} aria-hidden />
+
+                  <section className={SECTION_BLOCK_CLASS}>
+                    <div>
+                      <p className={SECTION_EYEBROW_CLASS}>
+                        <span className="inline-block h-px w-5 bg-muted-rose/40" />
+                        Capa
+                      </p>
+                      <h4 className="font-display italic text-lg text-espresso mt-1 leading-tight">
+                        Imagem do convite
+                      </h4>
+                      <p className="text-xs text-warm-gray/70 mt-1">
+                        A capa aparece no topo da página para todos os convidados.
+                      </p>
+                    </div>
+                    <p className="text-[11px] text-warm-gray/55 leading-relaxed">
+                      Recomendação: JPG/WEBP em 16:9. Ideal 1920×1080 (mínimo
+                      1280×720), até 8MB.
                     </p>
                     {coverImageUrl ? (
-                      <div className="rounded-xl overflow-hidden relative group">
+                      <div className="rounded-xl overflow-hidden relative group shadow-dreamy border border-muted-rose/15">
                         <img
                           src={coverImageUrl}
                           alt="Capa do evento"
-                          className="w-full max-h-[22rem] object-contain"
+                          className="w-full max-h-[22rem] object-contain bg-warm-white"
                           loading="lazy"
                         />
                         <label className="absolute bottom-3 right-3 inline-flex">
@@ -1826,37 +1654,22 @@ function EventGiftsPageShell() {
                     {isUploadingCover && (
                       <p className="text-xs text-warm-gray/60">Enviando imagem...</p>
                     )}
-                  </div>
+                  </section>
 
-                  <div className="flex flex-wrap gap-3">
-                    <Button
-                      type="button"
-                      variant="default"
-                      size="sm"
-                      onClick={() => void handleSaveEvent()}
-                      className={PRIMARY_ACTION_CLASS}
-                      isLoading={eventSaving}
-                    >
-                      Salvar alterações
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive"
-                      onClick={() => void handleDeleteEvent()}
-                      isLoading={eventDeleting}
-                    >
-                      Excluir evento
-                    </Button>
-                  </div>
+                  <div className={SECTION_HAIRLINE_CLASS} aria-hidden />
 
-                  <div className="rounded-xl border border-dashed border-muted-rose/30 bg-blush/6 p-5 space-y-4">
-                    <p className="text-sm font-medium text-espresso flex items-center gap-2">
-                      <Link2 className="size-4 text-muted-rose/60" />
-                      Links para compartilhar
-                    </p>
-                    <div className="inline-flex rounded-xl border border-border/50 p-1 bg-warm-white">
+                  <section className={SECTION_BLOCK_CLASS}>
+                    <div>
+                      <p className={SECTION_EYEBROW_CLASS}>
+                        <span className="inline-block h-px w-5 bg-muted-rose/40" />
+                        Compartilhar
+                      </p>
+                      <h4 className="font-display italic text-lg text-espresso mt-1 leading-tight flex items-center gap-2">
+                        <Link2 className="size-4 text-muted-rose/70" strokeWidth={1.8} />
+                        Links do convite
+                      </h4>
+                    </div>
+                    <div className="inline-flex rounded-xl border border-muted-rose/20 p-1 bg-warm-white shadow-sm">
                       <Button
                         type="button"
                         size="sm"
@@ -1875,21 +1688,22 @@ function EventGiftsPageShell() {
                       </Button>
                     </div>
                     {shareLinkTab === 'partner' ? (
-                      <div>
-                        <p className="text-xs text-warm-gray/70 mb-1.5">
-                          Convite para o outro anfitrião
-                        </p>
-                        <Input readOnly value={`/events/${event.slug}/convite-parceiro`} />
-                        {canSharePartnerInvite ? (
-                          <p className="text-[11px] text-warm-gray/50 mt-1 pl-0.5">
-                            Envie somente para o outro anfitrião.
-                          </p>
-                        ) : (
-                          <p className="text-[11px] text-warm-gray/50 mt-1 pl-0.5">
-                            Dica: este convite é ideal para eventos com dois anfitriões.
-                          </p>
-                        )}
-                      </div>
+                      <PartnerInviteSection
+                        invites={partnerInvites}
+                        activeInvite={activePartnerInvite}
+                        hasUsedInvite={hasUsedPartnerInvite}
+                        canSharePartnerInvite={canSharePartnerInvite}
+                        buildInviteUrl={buildInviteUrl}
+                        copiedInviteToken={copiedInviteToken}
+                        revokingInviteId={revokingInviteId}
+                        isGeneratingInvite={isGeneratingInvite}
+                        isRotatingInvite={isRotatingInvite}
+                        error={partnerInviteError}
+                        onGenerate={handleGeneratePartnerInvite}
+                        onCopy={handleCopyInvite}
+                        onRevoke={handleRevokePartnerInvite}
+                        onRotate={handleRotatePartnerInvite}
+                      />
                     ) : (
                       <div>
                         <p className="text-xs text-warm-gray/70 mb-1.5">
@@ -1901,6 +1715,37 @@ function EventGiftsPageShell() {
                         </p>
                       </div>
                     )}
+                  </section>
+
+                  <div className="pt-1">
+                    <div className="flex items-center gap-3 mb-5">
+                      <span className="h-px flex-1 bg-gradient-to-r from-transparent via-muted-rose/35 to-transparent" />
+                      <OrnamentDivider className="w-16 text-muted-rose/50" />
+                      <span className="h-px flex-1 bg-gradient-to-r from-transparent via-muted-rose/35 to-transparent" />
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="sm"
+                        onClick={() => void handleSaveEvent()}
+                        className={PRIMARY_ACTION_CLASS}
+                        isLoading={eventSaving}
+                      >
+                        Salvar alterações
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:bg-destructive/10"
+                        onClick={() => void handleDeleteEvent()}
+                        isLoading={eventDeleting}
+                      >
+                        <Trash2 className="size-4" />
+                        Excluir evento
+                      </Button>
+                    </div>
                   </div>
                 </div>
                 </motion.div>
@@ -1911,16 +1756,6 @@ function EventGiftsPageShell() {
       )}
 
       {/* ═══ ERROR ═══ */}
-      {showReserveLoginPrompt && (
-        <div className="px-6 max-w-5xl mx-auto pb-4">
-          <div className="text-sm text-espresso bg-sage/15 border border-sage/25 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-            <span>Faca login para reservar um presente.</span>
-            <Button size="sm" variant="outline" onClick={() => void handleSignInToReserve()}>
-              Fazer login
-            </Button>
-          </div>
-        </div>
-      )}
       {error && (
         <div className="px-6 max-w-5xl mx-auto pb-4">
           <p className="text-sm text-destructive bg-destructive/8 border border-destructive/20 rounded-xl px-4 py-3">
@@ -1931,28 +1766,50 @@ function EventGiftsPageShell() {
 
       {/* ═══ ADD GIFT (Host) ═══ */}
       {isHostView && (
-        <section className="px-6 pb-8 max-w-5xl mx-auto">
-          <div className="rounded-2xl border border-sage/30 bg-sage/5 overflow-hidden">
+        <section className="px-4 sm:px-6 pb-10 max-w-5xl mx-auto">
+          <div className={cn(PANEL_SHELL_CLASS, 'border-sage/30')}>
+            {/* Decorative top hairline — sage gradient */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sage/55 to-transparent"
+            />
             <button
               type="button"
               onClick={() => setIsAddGiftPanelOpen((prev) => !prev)}
-              className="w-full flex items-center justify-between gap-3 px-5 py-4 transition-all duration-200 hover:bg-sage/10 cursor-pointer"
+              className={cn(
+                PANEL_HEADER_BASE_CLASS,
+                'hover:bg-sage/10',
+                isAddGiftPanelOpen && 'bg-sage/8',
+              )}
             >
-              <div className="flex items-center gap-3 text-left">
-                <Gift className="size-4 text-sage" />
-                <div>
-                  <p className="text-sm font-medium text-espresso">Adicionar presente</p>
-                  <p className="text-xs text-warm-gray/70">
+              <div className="flex items-center gap-4 min-w-0">
+                <span
+                  aria-hidden
+                  className="relative inline-flex items-center justify-center size-11 sm:size-12 rounded-2xl bg-gradient-to-br from-sage via-sage/75 to-sage/40 ring-1 ring-warm-white/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_2px_6px_rgba(168,197,168,0.3)] shrink-0"
+                >
+                  <Gift className="size-5 text-espresso/80" strokeWidth={1.6} />
+                </span>
+                <div className="min-w-0">
+                  <p className="flex items-center gap-2 text-[10.5px] uppercase tracking-[0.22em] text-sage/90 font-medium">
+                    <span className="inline-block h-px w-5 bg-sage/60" />
+                    Novo na lista
+                  </p>
+                  <h3 className="font-display italic text-xl sm:text-[1.4rem] text-espresso mt-1.5 leading-tight">
+                    Adicionar presente
+                  </h3>
+                  <p className="text-xs sm:text-[13px] text-warm-gray/75 mt-1 leading-snug">
                     Crie novos itens da lista e organize imagens e links.
                   </p>
                 </div>
               </div>
-              <ChevronDown
+              <span
                 className={cn(
-                  'size-4 text-warm-gray transition-transform duration-300',
-                  isAddGiftPanelOpen && 'rotate-180',
+                  'inline-flex items-center justify-center size-9 rounded-full bg-warm-white/80 border border-sage/30 shadow-sm transition-all duration-300 shrink-0',
+                  isAddGiftPanelOpen && 'rotate-180 bg-sage/30 border-sage/60',
                 )}
-              />
+              >
+                <ChevronDown className="size-4 text-espresso/70" strokeWidth={1.8} />
+              </span>
             </button>
 
             <AnimatePresence>
@@ -1961,10 +1818,10 @@ function EventGiftsPageShell() {
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3, ease }}
-                  className="overflow-hidden border-t border-sage/20"
+                  transition={{ duration: 0.35, ease }}
+                  className="overflow-hidden border-t border-dashed border-sage/35"
                 >
-                  <div className="p-5 md:p-6 space-y-4 bg-warm-white/40">
+                  <div className="p-6 sm:p-8 md:p-10 space-y-6 bg-gradient-to-b from-sage/8 via-warm-white/60 to-warm-white/40">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Input
                         label="Nome do presente"
@@ -1999,9 +1856,11 @@ function EventGiftsPageShell() {
                               </option>
                             ))}
                           </select>
-                          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-warm-gray/60 text-xs">
-                            ▼
-                          </span>
+                          <ChevronDown
+                            aria-hidden
+                            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-warm-gray/55"
+                            strokeWidth={1.8}
+                          />
                         </div>
                       </div>
                       <div className="space-y-1.5">
@@ -2021,17 +1880,26 @@ function EventGiftsPageShell() {
                           className={cn(FORM_TEXTAREA_CLASS, 'min-h-[4.5rem] resize-y')}
                         />
                       </div>
-                      <Input
-                        label="Link de referência (opcional)"
-                        value={newGiftForm.referenceUrl}
-                        onChange={(e) =>
-                          setNewGiftForm((c) => ({
-                            ...c,
-                            referenceUrl: e.target.value,
-                          }))
-                        }
-                        placeholder="https://..."
-                      />
+                      <div className="space-y-1.5">
+                        <Input
+                          label="Link de referência (opcional)"
+                          value={newGiftForm.referenceUrl}
+                          onChange={(e) =>
+                            {
+                              setNewGiftReferenceTouched(true)
+                              setNewGiftReferenceImageError(null)
+                              setNewGiftForm((c) => ({
+                                ...c,
+                                referenceUrl: e.target.value,
+                              }))
+                            }
+                          }
+                          placeholder="https://..."
+                        />
+                        <p className="text-[11px] text-warm-gray/65 leading-relaxed pl-0.5">
+                          Cole o link da loja e a gente busca a imagem pra você.
+                        </p>
+                      </div>
                       <div className="md:col-span-2 space-y-2">
                         <p className="text-sm font-medium text-espresso/80 pl-0.5">
                           Imagem do presente (opcional)
@@ -2040,81 +1908,137 @@ function EventGiftsPageShell() {
                           Recomendação: JPG/WEBP em 1:1. Ideal 1200×1200 (mínimo 600×600),
                           até 8MB.
                         </p>
-                        {newGiftForm.imageUrl ? (
-                          <div className="rounded-xl overflow-hidden border border-border/30 max-w-sm bg-warm-white relative group">
-                            <img
-                              src={newGiftForm.imageUrl}
-                              alt="Prévia do presente"
-                              className="w-full h-44 object-contain"
-                            />
-                            <label className="absolute bottom-3 right-3 inline-flex">
+                        <div className="max-w-sm">
+                          {isExtractingNewGiftImage ? (
+                            <div
+                              role="status"
+                              aria-live="polite"
+                              className="rounded-xl border border-dashed border-muted-rose/55 bg-muted-rose/8 h-44 flex flex-col items-center justify-center gap-2 px-4 text-center"
+                            >
+                              <Loader2 className="size-6 text-muted-rose animate-spin" />
+                              <p className="text-sm font-medium text-espresso">
+                                Buscando imagem do link...
+                              </p>
+                              <p className="text-xs text-warm-gray/75">
+                                Isso pode levar alguns segundos
+                              </p>
+                            </div>
+                          ) : newGiftForm.imageUrl ? (
+                            <div className="rounded-xl overflow-hidden border border-border/30 bg-warm-white relative group">
+                              <img
+                                src={newGiftForm.imageUrl}
+                                alt="Prévia do presente"
+                                className="w-full h-44 object-contain"
+                              />
+                              {isUploadingGiftImage && (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-warm-white/80 backdrop-blur-sm">
+                                  <Loader2 className="size-5 text-muted-rose animate-spin" />
+                                  <p className="text-sm font-medium text-espresso">
+                                    Enviando imagem...
+                                  </p>
+                                </div>
+                              )}
+                              <label className="absolute bottom-3 right-3 inline-flex">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="sr-only"
+                                  onChange={(e) =>
+                                    void handleUploadGiftImage(
+                                      e.target.files?.[0],
+                                      'create',
+                                    )
+                                  }
+                                  disabled={isNewGiftImageProcessing}
+                                />
+                                <span
+                                  className={cn(
+                                    UPLOAD_CHIP_CLASS,
+                                    isNewGiftImageProcessing &&
+                                      'opacity-60 cursor-not-allowed',
+                                  )}
+                                >
+                                  <ImagePlus className="size-3.5" />
+                                  Trocar imagem
+                                </span>
+                              </label>
+                            </div>
+                          ) : (
+                            <label
+                              className={cn(UPLOAD_DROPZONE_CLASS, 'h-44 gap-2')}
+                            >
                               <input
                                 type="file"
                                 accept="image/*"
                                 className="sr-only"
                                 onChange={(e) =>
-                                  void handleUploadGiftImage(e.target.files?.[0], 'create')
+                                  void handleUploadGiftImage(
+                                    e.target.files?.[0],
+                                    'create',
+                                  )
                                 }
-                                disabled={isUploadingGiftImage}
+                                disabled={isNewGiftImageProcessing}
                               />
-                              <span
-                                className={cn(
-                                  UPLOAD_CHIP_CLASS,
-                                  isUploadingGiftImage && 'opacity-60 cursor-not-allowed',
-                                )}
-                              >
-                                <ImagePlus className="size-3.5" />
-                                Trocar imagem
-                              </span>
+                              {isUploadingGiftImage ? (
+                                <>
+                                  <Loader2 className="size-5 text-muted-rose animate-spin" />
+                                  <span className="text-sm font-medium text-espresso">
+                                    Enviando imagem...
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <ImagePlus className="size-5 text-muted-rose/75" />
+                                  <span>Clique para enviar uma imagem</span>
+                                  <span className="text-[11px] text-warm-gray/55">
+                                    ou cole um link de referência acima
+                                  </span>
+                                </>
+                              )}
                             </label>
-                          </div>
-                        ) : (
-                          <label className={cn(UPLOAD_DROPZONE_CLASS, 'h-28 gap-1.5')}>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="sr-only"
-                              onChange={(e) =>
-                                void handleUploadGiftImage(e.target.files?.[0], 'create')
-                              }
-                              disabled={isUploadingGiftImage}
-                            />
-                            <ImagePlus className="size-5 text-muted-rose/75" />
-                            <span>{isUploadingGiftImage ? 'Enviando imagem...' : 'Enviar imagem'}</span>
-                          </label>
+                          )}
+                        </div>
+                        {newGiftReferenceImageError && (
+                          <p className="text-xs text-destructive pl-0.5">
+                            {newGiftReferenceImageError}
+                          </p>
                         )}
                         <div className="flex flex-wrap gap-2">
-                          {newGiftForm.imageId && (
+                          {newGiftForm.imageId && !isExtractingNewGiftImage && (
                             <Button
                               type="button"
                               variant="ghost"
                               size="sm"
                               className="text-destructive"
                               onClick={handleRemoveDraftGiftImage}
-                              disabled={isUploadingGiftImage}
+                              disabled={isNewGiftImageProcessing}
                             >
                               <Trash2 className="size-4" />
                               Remover imagem
                             </Button>
                           )}
                         </div>
-                        {isUploadingGiftImage && (
-                          <p className="text-xs text-warm-gray/60">Enviando imagem...</p>
-                        )}
                       </div>
                     </div>
-                    <div className="flex justify-end">
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => void handleCreateGift()}
-                        className={PRIMARY_ACTION_CLASS}
-                        isLoading={isCreatingGift}
-                        disabled={!newGiftForm.name.trim()}
-                      >
-                        <Plus className="size-3.5" />
-                        Adicionar
-                      </Button>
+                    <div className="pt-2">
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="h-px flex-1 bg-gradient-to-r from-transparent via-sage/40 to-transparent" />
+                        <OrnamentDivider className="w-14 text-sage/60" />
+                        <span className="h-px flex-1 bg-gradient-to-r from-transparent via-sage/40 to-transparent" />
+                      </div>
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => void handleCreateGift()}
+                          className={PRIMARY_ACTION_CLASS}
+                          isLoading={isCreatingGift}
+                          disabled={!newGiftForm.name.trim() || isNewGiftImageProcessing}
+                        >
+                          <Plus className="size-3.5" />
+                          Adicionar à lista
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -2163,11 +2087,10 @@ function EventGiftsPageShell() {
             </p>
           </div>
         ) : (
-          <div
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
-          >
-            <AnimatePresence mode="popLayout">
-            {gifts.map((gift) => {
+          <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              <AnimatePresence mode="popLayout">
+              {gifts.map((gift) => {
               const isEditing = editingGiftId === gift._id && isHostView
               const statusStyles = {
                 available: 'bg-gift-available/10 border-gift-available/20',
@@ -2209,21 +2132,43 @@ function EventGiftsPageShell() {
                           Recomendação: JPG/WEBP em 1:1. Ideal 1200×1200 (mínimo
                           600×600), até 8MB.
                         </p>
-                        {giftForm.imageUrl ? (
-                          <div className="rounded-xl overflow-hidden border border-border/30 bg-warm-white">
+                        {isExtractingEditedGiftImage ? (
+                          <div
+                            role="status"
+                            aria-live="polite"
+                            className="rounded-xl border border-dashed border-muted-rose/55 bg-muted-rose/8 h-40 flex flex-col items-center justify-center gap-2 px-4 text-center"
+                          >
+                            <Loader2 className="size-6 text-muted-rose animate-spin" />
+                            <p className="text-sm font-medium text-espresso">
+                              Buscando imagem do link...
+                            </p>
+                            <p className="text-xs text-warm-gray/75">
+                              Isso pode levar alguns segundos
+                            </p>
+                          </div>
+                        ) : giftForm.imageUrl ? (
+                          <div className="rounded-xl overflow-hidden border border-border/30 bg-warm-white relative">
                             <img
                               src={giftForm.imageUrl}
                               alt="Prévia do presente"
                               className="w-full h-40 object-contain"
                             />
+                            {isUploadingEditedGiftImage && (
+                              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-warm-white/80 backdrop-blur-sm">
+                                <Loader2 className="size-5 text-muted-rose animate-spin" />
+                                <p className="text-sm font-medium text-espresso">
+                                  Enviando imagem...
+                                </p>
+                              </div>
+                            )}
                           </div>
                         ) : (
-                          <div className="rounded-xl border border-dashed border-border/50 h-24 flex items-center justify-center text-sm text-warm-gray/60">
-                            Sem imagem
-                          </div>
-                        )}
-                        <div className="flex flex-wrap gap-2">
-                          <label className="inline-flex">
+                          <label
+                            className={cn(
+                              UPLOAD_DROPZONE_CLASS,
+                              'h-40 gap-2',
+                            )}
+                          >
                             <input
                               type="file"
                               accept="image/*"
@@ -2231,35 +2176,68 @@ function EventGiftsPageShell() {
                               onChange={(e) =>
                                 void handleUploadGiftImage(e.target.files?.[0], 'edit')
                               }
-                              disabled={isUploadingEditedGiftImage}
+                              disabled={isEditedGiftImageProcessing}
                             />
-                            <span
-                              className={cn(
-                                'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm border cursor-pointer transition-colors shadow-sm border-muted-rose/35 bg-warm-white text-espresso hover:bg-muted-rose/16 hover:border-muted-rose/60',
-                                isUploadingEditedGiftImage &&
-                                  'opacity-60 cursor-not-allowed',
-                              )}
-                            >
-                              <ImagePlus className="size-4" />
-                              {giftForm.imageId ? 'Trocar imagem' : 'Enviar imagem'}
-                            </span>
+                            {isUploadingEditedGiftImage ? (
+                              <>
+                                <Loader2 className="size-5 text-muted-rose animate-spin" />
+                                <span className="text-sm font-medium text-espresso">
+                                  Enviando imagem...
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <ImagePlus className="size-5 text-muted-rose/75" />
+                                <span>Clique para enviar uma imagem</span>
+                                <span className="text-[11px] text-warm-gray/55">
+                                  ou cole um link de referência abaixo
+                                </span>
+                              </>
+                            )}
                           </label>
-                          {giftForm.imageId && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive"
-                              onClick={handleRemoveEditingGiftImage}
-                              disabled={isUploadingEditedGiftImage}
-                            >
-                              <Trash2 className="size-4" />
-                              Remover imagem
-                            </Button>
-                          )}
-                        </div>
-                        {isUploadingEditedGiftImage && (
-                          <p className="text-xs text-warm-gray/60">Enviando imagem...</p>
+                        )}
+                        {!isExtractingEditedGiftImage && (
+                          <div className="flex flex-wrap gap-2">
+                            {giftForm.imageUrl && (
+                              <label className="inline-flex">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="sr-only"
+                                  onChange={(e) =>
+                                    void handleUploadGiftImage(
+                                      e.target.files?.[0],
+                                      'edit',
+                                    )
+                                  }
+                                  disabled={isEditedGiftImageProcessing}
+                                />
+                                <span
+                                  className={cn(
+                                    'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm border cursor-pointer transition-colors shadow-sm border-muted-rose/35 bg-warm-white text-espresso hover:bg-muted-rose/16 hover:border-muted-rose/60',
+                                    isEditedGiftImageProcessing &&
+                                      'opacity-60 cursor-not-allowed',
+                                  )}
+                                >
+                                  <ImagePlus className="size-4" />
+                                  Trocar imagem
+                                </span>
+                              </label>
+                            )}
+                            {giftForm.imageId && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive"
+                                onClick={handleRemoveEditingGiftImage}
+                                disabled={isEditedGiftImageProcessing}
+                              >
+                                <Trash2 className="size-4" />
+                                Remover imagem
+                              </Button>
+                            )}
+                          </div>
                         )}
                       </div>
                       <div className="space-y-1.5">
@@ -2287,9 +2265,11 @@ function EventGiftsPageShell() {
                               </option>
                             ))}
                           </select>
-                          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-warm-gray/60 text-xs">
-                            ▼
-                          </span>
+                          <ChevronDown
+                            aria-hidden
+                            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-warm-gray/55"
+                            strokeWidth={1.8}
+                          />
                         </div>
                       </div>
                       <div className="space-y-1.5">
@@ -2309,23 +2289,49 @@ function EventGiftsPageShell() {
                           className={cn(FORM_TEXTAREA_CLASS, 'resize-y')}
                         />
                       </div>
-                      <Input
-                        label="Link de referência"
-                        value={giftForm.referenceUrl}
-                        onChange={(e) =>
-                          setGiftForm((c) => ({
-                            ...c,
-                            referenceUrl: e.target.value,
-                          }))
-                        }
-                        placeholder="https://..."
-                      />
+                      <div className="space-y-1.5">
+                        <Input
+                          label="Link de referência"
+                          value={giftForm.referenceUrl}
+                          onChange={(e) =>
+                            {
+                              setEditingGiftReferenceTouched(true)
+                              setEditedGiftReferenceImageError(null)
+                              setGiftForm((c) => ({
+                                ...c,
+                                referenceUrl: e.target.value,
+                              }))
+                            }
+                          }
+                          placeholder="https://..."
+                        />
+                        <p className="text-[11px] text-warm-gray/65 leading-relaxed pl-0.5">
+                          Cole o link da loja e a gente busca a imagem pra você.
+                        </p>
+                        {editedGiftReferenceImageError && (
+                          <p className="text-xs text-destructive pl-0.5">
+                            {editedGiftReferenceImageError}
+                          </p>
+                        )}
+                      </div>
                       <div className="flex gap-2 justify-end pt-1">
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => setEditingGiftId(null)}
+                          onClick={() => {
+                            if (
+                              giftForm.imageId &&
+                              giftForm.imageId !== editingOriginalImageId
+                            ) {
+                              void discardTemporaryGiftImage({
+                                imageId: giftForm.imageId,
+                              })
+                            }
+                            setEditingGiftReferenceTouched(false)
+                            setEditingOriginalImageId(undefined)
+                            setEditingGiftId(null)
+                          }}
                         >
                           Cancelar
                         </Button>
@@ -2354,7 +2360,7 @@ function EventGiftsPageShell() {
                         )}
                       </div>
                       <div className="flex items-start justify-between gap-2 min-h-12">
-                        <h4 className="font-display text-base leading-snug text-espresso">
+                        <h4 className="font-display italic text-base leading-snug text-espresso">
                           {gift.name}
                         </h4>
                         <Badge variant={gift.status} className="shrink-0">
@@ -2362,8 +2368,8 @@ function EventGiftsPageShell() {
                         </Badge>
                       </div>
 
-                      <p className="text-xs text-warm-gray/60 mt-1 min-h-4">
-                        {gift.category || 'Sem categoria'}
+                      <p className="font-accent text-base text-muted-rose/85 leading-none mt-1 min-h-4">
+                        {gift.category || ''}
                       </p>
 
                       <div className="mt-3 min-h-16">
@@ -2489,8 +2495,24 @@ function EventGiftsPageShell() {
                   )}
                 </motion.div>
               )
-            })}
-            </AnimatePresence>
+              })}
+              </AnimatePresence>
+            </div>
+
+            {(hasMoreGifts || isLoadingMoreGifts) && (
+              <div ref={loadMoreTriggerRef} className="h-1 w-full" />
+            )}
+
+            {isLoadingMoreGifts && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-5">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={`gifts-loading-more-${i}`}
+                    className="h-44 rounded-2xl bg-blush/25 animate-pulse"
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </section>
@@ -2544,6 +2566,44 @@ function EventGiftsPageShell() {
         </DialogContent>
       </Dialog>
 
+      {/* ═══ LOGIN TO RESERVE DIALOG ═══ */}
+      <Dialog
+        open={showReserveLoginPrompt}
+        onOpenChange={(open) => setShowReserveLoginPrompt(open)}
+      >
+        <DialogContent className="max-w-sm text-center">
+          <div className="flex justify-center mb-1">
+            <div className="size-12 rounded-full bg-sage/20 flex items-center justify-center">
+              <Gift className="size-5 text-sage" />
+            </div>
+          </div>
+          <DialogTitle className="font-display italic text-2xl text-espresso">
+            Entre para reservar
+          </DialogTitle>
+          <DialogDescription className="text-sm text-warm-gray/80 leading-relaxed pt-1">
+            Faça login para escolher e reservar um presente. É rapidinho!
+          </DialogDescription>
+          <div className="flex flex-col gap-2 pt-2">
+            <Button
+              type="button"
+              className={PRIMARY_ACTION_CLASS}
+              onClick={() => void handleSignInToReserve()}
+            >
+              Entrar com Google
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-warm-gray/60"
+              onClick={() => setShowReserveLoginPrompt(false)}
+            >
+              Agora não
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* ═══ SHARE EVENT DIALOG ═══ */}
       <Dialog
         open={isShareDialogOpen}
@@ -2592,22 +2652,223 @@ function EventGiftsPageShell() {
   )
 }
 
-function OrnamentDivider({ className }: { className?: string }) {
+type PartnerInviteEntry = {
+  _id: Id<'eventInvites'>
+  token: string
+  createdAt: number
+  usedAt?: number
+  revokedAt?: number
+  status: 'active' | 'used' | 'revoked'
+  usedByName?: string
+  usedByEmail?: string
+}
+
+function formatInviteDate(timestamp: number) {
+  try {
+    return new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(timestamp))
+  } catch {
+    return ''
+  }
+}
+
+function PartnerInviteSection({
+  invites,
+  activeInvite,
+  hasUsedInvite,
+  canSharePartnerInvite,
+  buildInviteUrl,
+  copiedInviteToken,
+  revokingInviteId,
+  isGeneratingInvite,
+  isRotatingInvite,
+  error,
+  onGenerate,
+  onCopy,
+  onRevoke,
+  onRotate,
+}: {
+  invites: Array<PartnerInviteEntry> | undefined
+  activeInvite: PartnerInviteEntry | null
+  hasUsedInvite: boolean
+  canSharePartnerInvite: boolean
+  buildInviteUrl: (token: string) => string
+  copiedInviteToken: string | null
+  revokingInviteId: Id<'eventInvites'> | null
+  isGeneratingInvite: boolean
+  isRotatingInvite: boolean
+  error: string | null
+  onGenerate: () => void | Promise<void>
+  onCopy: (token: string) => void | Promise<void>
+  onRevoke: (inviteId: Id<'eventInvites'>) => void | Promise<void>
+  onRotate: () => void | Promise<void>
+}) {
+  const audienceHint = canSharePartnerInvite
+    ? 'para o outro anfitrião'
+    : 'para quem vai coorganizar'
+
   return (
-    <svg
-      viewBox="0 0 120 24"
-      fill="none"
-      className={className}
-      aria-hidden="true"
-    >
-      <path
-        d="M0 12 C20 4, 40 20, 60 12 C80 4, 100 20, 120 12"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <circle cx="60" cy="12" r="2" fill="currentColor" opacity="0.5" />
-    </svg>
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-muted-rose/30 bg-blush/15 p-4 space-y-2">
+        <p className="text-[11px] uppercase tracking-[0.22em] text-muted-rose/90 font-medium">
+          Como funciona
+        </p>
+        <ul className="text-sm text-espresso/85 leading-relaxed space-y-1.5 list-disc pl-5 marker:text-muted-rose/70">
+          <li>
+            Compartilhe o link <strong>{audienceHint}</strong>. Quem abrir e
+            entrar com a conta Google vira coanfitrião e pode editar tudo.
+          </li>
+          <li>
+            <strong>Não pedimos código nem confirmação extra</strong> — quem
+            tiver o link consegue aceitar. Envie só para a pessoa certa.
+          </li>
+          <li>
+            Cada link funciona <strong>uma única vez</strong>. Depois que for
+            usado, perde a validade automaticamente.
+          </li>
+        </ul>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h5 className="font-display italic text-base text-espresso">
+          Seus links de convite
+        </h5>
+        {invites && invites.length > 0 ? (
+          <Button
+            type="button"
+            size="sm"
+            variant={activeInvite ? 'ghost' : 'default'}
+            onClick={() => {
+              if (activeInvite) {
+                void onRotate()
+              } else {
+                void onGenerate()
+              }
+            }}
+            isLoading={isRotatingInvite || isGeneratingInvite}
+          >
+            {activeInvite ? 'Gerar novo link' : 'Gerar link'}
+          </Button>
+        ) : null}
+      </div>
+
+      {invites === undefined ? (
+        <p className="text-sm text-warm-gray/60">Carregando convites...</p>
+      ) : invites.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-muted-rose/30 bg-warm-white/70 p-5 text-center space-y-3">
+          <p className="text-sm text-warm-gray/80">
+            Você ainda não gerou nenhum link de convite.
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => void onGenerate()}
+            isLoading={isGeneratingInvite}
+          >
+            Gerar primeiro link
+          </Button>
+        </div>
+      ) : (
+        <ul className="space-y-2.5">
+          {invites.map((invite) => {
+            const url = buildInviteUrl(invite.token)
+            const isCopied = copiedInviteToken === invite.token
+            const isRevoking = revokingInviteId === invite._id
+            const statusBadge =
+              invite.status === 'active'
+                ? {
+                    label: 'Pendente',
+                    className: 'bg-sage/25 text-espresso border-sage/40',
+                  }
+                : invite.status === 'used'
+                  ? {
+                      label: 'Aceito',
+                      className:
+                        'bg-muted-rose/25 text-espresso border-muted-rose/45',
+                    }
+                  : {
+                      label: 'Revogado',
+                      className: 'bg-warm-gray/15 text-warm-gray border-warm-gray/30',
+                    }
+            const acceptedBy =
+              invite.status === 'used'
+                ? (invite.usedByName ?? invite.usedByEmail ?? '')
+                : ''
+            const subline =
+              invite.status === 'used' && invite.usedAt
+                ? acceptedBy
+                  ? `Aceito por ${acceptedBy} em ${formatInviteDate(invite.usedAt)}`
+                  : `Aceito em ${formatInviteDate(invite.usedAt)}`
+                : invite.status === 'revoked' && invite.revokedAt
+                  ? `Revogado em ${formatInviteDate(invite.revokedAt)}`
+                  : `Criado em ${formatInviteDate(invite.createdAt)}`
+            return (
+              <li
+                key={invite._id}
+                className="rounded-xl border border-muted-rose/25 bg-warm-white/90 p-4 space-y-3"
+              >
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <span
+                    className={cn(
+                      'inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium tracking-wide',
+                      statusBadge.className,
+                    )}
+                  >
+                    {statusBadge.label}
+                  </span>
+                  <span className="text-xs text-warm-gray/70 truncate min-w-0">
+                    {subline}
+                  </span>
+                </div>
+
+                {invite.status === 'active' && (
+                  <>
+                    <Input
+                      readOnly
+                      value={url}
+                      className="text-xs w-full"
+                      onFocus={(e) => e.currentTarget.select()}
+                    />
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => void onCopy(invite.token)}
+                      >
+                        {isCopied ? 'Link copiado!' : 'Copiar link'}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:bg-destructive/10"
+                        onClick={() => void onRevoke(invite._id)}
+                        isLoading={isRevoking}
+                      >
+                        Revogar
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      {hasUsedInvite && (
+        <p className="text-[11px] text-warm-gray/55 leading-relaxed">
+          Convites utilizados ficam no histórico apenas para sua referência —
+          eles não podem mais ser reaproveitados.
+        </p>
+      )}
+
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
   )
 }
 
@@ -2762,4 +3023,3 @@ function GiftPlaceholderIllustration({
     </div>
   )
 }
-

@@ -62,6 +62,18 @@ export function useEventMembership(eventId: Id<'events'> | undefined) {
   }
 }
 
+export function useRecentPublicEvents(limit?: number) {
+  const events = useQuery(
+    api.events.listRecentPublicEvents,
+    limit !== undefined ? { limit } : {},
+  )
+
+  return {
+    events: events ?? [],
+    isLoading: events === undefined,
+  }
+}
+
 export function useEventSearch(search: string, enabled: boolean) {
   const events = useQuery(
     api.events.searchPublicEvents,
