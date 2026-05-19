@@ -773,3 +773,11 @@ body::after {
   padding: 0.12rem 0.35rem;
   border-radius: 0.35rem;
 }
+
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
