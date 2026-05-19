@@ -9,6 +9,7 @@ import {
   Heart,
   ImagePlus,
   Link2,
+  Loader2,
   MapPin,
   Plus,
   Share2,
@@ -629,14 +630,16 @@ function EventGiftsPageShell() {
             return
           }
           setNewGiftReferenceImageError(null)
-          if (newGiftForm.imageId && newGiftForm.imageId !== result.imageId) {
-            void discardTemporaryGiftImage({ imageId: newGiftForm.imageId })
-          }
-          setNewGiftForm((current) => ({
-            ...current,
-            imageId: result.imageId,
-            imageUrl: result.imageUrl,
-          }))
+          setNewGiftForm((current) => {
+            if (current.imageId && current.imageId !== result.imageId) {
+              void discardTemporaryGiftImage({ imageId: current.imageId })
+            }
+            return {
+              ...current,
+              imageId: result.imageId,
+              imageUrl: result.imageUrl,
+            }
+          })
         })
         .catch(() => {
           if (newGiftExtractionIdRef.current !== extractionId) return
@@ -657,7 +660,6 @@ function EventGiftsPageShell() {
     discardTemporaryGiftImage,
     extractGiftImageFromReferenceUrl,
     isHostView,
-    newGiftForm.imageId,
     newGiftForm.referenceUrl,
     newGiftReferenceTouched,
   ])
@@ -695,14 +697,16 @@ function EventGiftsPageShell() {
             return
           }
           setEditedGiftReferenceImageError(null)
-          if (giftForm.imageId && giftForm.imageId !== result.imageId) {
-            void discardTemporaryGiftImage({ imageId: giftForm.imageId })
-          }
-          setGiftForm((current) => ({
-            ...current,
-            imageId: result.imageId,
-            imageUrl: result.imageUrl,
-          }))
+          setGiftForm((current) => {
+            if (current.imageId && current.imageId !== result.imageId) {
+              void discardTemporaryGiftImage({ imageId: current.imageId })
+            }
+            return {
+              ...current,
+              imageId: result.imageId,
+              imageUrl: result.imageUrl,
+            }
+          })
         })
         .catch(() => {
           if (editedGiftExtractionIdRef.current !== extractionId) return
@@ -724,7 +728,6 @@ function EventGiftsPageShell() {
     editingGiftId,
     editingGiftReferenceTouched,
     extractGiftImageFromReferenceUrl,
-    giftForm.imageId,
     giftForm.referenceUrl,
     isHostView,
   ])
@@ -2303,71 +2306,107 @@ function EventGiftsPageShell() {
                         <p className="text-sm font-medium text-espresso/80 pl-0.5">
                           Imagem do presente (opcional)
                         </p>
-                        {isExtractingNewGiftImage && (
-                          <p className="text-xs text-warm-gray/60 pl-0.5">
-                            Extraindo imagem da URL...
-                          </p>
-                        )}
-                        {newGiftReferenceImageError && (
-                          <p className="text-xs text-destructive pl-0.5">
-                            {newGiftReferenceImageError}
-                          </p>
-                        )}
                         <p className="text-[11px] text-warm-gray/60 leading-relaxed max-w-md">
                           Recomendação: JPG/WEBP em 1:1. Ideal 1200×1200 (mínimo 600×600),
                           até 8MB.
                         </p>
-                        {newGiftForm.imageUrl ? (
-                          <div className="rounded-xl overflow-hidden border border-border/30 max-w-sm bg-warm-white relative group">
-                            <img
-                              src={newGiftForm.imageUrl}
-                              alt="Prévia do presente"
-                              className="w-full h-44 object-contain"
-                            />
-                            <label className="absolute bottom-3 right-3 inline-flex">
+                        <div className="max-w-sm">
+                          {isExtractingNewGiftImage ? (
+                            <div
+                              role="status"
+                              aria-live="polite"
+                              className="rounded-xl border border-dashed border-muted-rose/55 bg-muted-rose/8 h-44 flex flex-col items-center justify-center gap-2 px-4 text-center"
+                            >
+                              <Loader2 className="size-6 text-muted-rose animate-spin" />
+                              <p className="text-sm font-medium text-espresso">
+                                Buscando imagem do link...
+                              </p>
+                              <p className="text-xs text-warm-gray/75">
+                                Isso pode levar alguns segundos
+                              </p>
+                            </div>
+                          ) : newGiftForm.imageUrl ? (
+                            <div className="rounded-xl overflow-hidden border border-border/30 bg-warm-white relative group">
+                              <img
+                                src={newGiftForm.imageUrl}
+                                alt="Prévia do presente"
+                                className="w-full h-44 object-contain"
+                              />
+                              {isUploadingGiftImage && (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-warm-white/80 backdrop-blur-sm">
+                                  <Loader2 className="size-5 text-muted-rose animate-spin" />
+                                  <p className="text-sm font-medium text-espresso">
+                                    Enviando imagem...
+                                  </p>
+                                </div>
+                              )}
+                              <label className="absolute bottom-3 right-3 inline-flex">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="sr-only"
+                                  onChange={(e) =>
+                                    void handleUploadGiftImage(
+                                      e.target.files?.[0],
+                                      'create',
+                                    )
+                                  }
+                                  disabled={isNewGiftImageProcessing}
+                                />
+                                <span
+                                  className={cn(
+                                    UPLOAD_CHIP_CLASS,
+                                    isNewGiftImageProcessing &&
+                                      'opacity-60 cursor-not-allowed',
+                                  )}
+                                >
+                                  <ImagePlus className="size-3.5" />
+                                  Trocar imagem
+                                </span>
+                              </label>
+                            </div>
+                          ) : (
+                            <label
+                              className={cn(UPLOAD_DROPZONE_CLASS, 'h-44 gap-2')}
+                            >
                               <input
                                 type="file"
                                 accept="image/*"
                                 className="sr-only"
                                 onChange={(e) =>
-                                  void handleUploadGiftImage(e.target.files?.[0], 'create')
+                                  void handleUploadGiftImage(
+                                    e.target.files?.[0],
+                                    'create',
+                                  )
                                 }
                                 disabled={isNewGiftImageProcessing}
                               />
-                              <span
-                                className={cn(
-                                  UPLOAD_CHIP_CLASS,
-                                  isNewGiftImageProcessing && 'opacity-60 cursor-not-allowed',
-                                )}
-                              >
-                                <ImagePlus className="size-3.5" />
-                                Trocar imagem
-                              </span>
+                              {isUploadingGiftImage ? (
+                                <>
+                                  <Loader2 className="size-5 text-muted-rose animate-spin" />
+                                  <span className="text-sm font-medium text-espresso">
+                                    Enviando imagem...
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <ImagePlus className="size-5 text-muted-rose/75" />
+                                  <span>Clique para enviar uma imagem</span>
+                                  <span className="text-[11px] text-warm-gray/55">
+                                    ou cole um link de referência acima
+                                  </span>
+                                </>
+                              )}
                             </label>
-                          </div>
-                        ) : (
-                          <label className={cn(UPLOAD_DROPZONE_CLASS, 'h-28 gap-1.5')}>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="sr-only"
-                              onChange={(e) =>
-                                void handleUploadGiftImage(e.target.files?.[0], 'create')
-                              }
-                              disabled={isNewGiftImageProcessing}
-                            />
-                            <ImagePlus className="size-5 text-muted-rose/75" />
-                            <span>
-                              {isExtractingNewGiftImage
-                                ? 'Extraindo imagem...'
-                                : isUploadingGiftImage
-                                  ? 'Enviando imagem...'
-                                  : 'Enviar imagem'}
-                            </span>
-                          </label>
+                          )}
+                        </div>
+                        {newGiftReferenceImageError && (
+                          <p className="text-xs text-destructive pl-0.5">
+                            {newGiftReferenceImageError}
+                          </p>
                         )}
                         <div className="flex flex-wrap gap-2">
-                          {newGiftForm.imageId && (
+                          {newGiftForm.imageId && !isExtractingNewGiftImage && (
                             <Button
                               type="button"
                               variant="ghost"
@@ -2381,13 +2420,6 @@ function EventGiftsPageShell() {
                             </Button>
                           )}
                         </div>
-                        {isNewGiftImageProcessing && (
-                          <p className="text-xs text-warm-gray/60">
-                            {isExtractingNewGiftImage
-                              ? 'Extraindo imagem do link...'
-                              : 'Enviando imagem...'}
-                          </p>
-                        )}
                       </div>
                     </div>
                     <div className="flex justify-end">
@@ -2495,21 +2527,43 @@ function EventGiftsPageShell() {
                           Recomendação: JPG/WEBP em 1:1. Ideal 1200×1200 (mínimo
                           600×600), até 8MB.
                         </p>
-                        {giftForm.imageUrl ? (
-                          <div className="rounded-xl overflow-hidden border border-border/30 bg-warm-white">
+                        {isExtractingEditedGiftImage ? (
+                          <div
+                            role="status"
+                            aria-live="polite"
+                            className="rounded-xl border border-dashed border-muted-rose/55 bg-muted-rose/8 h-40 flex flex-col items-center justify-center gap-2 px-4 text-center"
+                          >
+                            <Loader2 className="size-6 text-muted-rose animate-spin" />
+                            <p className="text-sm font-medium text-espresso">
+                              Buscando imagem do link...
+                            </p>
+                            <p className="text-xs text-warm-gray/75">
+                              Isso pode levar alguns segundos
+                            </p>
+                          </div>
+                        ) : giftForm.imageUrl ? (
+                          <div className="rounded-xl overflow-hidden border border-border/30 bg-warm-white relative">
                             <img
                               src={giftForm.imageUrl}
                               alt="Prévia do presente"
                               className="w-full h-40 object-contain"
                             />
+                            {isUploadingEditedGiftImage && (
+                              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-warm-white/80 backdrop-blur-sm">
+                                <Loader2 className="size-5 text-muted-rose animate-spin" />
+                                <p className="text-sm font-medium text-espresso">
+                                  Enviando imagem...
+                                </p>
+                              </div>
+                            )}
                           </div>
                         ) : (
-                          <div className="rounded-xl border border-dashed border-border/50 h-24 flex items-center justify-center text-sm text-warm-gray/60">
-                            Sem imagem
-                          </div>
-                        )}
-                        <div className="flex flex-wrap gap-2">
-                          <label className="inline-flex">
+                          <label
+                            className={cn(
+                              UPLOAD_DROPZONE_CLASS,
+                              'h-40 gap-2',
+                            )}
+                          >
                             <input
                               type="file"
                               accept="image/*"
@@ -2519,37 +2573,66 @@ function EventGiftsPageShell() {
                               }
                               disabled={isEditedGiftImageProcessing}
                             />
-                            <span
-                              className={cn(
-                                'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm border cursor-pointer transition-colors shadow-sm border-muted-rose/35 bg-warm-white text-espresso hover:bg-muted-rose/16 hover:border-muted-rose/60',
-                                isEditedGiftImageProcessing &&
-                                  'opacity-60 cursor-not-allowed',
-                              )}
-                            >
-                              <ImagePlus className="size-4" />
-                              {giftForm.imageId ? 'Trocar imagem' : 'Enviar imagem'}
-                            </span>
+                            {isUploadingEditedGiftImage ? (
+                              <>
+                                <Loader2 className="size-5 text-muted-rose animate-spin" />
+                                <span className="text-sm font-medium text-espresso">
+                                  Enviando imagem...
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <ImagePlus className="size-5 text-muted-rose/75" />
+                                <span>Clique para enviar uma imagem</span>
+                                <span className="text-[11px] text-warm-gray/55">
+                                  ou cole um link de referência abaixo
+                                </span>
+                              </>
+                            )}
                           </label>
-                          {giftForm.imageId && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive"
-                              onClick={handleRemoveEditingGiftImage}
-                              disabled={isEditedGiftImageProcessing}
-                            >
-                              <Trash2 className="size-4" />
-                              Remover imagem
-                            </Button>
-                          )}
-                        </div>
-                        {isEditedGiftImageProcessing && (
-                          <p className="text-xs text-warm-gray/60">
-                            {isExtractingEditedGiftImage
-                              ? 'Extraindo imagem do link...'
-                              : 'Enviando imagem...'}
-                          </p>
+                        )}
+                        {!isExtractingEditedGiftImage && (
+                          <div className="flex flex-wrap gap-2">
+                            {giftForm.imageUrl && (
+                              <label className="inline-flex">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="sr-only"
+                                  onChange={(e) =>
+                                    void handleUploadGiftImage(
+                                      e.target.files?.[0],
+                                      'edit',
+                                    )
+                                  }
+                                  disabled={isEditedGiftImageProcessing}
+                                />
+                                <span
+                                  className={cn(
+                                    'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm border cursor-pointer transition-colors shadow-sm border-muted-rose/35 bg-warm-white text-espresso hover:bg-muted-rose/16 hover:border-muted-rose/60',
+                                    isEditedGiftImageProcessing &&
+                                      'opacity-60 cursor-not-allowed',
+                                  )}
+                                >
+                                  <ImagePlus className="size-4" />
+                                  Trocar imagem
+                                </span>
+                              </label>
+                            )}
+                            {giftForm.imageId && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive"
+                                onClick={handleRemoveEditingGiftImage}
+                                disabled={isEditedGiftImageProcessing}
+                              >
+                                <Trash2 className="size-4" />
+                                Remover imagem
+                              </Button>
+                            )}
+                          </div>
                         )}
                       </div>
                       <div className="space-y-1.5">
@@ -2614,11 +2697,6 @@ function EventGiftsPageShell() {
                         }
                         placeholder="https://..."
                       />
-                      {isExtractingEditedGiftImage && (
-                        <p className="text-xs text-warm-gray/60">
-                          Extraindo imagem da URL...
-                        </p>
-                      )}
                       {editedGiftReferenceImageError && (
                         <p className="text-xs text-destructive">
                           {editedGiftReferenceImageError}
