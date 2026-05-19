@@ -9,9 +9,11 @@ import {
   Heart,
   ImagePlus,
   Link2,
+  Lock,
   Loader2,
   Plus,
   Share2,
+  Sparkles,
   Settings2,
   Trash2,
   X,
@@ -23,6 +25,7 @@ import { capitalizeFirst, getDisplayHostNames } from '../lib/presentation'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { useEventBySlug, useEventMembership } from '../hooks/useEvents'
 import { useGiftMutations, useGifts } from '../hooks/useGifts'
+import type { GiftStatusFilter, GiftSortOrder } from '../hooks/useGifts'
 import { api } from '../../convex/_generated/api'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
@@ -36,6 +39,7 @@ import {
 } from '../components/ui/dialog'
 import { DEFAULT_GIFT_CATEGORIES } from '../constants/giftCategories'
 import { EventInvitationHero } from '../components/EventInvitationHero'
+import { UserAvatar } from '../components/UserAvatar'
 import { OrnamentDivider } from '../components/OrnamentDivider'
 import { SITE_NAME, absoluteUrl, toJsonLd } from '../lib/seo'
 
@@ -93,7 +97,7 @@ const PRIMARY_ACTION_CLASS =
 
 // ── Panel shells & sub-section cards (host + add-gift panels) ──
 const PANEL_SHELL_CLASS =
-  'relative rounded-3xl border border-muted-rose/20 bg-warm-white/90 shadow-dreamy overflow-hidden backdrop-blur-[2px]'
+  'relative rounded-3xl border border-muted-rose/20 bg-gradient-to-br from-warm-white/85 via-blush/6 to-warm-white/70 shadow-dreamy overflow-hidden backdrop-blur-[2px]'
 const PANEL_HEADER_BASE_CLASS =
   'w-full flex items-center justify-between gap-4 px-5 sm:px-6 md:px-7 py-5 md:py-6 transition-colors duration-200 cursor-pointer text-left'
 const PANEL_BODY_WRAPPER_CLASS =
@@ -200,17 +204,33 @@ function EventGiftsPageShell() {
   const { signIn } = useAuthActions()
   const { isAuthenticated } = useCurrentUser()
   const { event, isLoading: isEventLoading } = useEventBySlug(slug)
+  const [giftStatusFilter, setGiftStatusFilter] =
+    useState<GiftStatusFilter>('available')
+  const [giftSortOrder, setGiftSortOrder] = useState<GiftSortOrder>('asc')
+  const [giftCategoryFilter, setGiftCategoryFilter] = useState<string>('')
   const {
     gifts,
     isLoading: isGiftsLoading,
     hasMore: hasMoreGifts,
     isLoadingMore: isLoadingMoreGifts,
     loadMore: loadMoreGifts,
-  } = useGifts(event?._id)
+  } = useGifts(event?._id, {
+    statusFilter: giftStatusFilter,
+    sortOrder: giftSortOrder,
+  })
+  const giftCategories = useQuery(
+    api.gifts.listGiftCategoriesForEvent,
+    event ? { eventId: event._id } : 'skip',
+  )
   const { membership, isLoading: isMembershipLoading } = useEventMembership(
     event?._id as Id<'events'> | undefined,
   )
-  const { createGift, reserveGift, updateGift, deleteGift } = useGiftMutations()
+  const hostReservations = useQuery(
+    api.gifts.listGiftReservationsForHost,
+    event && membership?.role === 'host' ? { eventId: event._id } : 'skip',
+  )
+  const { createGift, reserveGift, updateGift, deleteGift, setGiftStatus } =
+    useGiftMutations()
   const updateEvent = useMutation(api.events.updateEvent)
   const deleteEvent = useMutation(api.events.deleteEvent)
   const ensurePartnerInvite = useMutation(api.eventInvites.ensurePartnerInvite)
@@ -230,6 +250,14 @@ function EventGiftsPageShell() {
   const [reservingGiftId, setReservingGiftId] = useState<Id<'gifts'> | null>(
     null,
   )
+  const [reservationDialog, setReservationDialog] = useState<{
+    giftId: Id<'gifts'>
+    giftName: string
+  } | null>(null)
+  const [reservationMessage, setReservationMessage] = useState('')
+  const [statusChangingGiftId, setStatusChangingGiftId] =
+    useState<Id<'gifts'> | null>(null)
+  const [isHostReservationsOpen, setIsHostReservationsOpen] = useState(false)
   const [locallyReservedGiftIds, setLocallyReservedGiftIds] = useState<
     Set<Id<'gifts'>>
   >(new Set())
@@ -592,11 +620,11 @@ function EventGiftsPageShell() {
   const navigate = Route.useNavigate()
 
   const reserveNow = useCallback(
-    async (giftId: Id<'gifts'>) => {
+    async (giftId: Id<'gifts'>, message?: string) => {
       setReservingGiftId(giftId)
       setError(null)
       try {
-        await reserveGift({ giftId })
+        await reserveGift({ giftId, message })
         setLocallyReservedGiftIds((current) => {
           const next = new Set(current)
           next.add(giftId)
@@ -616,7 +644,7 @@ function EventGiftsPageShell() {
   )
 
   const handleReserveGift = useCallback(
-    async (giftId: Id<'gifts'>) => {
+    (giftId: Id<'gifts'>, giftName: string) => {
       if (!isAuthenticated) {
         setError(null)
         setShowReserveLoginPrompt(true)
@@ -624,10 +652,38 @@ function EventGiftsPageShell() {
       }
 
       setShowReserveLoginPrompt(false)
-      await reserveNow(giftId)
+      setReservationMessage('')
+      setReservationDialog({ giftId, giftName })
     },
-    [isAuthenticated, reserveNow],
+    [isAuthenticated],
   )
+
+  const handleSetGiftStatus = useCallback(
+    async (giftId: Id<'gifts'>, status: 'available' | 'received') => {
+      setStatusChangingGiftId(giftId)
+      setError(null)
+      try {
+        await setGiftStatus({ giftId, status })
+      } catch (statusError) {
+        setError(
+          statusError instanceof Error
+            ? statusError.message
+            : 'Não foi possível atualizar o status do presente.',
+        )
+      } finally {
+        setStatusChangingGiftId(null)
+      }
+    },
+    [setGiftStatus],
+  )
+
+  const handleConfirmReservation = useCallback(async () => {
+    if (!reservationDialog) return
+    const { giftId } = reservationDialog
+    const trimmed = reservationMessage.trim()
+    setReservationDialog(null)
+    await reserveNow(giftId, trimmed ? trimmed : undefined)
+  }, [reservationDialog, reservationMessage, reserveNow])
 
   const handleSignInToReserve = useCallback(async () => {
     await signIn('google', { redirectTo: `/events/${slug}` })
@@ -1181,7 +1237,14 @@ function EventGiftsPageShell() {
     headerEvent.customEventType ||
     EVENT_TYPE_LABELS[headerEvent.eventType] ||
     'Evento'
-  const hasLongDescriptions = gifts.some(
+  const filteredGifts = giftCategoryFilter
+    ? gifts.filter(
+        (gift) =>
+          (gift.category?.trim() ?? '').toLowerCase() ===
+          giftCategoryFilter.toLowerCase(),
+      )
+    : gifts
+  const hasLongDescriptions = filteredGifts.some(
     (gift) => (gift.description?.trim().length ?? 0) > 140,
   )
   const cardSizeClass = expandDescriptions ? 'min-h-[24rem]' : 'min-h-[20rem]'
@@ -1764,9 +1827,28 @@ function EventGiftsPageShell() {
         </div>
       )}
 
-      {/* ═══ ADD GIFT (Host) ═══ */}
+
+      {/* ═══ GIFT GRID ═══ */}
+      <section className="px-6 pb-24 max-w-5xl mx-auto">
+        {!isHostView && (
+          <div className="text-center mb-8 md:mb-10">
+            <p className="font-accent text-xl md:text-2xl text-muted-rose">com carinho</p>
+            <h2 className="font-display italic text-3xl md:text-4xl text-espresso mt-1">
+              Lista de presentes
+            </h2>
+          </div>
+        )}
+
+        {isHostView && hostReservations && hostReservations.length > 0 && (
+          <HostReservationsPanel
+            reservations={hostReservations}
+            isOpen={isHostReservationsOpen}
+            onToggle={() => setIsHostReservationsOpen((prev) => !prev)}
+          />
+        )}
+
       {isHostView && (
-        <section className="px-4 sm:px-6 pb-10 max-w-5xl mx-auto">
+        <div className="mb-10">
           <div className={cn(PANEL_SHELL_CLASS, 'border-sage/30')}>
             {/* Decorative top hairline — sage gradient */}
             <span
@@ -2045,19 +2127,83 @@ function EventGiftsPageShell() {
               )}
             </AnimatePresence>
           </div>
-        </section>
+        </div>
       )}
 
-      {/* ═══ GIFT GRID ═══ */}
-      <section className="px-6 pb-24 max-w-5xl mx-auto">
-        {!isHostView && (
-          <div className="text-center mb-8 md:mb-10">
-            <p className="font-accent text-xl md:text-2xl text-muted-rose">com carinho</p>
-            <h2 className="font-display italic text-3xl md:text-4xl text-espresso mt-1">
-              Lista de presentes
-            </h2>
+        <div className="mb-6 flex flex-wrap items-center gap-2 sm:gap-3">
+          {(
+            [
+              { value: 'available', label: 'Disponíveis' },
+              { value: 'reserved', label: 'Reservados' },
+              ...(isHostView
+                ? [{ value: 'received', label: 'Recebidos' }]
+                : []),
+              { value: 'all', label: 'Todos' },
+            ] as Array<{ value: GiftStatusFilter; label: string }>
+          ).map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setGiftStatusFilter(option.value)}
+              className={cn(
+                'rounded-full border px-3 py-1 text-xs transition-colors',
+                giftStatusFilter === option.value
+                  ? 'border-muted-rose bg-muted-rose/15 text-espresso'
+                  : 'border-border/50 text-warm-gray hover:text-espresso hover:border-muted-rose/40',
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+          {isHostView && giftStatusFilter === 'received' && (
+            <span className="flex items-center gap-1 text-[11px] text-muted-rose/70 ml-1">
+              <Lock className="size-3" />
+              Só você vê esta aba
+            </span>
+          )}
+
+          <div className="ml-auto flex flex-wrap items-center gap-2 sm:gap-3">
+            {(giftCategories?.length ?? 0) > 0 && (
+              <div className="relative">
+                <select
+                  value={giftCategoryFilter}
+                  onChange={(e) => setGiftCategoryFilter(e.target.value)}
+                  className="appearance-none rounded-full border border-border/50 bg-warm-white pl-3 pr-8 py-1 text-xs text-espresso hover:border-muted-rose/40 focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Todas categorias</option>
+                  {giftCategories?.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  aria-hidden
+                  className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 size-3 text-warm-gray/60"
+                  strokeWidth={1.8}
+                />
+              </div>
+            )}
+            <div className="relative">
+              <select
+                value={giftSortOrder}
+                onChange={(e) =>
+                  setGiftSortOrder(e.target.value as GiftSortOrder)
+                }
+                className="appearance-none rounded-full border border-border/50 bg-warm-white pl-3 pr-8 py-1 text-xs text-espresso hover:border-muted-rose/40 focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="asc">Mais antigos primeiro</option>
+                <option value="desc">Mais recentes primeiro</option>
+              </select>
+              <ChevronDown
+                aria-hidden
+                className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 size-3 text-warm-gray/60"
+                strokeWidth={1.8}
+              />
+            </div>
           </div>
-        )}
+        </div>
+
         {hasLongDescriptions && (
           <div className="mb-4 flex justify-end">
             <Button
@@ -2079,18 +2225,20 @@ function EventGiftsPageShell() {
               />
             ))}
           </div>
-        ) : gifts.length === 0 ? (
+        ) : filteredGifts.length === 0 ? (
           <div className="text-center py-20">
             <Gift className="size-10 text-warm-gray/15 mx-auto mb-4" />
             <p className="text-warm-gray/50 leading-relaxed">
-              Ainda não há presentes nesta lista.
+              {gifts.length === 0
+                ? 'Ainda não há presentes nesta lista.'
+                : 'Nenhum presente corresponde aos filtros atuais.'}
             </p>
           </div>
         ) : (
           <div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               <AnimatePresence mode="popLayout">
-              {gifts.map((gift) => {
+              {filteredGifts.map((gift) => {
               const isEditing = editingGiftId === gift._id && isHostView
               const statusStyles = {
                 available: 'bg-gift-available/10 border-gift-available/20',
@@ -2427,7 +2575,7 @@ function EventGiftsPageShell() {
                               className="w-full"
                               isLoading={reservingGiftId === gift._id}
                               onClick={() =>
-                                void handleReserveGift(gift._id)
+                                handleReserveGift(gift._id, gift.name)
                               }
                             >
                               <Heart className="size-3.5" />
@@ -2471,7 +2619,34 @@ function EventGiftsPageShell() {
                       </div>
 
                       {isHostView && (
-                        <div className="flex justify-end gap-2 pt-3 mt-3 border-t border-border/70">
+                        <div className="flex flex-wrap justify-end gap-2 pt-3 mt-3 border-t border-border/70">
+                          {gift.status === 'reserved' && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              isLoading={statusChangingGiftId === gift._id}
+                              onClick={() =>
+                                void handleSetGiftStatus(gift._id, 'received')
+                              }
+                            >
+                              <Heart className="size-3.5" />
+                              Marcar como recebido
+                            </Button>
+                          )}
+                          {gift.status === 'received' && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              isLoading={statusChangingGiftId === gift._id}
+                              onClick={() =>
+                                void handleSetGiftStatus(gift._id, 'available')
+                              }
+                            >
+                              Desfazer recebimento
+                            </Button>
+                          )}
                           <Button
                             type="button"
                             variant="ghost"
@@ -2516,6 +2691,63 @@ function EventGiftsPageShell() {
           </div>
         )}
       </section>
+
+      {/* ═══ RESERVATION MESSAGE DIALOG ═══ */}
+      <Dialog
+        open={reservationDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) setReservationDialog(null)
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogTitle>Reservar este presente</DialogTitle>
+          <DialogDescription>
+            {reservationDialog ? (
+              <>
+                Você vai reservar{' '}
+                <span className="font-medium text-espresso">
+                  {reservationDialog.giftName}
+                </span>
+                . Quer deixar uma mensagem para os anfitriões?
+              </>
+            ) : null}
+          </DialogDescription>
+          <div className="space-y-1.5 mt-2">
+            <label className="block text-sm font-medium text-espresso/80">
+              Mensagem (opcional)
+            </label>
+            <textarea
+              value={reservationMessage}
+              onChange={(e) => setReservationMessage(e.target.value)}
+              placeholder="Ex.: Estamos torcendo muito por vocês!"
+              rows={3}
+              maxLength={400}
+              className={cn(FORM_TEXTAREA_CLASS, 'resize-y')}
+            />
+            <p className="text-[11px] text-warm-gray/55 text-right">
+              {reservationMessage.trim().length}/400
+            </p>
+          </div>
+          <div className="flex gap-2 justify-end pt-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setReservationDialog(null)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className={PRIMARY_ACTION_CLASS}
+              onClick={() => void handleConfirmReservation()}
+            >
+              Confirmar reserva
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ═══ DELETE GIFT CONFIRM DIALOG ═══ */}
       <Dialog
@@ -2876,6 +3108,230 @@ const STATUS_LABELS: Record<'available' | 'reserved' | 'received', string> = {
   available: 'Disponível',
   reserved: 'Reservado',
   received: 'Recebido',
+}
+
+type HostReservationEntry = {
+  _id: Id<'gifts'>
+  name: string
+  status: 'available' | 'reserved' | 'received'
+  reservedAt?: number
+  reservationMessage?: string
+  guestUserId?: Id<'users'>
+  guestName?: string
+  guestImageUrl?: string
+}
+
+function formatReservationDate(timestamp?: number) {
+  if (!timestamp) return ''
+  try {
+    return new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    }).format(new Date(timestamp))
+  } catch {
+    return ''
+  }
+}
+
+function HostReservationsPanel({
+  reservations,
+  isOpen,
+  onToggle,
+}: {
+  reservations: Array<HostReservationEntry>
+  isOpen: boolean
+  onToggle: () => void
+}) {
+  const withMessage = reservations.filter((r) => r.reservationMessage?.trim())
+  const withoutMessage = reservations.filter((r) => !r.reservationMessage?.trim())
+
+  return (
+    <motion.div
+      layout
+      className="mb-10 relative overflow-hidden rounded-[2rem] border border-muted-rose/25 bg-gradient-to-br from-warm-white via-blush/8 to-sage/8 shadow-dreamy-md"
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-16 -right-12 size-48 rounded-full bg-muted-rose/10 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-20 -left-10 size-56 rounded-full bg-sage/10 blur-3xl"
+      />
+
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={isOpen}
+        className="relative z-10 w-full flex items-center justify-between gap-4 px-6 sm:px-8 py-6 text-left cursor-pointer"
+      >
+        <div className="flex items-start gap-4 min-w-0">
+          <div className="shrink-0 size-11 rounded-full bg-warm-white/90 border border-muted-rose/30 flex items-center justify-center shadow-sm">
+            <Sparkles className="size-5 text-muted-rose" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-accent text-xl text-muted-rose leading-none">
+                recadinhos pra vocês
+              </p>
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-warm-white/85 border border-muted-rose/25 px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-muted-rose/85"
+                title="Só os anfitriões enxergam essa área"
+              >
+                <Lock className="size-3" />
+                Só anfitriões
+              </span>
+            </div>
+            <p className="font-display italic text-2xl text-espresso mt-1 leading-tight">
+              {reservations.length} convidado
+              {reservations.length === 1 ? ' já escolheu um mimo' : 's já escolheram um mimo'}
+            </p>
+            <p className="text-sm text-warm-gray/80 mt-1">
+              {withMessage.length > 0
+                ? `${withMessage.length} mensage${withMessage.length === 1 ? 'm' : 'ns'} carinhosa${withMessage.length === 1 ? '' : 's'} pra você ler.`
+                : 'Toque para ver quem reservou cada presente.'}
+            </p>
+          </div>
+        </div>
+        <motion.div
+          animate={{ rotate: isOpen ? 180 : 0 }}
+          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          className="shrink-0 size-9 rounded-full bg-warm-white/80 border border-muted-rose/25 flex items-center justify-center text-muted-rose"
+        >
+          <ChevronDown className="size-4" />
+        </motion.div>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            key="content"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className="relative z-10 overflow-hidden"
+          >
+            <div className="px-6 sm:px-8 pb-8 space-y-6">
+              {withMessage.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Heart className="size-3.5 text-muted-rose" />
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-muted-rose/85 font-medium">
+                      Com mensagem
+                    </p>
+                    <div className="flex-1 h-px bg-gradient-to-r from-muted-rose/25 via-muted-rose/10 to-transparent" />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {withMessage.map((reservation) => (
+                      <ReservationMessageCard
+                        key={reservation._id}
+                        reservation={reservation}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {withoutMessage.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Gift className="size-3.5 text-sage" />
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-sage/85 font-medium">
+                      Sem mensagem
+                    </p>
+                    <div className="flex-1 h-px bg-gradient-to-r from-sage/25 via-sage/10 to-transparent" />
+                  </div>
+                  <ul className="space-y-2.5">
+                    {withoutMessage.map((reservation) => (
+                      <li
+                        key={reservation._id}
+                        className="flex items-center gap-3 rounded-xl border border-border/40 bg-warm-white/70 px-3 py-2.5"
+                      >
+                        <UserAvatar
+                          src={reservation.guestImageUrl}
+                          name={reservation.guestName}
+                          className="size-9 shrink-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm text-espresso truncate">
+                            <span className="font-medium">
+                              {reservation.guestName || 'Convidado'}
+                            </span>{' '}
+                            <span className="text-warm-gray/80">reservou</span>{' '}
+                            <span className="font-medium">
+                              {reservation.name}
+                            </span>
+                          </p>
+                          {reservation.reservedAt && (
+                            <p className="text-[11px] text-warm-gray/55 mt-0.5">
+                              {formatReservationDate(reservation.reservedAt)}
+                            </p>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+}
+
+function ReservationMessageCard({
+  reservation,
+}: {
+  reservation: HostReservationEntry
+}) {
+  return (
+    <motion.article
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0, transition: { duration: 0.35 } }}
+      className="relative rounded-2xl border border-muted-rose/25 bg-warm-white/95 shadow-dreamy px-5 pt-5 pb-4 overflow-hidden"
+    >
+      <span
+        aria-hidden
+        className="absolute -top-2 left-5 font-display italic text-[3.5rem] leading-none text-muted-rose/25 select-none"
+      >
+        “
+      </span>
+      <div className="relative pl-6">
+        <p className="font-accent text-lg text-espresso/90 leading-relaxed">
+          {reservation.reservationMessage}
+        </p>
+      </div>
+      <div className="mt-4 pt-3 border-t border-dashed border-muted-rose/25 flex items-center gap-3">
+        <UserAvatar
+          src={reservation.guestImageUrl}
+          name={reservation.guestName}
+          className="size-9 shrink-0"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-espresso truncate">
+            {reservation.guestName || 'Convidado'}
+          </p>
+          <p className="text-[11px] text-warm-gray/70 truncate">
+            reservou{' '}
+            <span className="text-espresso/80">{reservation.name}</span>
+            {reservation.reservedAt && (
+              <>
+                {' '}·{' '}
+                <span className="text-warm-gray/55">
+                  {formatReservationDate(reservation.reservedAt)}
+                </span>
+              </>
+            )}
+          </p>
+        </div>
+      </div>
+    </motion.article>
+  )
 }
 
 function GiftPlaceholderIllustration({

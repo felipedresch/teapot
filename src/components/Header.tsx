@@ -1,7 +1,8 @@
 import { Link, useLocation } from '@tanstack/react-router'
-import { Menu, LogOut } from 'lucide-react'
+import { Menu, LogOut, Gift } from 'lucide-react'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { useCallback, useEffect, useState } from 'react'
+import { UserAvatar } from './UserAvatar'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { Button } from './ui/button'
 import BrandWordmark from './BrandWordmark'
@@ -100,16 +101,21 @@ export default function Header() {
           {!isLoading &&
             (isAuthenticated ? (
               <>
-                {user?.image ? (
-                  <img
-                    src={user.image}
-                    alt={user?.name ?? ''}
-                    className="size-7 rounded-full object-cover ring-1 ring-border"
+                <span title={user?.name ?? 'Conta conectada'}>
+                  <UserAvatar
+                    src={user?.image}
+                    name={user?.name}
+                    className="size-7"
                   />
-                ) : null}
-                <span className="text-sm text-warm-gray max-w-[120px] truncate">
-                  {user?.name ?? 'Conta conectada'}
                 </span>
+                <Link
+                  to="/my-gifts"
+                  className="text-sm text-warm-gray hover:text-espresso transition-colors inline-flex items-center gap-1"
+                  activeProps={{ className: 'text-espresso font-medium text-sm inline-flex items-center gap-1' }}
+                >
+                  <Gift className="size-3.5" />
+                  Reservados
+                </Link>
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -140,15 +146,11 @@ export default function Header() {
                 aria-label="Abrir menu da conta"
                 className="inline-flex items-center justify-center rounded-full p-0.5 focus:outline-none focus:ring-2 focus:ring-ring"
               >
-                {user?.image ? (
-                  <img
-                    src={user.image}
-                    alt=""
-                    className="size-7 rounded-full object-cover ring-1 ring-border mr-1"
-                  />
-                ) : (
-                  <div className="size-7 rounded-full bg-blush/35 ring-1 ring-border" />
-                )}
+                <UserAvatar
+                  src={user?.image}
+                  name={user?.name}
+                  className="size-7 mr-1"
+                />
               </button>
             ) : (
               <Button
@@ -198,6 +200,18 @@ export default function Header() {
                   Criar meu evento
                 </a>
 
+                {isAuthenticated && (
+                  <Link
+                    to="/my-gifts"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={MOBILE_LINK_INACTIVE}
+                    activeProps={{ className: MOBILE_LINK_ACTIVE }}
+                  >
+                    <Gift className="size-4 shrink-0" />
+                    Reservados
+                  </Link>
+                )}
+
                 <a
                   href="/#public-events-search"
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -213,13 +227,11 @@ export default function Header() {
                   (isAuthenticated ? (
                     <div className="space-y-3">
                       <div className="flex items-center gap-3">
-                        {user?.image && (
-                          <img
-                            src={user.image}
-                            alt={user?.name ?? ''}
-                            className="size-8 rounded-full object-cover ring-1 ring-border"
-                          />
-                        )}
+                        <UserAvatar
+                          src={user?.image}
+                          name={user?.name}
+                          className="size-8"
+                        />
                         <div>
                           <p className="text-sm font-medium text-espresso">
                             {user?.name ?? 'Conta conectada'}
