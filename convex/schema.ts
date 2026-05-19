@@ -83,7 +83,16 @@ const schema = defineSchema({
     reservedAt: v.optional(v.number()),
   })
     .index('by_event', ['eventId'])
-    .index('by_event_and_status', ['eventId', 'status']),
+    .index('by_event_and_status', ['eventId', 'status'])
+    .index('by_image_id', ['imageId']),
+
+  temporaryGiftImages: defineTable({
+    imageId: v.id('_storage'),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index('by_image_id', ['imageId'])
+    .index('by_expires_at', ['expiresAt']),
 
   // Configurações do site (textos, nomes, etc.)
   config: defineTable({

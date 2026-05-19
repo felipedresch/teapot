@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useAuthActions } from '@convex-dev/auth/react'
-import { useMutation } from 'convex/react'
+import { useAction, useMutation } from 'convex/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowRight,
@@ -452,6 +452,15 @@ function dataUrlToFile(dataUrl: string, fallbackFilename: string): File {
   return new File([bytes], fallbackFilename, { type: mimeType })
 }
 
+function isValidReferenceUrl(value: string) {
+  try {
+    const parsed = new URL(value)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 function EventGiftsPageShell() {
   const { slug } = Route.useParams()
   const { signIn } = useAuthActions()
@@ -475,6 +484,11 @@ function EventGiftsPageShell() {
     api.events.generateEventCoverUploadUrl,
   )
   const updateEventCoverImage = useMutation(api.events.updateEventCoverImage)
+  const extractGiftImageFromReferenceUrl = useAction(
+    api.gifts.extractGiftImageFromReferenceUrl,
+  )
+  const registerUploadedGiftImage = useMutation(api.gifts.registerUploadedGiftImage)
+  const discardTemporaryGiftImage = useMutation(api.gifts.discardTemporaryGiftImage)
 
   const [reservingGiftId, setReservingGiftId] = useState<Id<'gifts'> | null>(
     null,
@@ -489,9 +503,19 @@ function EventGiftsPageShell() {
   const [isUploadingCover, setIsUploadingCover] = useState(false)
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | undefined>()
   const [editingGiftId, setEditingGiftId] = useState<Id<'gifts'> | null>(null)
+  const [editingOriginalImageId, setEditingOriginalImageId] = useState<
+    Id<'_storage'> | undefined
+  >()
   const [isCreatingGift, setIsCreatingGift] = useState(false)
   const [isUploadingGiftImage, setIsUploadingGiftImage] = useState(false)
   const [isUploadingEditedGiftImage, setIsUploadingEditedGiftImage] = useState(false)
+  const [isExtractingNewGiftImage, setIsExtractingNewGiftImage] = useState(false)
+  const [isExtractingEditedGiftImage, setIsExtractingEditedGiftImage] = useState(false)
+  const [newGiftReferenceImageError, setNewGiftReferenceImageError] = useState<
+    string | null
+  >(null)
+  const [editedGiftReferenceImageError, setEditedGiftReferenceImageError] =
+    useState<string | null>(null)
   const [isHostPanelOpen, setIsHostPanelOpen] = useState(false)
   const [isAddGiftPanelOpen, setIsAddGiftPanelOpen] = useState(true)
   const [deleteGiftConfirm, setDeleteGiftConfirm] = useState<{
@@ -504,6 +528,10 @@ function EventGiftsPageShell() {
   const [didCopyShareLink, setDidCopyShareLink] = useState(false)
   const [expandDescriptions, setExpandDescriptions] = useState(false)
   const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null)
+  const newGiftExtractionIdRef = useRef(0)
+  const editedGiftExtractionIdRef = useRef(0)
+  const [newGiftReferenceTouched, setNewGiftReferenceTouched] = useState(false)
+  const [editingGiftReferenceTouched, setEditingGiftReferenceTouched] = useState(false)
   const [editableEvent, setEditableEvent] = useState<{
     _id: Id<'events'>
     name: string
@@ -567,6 +595,139 @@ function EventGiftsPageShell() {
       setError('Não foi possível copiar o link agora.')
     }
   }, [guestShareUrl])
+
+  useEffect(() => {
+    if (!isHostView || !newGiftReferenceTouched) {
+      setIsExtractingNewGiftImage(false)
+      return
+    }
+
+    const normalizedUrl = newGiftForm.referenceUrl.trim()
+    if (!normalizedUrl || !isValidReferenceUrl(normalizedUrl)) {
+      setIsExtractingNewGiftImage(false)
+      setNewGiftReferenceImageError(null)
+      return
+    }
+
+    setIsExtractingNewGiftImage(true)
+    setNewGiftReferenceImageError(null)
+
+    const timeout = window.setTimeout(() => {
+      const extractionId = newGiftExtractionIdRef.current + 1
+      newGiftExtractionIdRef.current = extractionId
+
+      void extractGiftImageFromReferenceUrl({
+        referenceUrl: normalizedUrl,
+      })
+        .then((result) => {
+          if (newGiftExtractionIdRef.current !== extractionId) return
+          if (!result.success || !result.imageId || !result.imageUrl) {
+            setNewGiftReferenceImageError(
+              result.error ??
+                'Não conseguimos extrair a imagem automaticamente desse link.',
+            )
+            return
+          }
+          setNewGiftReferenceImageError(null)
+          if (newGiftForm.imageId && newGiftForm.imageId !== result.imageId) {
+            void discardTemporaryGiftImage({ imageId: newGiftForm.imageId })
+          }
+          setNewGiftForm((current) => ({
+            ...current,
+            imageId: result.imageId,
+            imageUrl: result.imageUrl,
+          }))
+        })
+        .catch(() => {
+          if (newGiftExtractionIdRef.current !== extractionId) return
+          setNewGiftReferenceImageError(
+            'Não foi possível extrair a imagem automaticamente desse link.',
+          )
+        })
+        .finally(() => {
+          if (newGiftExtractionIdRef.current !== extractionId) return
+          setIsExtractingNewGiftImage(false)
+        })
+    }, 500)
+
+    return () => {
+      window.clearTimeout(timeout)
+    }
+  }, [
+    discardTemporaryGiftImage,
+    extractGiftImageFromReferenceUrl,
+    isHostView,
+    newGiftForm.imageId,
+    newGiftForm.referenceUrl,
+    newGiftReferenceTouched,
+  ])
+
+  useEffect(() => {
+    if (!isHostView || !editingGiftId || !editingGiftReferenceTouched) {
+      setIsExtractingEditedGiftImage(false)
+      return
+    }
+
+    const normalizedUrl = giftForm.referenceUrl.trim()
+    if (!normalizedUrl || !isValidReferenceUrl(normalizedUrl)) {
+      setIsExtractingEditedGiftImage(false)
+      setEditedGiftReferenceImageError(null)
+      return
+    }
+
+    setIsExtractingEditedGiftImage(true)
+    setEditedGiftReferenceImageError(null)
+
+    const timeout = window.setTimeout(() => {
+      const extractionId = editedGiftExtractionIdRef.current + 1
+      editedGiftExtractionIdRef.current = extractionId
+
+      void extractGiftImageFromReferenceUrl({
+        referenceUrl: normalizedUrl,
+      })
+        .then((result) => {
+          if (editedGiftExtractionIdRef.current !== extractionId) return
+          if (!result.success || !result.imageId || !result.imageUrl) {
+            setEditedGiftReferenceImageError(
+              result.error ??
+                'Não conseguimos extrair a imagem automaticamente desse link.',
+            )
+            return
+          }
+          setEditedGiftReferenceImageError(null)
+          if (giftForm.imageId && giftForm.imageId !== result.imageId) {
+            void discardTemporaryGiftImage({ imageId: giftForm.imageId })
+          }
+          setGiftForm((current) => ({
+            ...current,
+            imageId: result.imageId,
+            imageUrl: result.imageUrl,
+          }))
+        })
+        .catch(() => {
+          if (editedGiftExtractionIdRef.current !== extractionId) return
+          setEditedGiftReferenceImageError(
+            'Não foi possível extrair a imagem automaticamente desse link.',
+          )
+        })
+        .finally(() => {
+          if (editedGiftExtractionIdRef.current !== extractionId) return
+          setIsExtractingEditedGiftImage(false)
+        })
+    }, 500)
+
+    return () => {
+      window.clearTimeout(timeout)
+    }
+  }, [
+    discardTemporaryGiftImage,
+    editingGiftId,
+    editingGiftReferenceTouched,
+    extractGiftImageFromReferenceUrl,
+    giftForm.imageId,
+    giftForm.referenceUrl,
+    isHostView,
+  ])
 
   useEffect(() => {
     if (!event || !isHostView) return
@@ -888,8 +1049,10 @@ function EventGiftsPageShell() {
         setError(null)
         if (mode === 'create') {
           setIsUploadingGiftImage(true)
+          setNewGiftReferenceImageError(null)
         } else {
           setIsUploadingEditedGiftImage(true)
+          setEditedGiftReferenceImageError(null)
         }
 
         const [previewUrl, uploadUrl] = await Promise.all([
@@ -906,21 +1069,33 @@ function EventGiftsPageShell() {
           `gift-${Date.now()}.jpg`,
         )
         const storageId = await uploadImageToConvex(uploadUrl, optimizedGiftFile)
+        await registerUploadedGiftImage({
+          eventId: event._id,
+          imageId: storageId,
+        })
 
         if (mode === 'create') {
+          if (newGiftForm.imageId && newGiftForm.imageId !== storageId) {
+            await discardTemporaryGiftImage({ imageId: newGiftForm.imageId })
+          }
           setNewGiftForm((current) => ({
             ...current,
             imageId: storageId,
             imageUrl: previewUrl,
           }))
+          setNewGiftReferenceTouched(false)
           return
         }
 
+        if (giftForm.imageId && giftForm.imageId !== storageId) {
+          await discardTemporaryGiftImage({ imageId: giftForm.imageId })
+        }
         setGiftForm((current) => ({
           ...current,
           imageId: storageId,
           imageUrl: previewUrl,
         }))
+        setEditingGiftReferenceTouched(false)
       } catch (uploadError) {
         setError(
           uploadError instanceof Error
@@ -935,29 +1110,49 @@ function EventGiftsPageShell() {
         }
       }
     },
-    [event, generateGiftImageUploadUrl, isHostView, validateImageFile],
+    [
+      discardTemporaryGiftImage,
+      event,
+      generateGiftImageUploadUrl,
+      giftForm.imageId,
+      isHostView,
+      newGiftForm.imageId,
+      registerUploadedGiftImage,
+      validateImageFile,
+    ],
   )
 
   const handleRemoveDraftGiftImage = useCallback(() => {
+    if (newGiftForm.imageId) {
+      void discardTemporaryGiftImage({ imageId: newGiftForm.imageId })
+    }
     setNewGiftForm((current) => ({
       ...current,
       imageId: undefined,
       imageUrl: undefined,
     }))
-  }, [])
+    setNewGiftReferenceImageError(null)
+  }, [discardTemporaryGiftImage, newGiftForm.imageId])
 
   const handleRemoveEditingGiftImage = useCallback(() => {
+    if (giftForm.imageId) {
+      void discardTemporaryGiftImage({ imageId: giftForm.imageId })
+    }
     setGiftForm((current) => ({
       ...current,
       imageId: null,
       imageUrl: undefined,
     }))
-  }, [])
+    setEditedGiftReferenceImageError(null)
+  }, [discardTemporaryGiftImage, giftForm.imageId])
 
   const startEditingGift = useCallback(
     (gift: (typeof gifts)[number]) => {
       if (!isHostView) return
       setEditingGiftId(gift._id)
+      setEditingOriginalImageId(gift.imageId)
+      setEditingGiftReferenceTouched(false)
+      setEditedGiftReferenceImageError(null)
       setGiftForm({
         name: gift.name,
         description: gift.description ?? '',
@@ -999,6 +1194,8 @@ function EventGiftsPageShell() {
         category: '',
         referenceUrl: '',
       })
+      setNewGiftReferenceTouched(false)
+      setNewGiftReferenceImageError(null)
     } catch (createError) {
       setError(
         createError instanceof Error
@@ -1026,6 +1223,9 @@ function EventGiftsPageShell() {
         referenceUrl: giftForm.referenceUrl.trim() || undefined,
       })
       setEditingGiftId(null)
+      setEditingOriginalImageId(undefined)
+      setEditingGiftReferenceTouched(false)
+      setEditedGiftReferenceImageError(null)
     } catch (updateError) {
       setError(
         updateError instanceof Error
@@ -1060,6 +1260,10 @@ function EventGiftsPageShell() {
       setIsDeletingGift(false)
     }
   }, [deleteGift, deleteGiftConfirm])
+
+  const isNewGiftImageProcessing = isUploadingGiftImage || isExtractingNewGiftImage
+  const isEditedGiftImageProcessing =
+    isUploadingEditedGiftImage || isExtractingEditedGiftImage
 
   // ── Loading ──
   if (isEventLoading) {
@@ -2084,10 +2288,14 @@ function EventGiftsPageShell() {
                         label="Link de referência (opcional)"
                         value={newGiftForm.referenceUrl}
                         onChange={(e) =>
-                          setNewGiftForm((c) => ({
-                            ...c,
-                            referenceUrl: e.target.value,
-                          }))
+                          {
+                            setNewGiftReferenceTouched(true)
+                            setNewGiftReferenceImageError(null)
+                            setNewGiftForm((c) => ({
+                              ...c,
+                              referenceUrl: e.target.value,
+                            }))
+                          }
                         }
                         placeholder="https://..."
                       />
@@ -2095,6 +2303,16 @@ function EventGiftsPageShell() {
                         <p className="text-sm font-medium text-espresso/80 pl-0.5">
                           Imagem do presente (opcional)
                         </p>
+                        {isExtractingNewGiftImage && (
+                          <p className="text-xs text-warm-gray/60 pl-0.5">
+                            Extraindo imagem da URL...
+                          </p>
+                        )}
+                        {newGiftReferenceImageError && (
+                          <p className="text-xs text-destructive pl-0.5">
+                            {newGiftReferenceImageError}
+                          </p>
+                        )}
                         <p className="text-[11px] text-warm-gray/60 leading-relaxed max-w-md">
                           Recomendação: JPG/WEBP em 1:1. Ideal 1200×1200 (mínimo 600×600),
                           até 8MB.
@@ -2114,12 +2332,12 @@ function EventGiftsPageShell() {
                                 onChange={(e) =>
                                   void handleUploadGiftImage(e.target.files?.[0], 'create')
                                 }
-                                disabled={isUploadingGiftImage}
+                                disabled={isNewGiftImageProcessing}
                               />
                               <span
                                 className={cn(
                                   UPLOAD_CHIP_CLASS,
-                                  isUploadingGiftImage && 'opacity-60 cursor-not-allowed',
+                                  isNewGiftImageProcessing && 'opacity-60 cursor-not-allowed',
                                 )}
                               >
                                 <ImagePlus className="size-3.5" />
@@ -2136,10 +2354,16 @@ function EventGiftsPageShell() {
                               onChange={(e) =>
                                 void handleUploadGiftImage(e.target.files?.[0], 'create')
                               }
-                              disabled={isUploadingGiftImage}
+                              disabled={isNewGiftImageProcessing}
                             />
                             <ImagePlus className="size-5 text-muted-rose/75" />
-                            <span>{isUploadingGiftImage ? 'Enviando imagem...' : 'Enviar imagem'}</span>
+                            <span>
+                              {isExtractingNewGiftImage
+                                ? 'Extraindo imagem...'
+                                : isUploadingGiftImage
+                                  ? 'Enviando imagem...'
+                                  : 'Enviar imagem'}
+                            </span>
                           </label>
                         )}
                         <div className="flex flex-wrap gap-2">
@@ -2150,15 +2374,19 @@ function EventGiftsPageShell() {
                               size="sm"
                               className="text-destructive"
                               onClick={handleRemoveDraftGiftImage}
-                              disabled={isUploadingGiftImage}
+                              disabled={isNewGiftImageProcessing}
                             >
                               <Trash2 className="size-4" />
                               Remover imagem
                             </Button>
                           )}
                         </div>
-                        {isUploadingGiftImage && (
-                          <p className="text-xs text-warm-gray/60">Enviando imagem...</p>
+                        {isNewGiftImageProcessing && (
+                          <p className="text-xs text-warm-gray/60">
+                            {isExtractingNewGiftImage
+                              ? 'Extraindo imagem do link...'
+                              : 'Enviando imagem...'}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -2169,7 +2397,7 @@ function EventGiftsPageShell() {
                         onClick={() => void handleCreateGift()}
                         className={PRIMARY_ACTION_CLASS}
                         isLoading={isCreatingGift}
-                        disabled={!newGiftForm.name.trim()}
+                        disabled={!newGiftForm.name.trim() || isNewGiftImageProcessing}
                       >
                         <Plus className="size-3.5" />
                         Adicionar
@@ -2289,12 +2517,12 @@ function EventGiftsPageShell() {
                               onChange={(e) =>
                                 void handleUploadGiftImage(e.target.files?.[0], 'edit')
                               }
-                              disabled={isUploadingEditedGiftImage}
+                              disabled={isEditedGiftImageProcessing}
                             />
                             <span
                               className={cn(
                                 'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm border cursor-pointer transition-colors shadow-sm border-muted-rose/35 bg-warm-white text-espresso hover:bg-muted-rose/16 hover:border-muted-rose/60',
-                                isUploadingEditedGiftImage &&
+                                isEditedGiftImageProcessing &&
                                   'opacity-60 cursor-not-allowed',
                               )}
                             >
@@ -2309,15 +2537,19 @@ function EventGiftsPageShell() {
                               size="sm"
                               className="text-destructive"
                               onClick={handleRemoveEditingGiftImage}
-                              disabled={isUploadingEditedGiftImage}
+                              disabled={isEditedGiftImageProcessing}
                             >
                               <Trash2 className="size-4" />
                               Remover imagem
                             </Button>
                           )}
                         </div>
-                        {isUploadingEditedGiftImage && (
-                          <p className="text-xs text-warm-gray/60">Enviando imagem...</p>
+                        {isEditedGiftImageProcessing && (
+                          <p className="text-xs text-warm-gray/60">
+                            {isExtractingEditedGiftImage
+                              ? 'Extraindo imagem do link...'
+                              : 'Enviando imagem...'}
+                          </p>
                         )}
                       </div>
                       <div className="space-y-1.5">
@@ -2371,19 +2603,45 @@ function EventGiftsPageShell() {
                         label="Link de referência"
                         value={giftForm.referenceUrl}
                         onChange={(e) =>
-                          setGiftForm((c) => ({
-                            ...c,
-                            referenceUrl: e.target.value,
-                          }))
+                          {
+                            setEditingGiftReferenceTouched(true)
+                            setEditedGiftReferenceImageError(null)
+                            setGiftForm((c) => ({
+                              ...c,
+                              referenceUrl: e.target.value,
+                            }))
+                          }
                         }
                         placeholder="https://..."
                       />
+                      {isExtractingEditedGiftImage && (
+                        <p className="text-xs text-warm-gray/60">
+                          Extraindo imagem da URL...
+                        </p>
+                      )}
+                      {editedGiftReferenceImageError && (
+                        <p className="text-xs text-destructive">
+                          {editedGiftReferenceImageError}
+                        </p>
+                      )}
                       <div className="flex gap-2 justify-end pt-1">
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => setEditingGiftId(null)}
+                          onClick={() => {
+                            if (
+                              giftForm.imageId &&
+                              giftForm.imageId !== editingOriginalImageId
+                            ) {
+                              void discardTemporaryGiftImage({
+                                imageId: giftForm.imageId,
+                              })
+                            }
+                            setEditingGiftReferenceTouched(false)
+                            setEditingOriginalImageId(undefined)
+                            setEditingGiftId(null)
+                          }}
                         >
                           Cancelar
                         </Button>
