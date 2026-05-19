@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useAuthActions } from '@convex-dev/auth/react'
-import { useAction, useMutation } from 'convex/react'
+import { useAction, useMutation, useQuery } from 'convex/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowRight,
@@ -81,15 +81,28 @@ const EVENT_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
 const PAIR_EVENT_TYPES = new Set(['wedding', 'bridal-shower'])
 
 const FORM_SELECT_CLASS =
-  'flex w-full appearance-none rounded-xl border border-border/80 bg-warm-white px-4 py-3 pr-10 text-base text-espresso transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent'
+  'flex w-full appearance-none rounded-xl border border-muted-rose/20 bg-warm-white px-4 py-3 pr-10 text-base text-espresso transition-all duration-200 hover:border-muted-rose/40 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent shadow-[inset_0_1px_2px_rgba(61,53,48,0.03)]'
 const FORM_TEXTAREA_CLASS =
-  'flex w-full rounded-xl border border-border/80 bg-warm-white px-4 py-3 text-base text-espresso placeholder:text-warm-gray/55 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent'
+  'flex w-full rounded-xl border border-muted-rose/20 bg-warm-white px-4 py-3 text-base text-espresso placeholder:text-warm-gray/55 transition-all duration-200 hover:border-muted-rose/40 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent shadow-[inset_0_1px_2px_rgba(61,53,48,0.03)]'
 const UPLOAD_CHIP_CLASS =
-  'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs border cursor-pointer transition-colors shadow-sm border-muted-rose/35 bg-warm-white text-espresso hover:bg-muted-rose/16 hover:border-muted-rose/60'
+  'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs border cursor-pointer transition-colors shadow-sm border-muted-rose/35 bg-warm-white/95 backdrop-blur-sm text-espresso hover:bg-muted-rose/16 hover:border-muted-rose/60'
 const UPLOAD_DROPZONE_CLASS =
-  'rounded-xl border border-dashed border-muted-rose/35 bg-warm-white/70 flex flex-col items-center justify-center text-sm text-warm-gray/75 cursor-pointer transition-colors hover:bg-muted-rose/10 hover:border-muted-rose/55'
+  'rounded-xl border border-dashed border-muted-rose/40 bg-warm-white/80 flex flex-col items-center justify-center text-sm text-warm-gray/75 cursor-pointer transition-all duration-200 hover:bg-muted-rose/8 hover:border-muted-rose/60 hover:shadow-dreamy'
 const PRIMARY_ACTION_CLASS =
   'shadow-dreamy-md hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ring/70'
+
+// ── Panel shells & sub-section cards (host + add-gift panels) ──
+const PANEL_SHELL_CLASS =
+  'relative rounded-3xl border border-muted-rose/20 bg-warm-white/90 shadow-dreamy overflow-hidden backdrop-blur-[2px]'
+const PANEL_HEADER_BASE_CLASS =
+  'w-full flex items-center justify-between gap-4 px-5 sm:px-6 md:px-7 py-5 md:py-6 transition-colors duration-200 cursor-pointer text-left'
+const PANEL_BODY_WRAPPER_CLASS =
+  'overflow-hidden border-t border-dashed border-muted-rose/25'
+const SECTION_BLOCK_CLASS = 'space-y-4'
+const SECTION_EYEBROW_CLASS =
+  'flex items-center gap-2 text-[10.5px] uppercase tracking-[0.22em] text-muted-rose/80 font-medium'
+const SECTION_HAIRLINE_CLASS =
+  'h-px w-full bg-gradient-to-r from-transparent via-muted-rose/25 to-transparent'
 
 const MAX_IMAGE_FILE_SIZE_BYTES = 8 * 1024 * 1024
 const COVER_PREVIEW_OPTIONS = {
@@ -200,6 +213,9 @@ function EventGiftsPageShell() {
   const { createGift, reserveGift, updateGift, deleteGift } = useGiftMutations()
   const updateEvent = useMutation(api.events.updateEvent)
   const deleteEvent = useMutation(api.events.deleteEvent)
+  const ensurePartnerInvite = useMutation(api.eventInvites.ensurePartnerInvite)
+  const rotatePartnerInvite = useMutation(api.eventInvites.rotatePartnerInvite)
+  const revokePartnerInvite = useMutation(api.eventInvites.revokePartnerInvite)
   const generateGiftImageUploadUrl = useMutation(api.gifts.generateGiftImageUploadUrl)
   const generateEventCoverUploadUrl = useMutation(
     api.events.generateEventCoverUploadUrl,
@@ -245,6 +261,16 @@ function EventGiftsPageShell() {
   } | null>(null)
   const [isDeletingGift, setIsDeletingGift] = useState(false)
   const [shareLinkTab, setShareLinkTab] = useState<'guest' | 'partner'>('guest')
+  const [copiedInviteToken, setCopiedInviteToken] = useState<string | null>(
+    null,
+  )
+  const [isRotatingInvite, setIsRotatingInvite] = useState(false)
+  const [isGeneratingInvite, setIsGeneratingInvite] = useState(false)
+  const [revokingInviteId, setRevokingInviteId] =
+    useState<Id<'eventInvites'> | null>(null)
+  const [partnerInviteError, setPartnerInviteError] = useState<string | null>(
+    null,
+  )
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [didCopyShareLink, setDidCopyShareLink] = useState(false)
   const [expandDescriptions, setExpandDescriptions] = useState(false)
@@ -316,6 +342,98 @@ function EventGiftsPageShell() {
       setError('Não foi possível copiar o link agora.')
     }
   }, [guestShareUrl])
+
+  const isHostMembership = Boolean(membership && membership.role === 'host')
+  const partnerInvites = useQuery(
+    api.eventInvites.listPartnerInvites,
+    event && isHostMembership ? { eventId: event._id } : 'skip',
+  )
+
+  const buildInviteUrl = useCallback(
+    (token: string) =>
+      absoluteUrl(
+        `/events/${slug}/convite-parceiro?t=${encodeURIComponent(token)}`,
+      ),
+    [slug],
+  )
+
+  const activePartnerInvite = useMemo(
+    () => partnerInvites?.find((invite) => invite.status === 'active') ?? null,
+    [partnerInvites],
+  )
+  const hasUsedPartnerInvite = useMemo(
+    () => Boolean(partnerInvites?.some((invite) => invite.status === 'used')),
+    [partnerInvites],
+  )
+
+  const handleGeneratePartnerInvite = useCallback(async () => {
+    if (!event) return
+    setPartnerInviteError(null)
+    setIsGeneratingInvite(true)
+    try {
+      await ensurePartnerInvite({ eventId: event._id })
+    } catch (caught) {
+      setPartnerInviteError(
+        caught instanceof Error
+          ? caught.message
+          : 'Não foi possível gerar o convite agora.',
+      )
+    } finally {
+      setIsGeneratingInvite(false)
+    }
+  }, [ensurePartnerInvite, event])
+
+  const handleCopyInvite = useCallback(
+    async (token: string) => {
+      const url = buildInviteUrl(token)
+      try {
+        await navigator.clipboard.writeText(url)
+        setCopiedInviteToken(token)
+        window.setTimeout(() => {
+          setCopiedInviteToken((current) => (current === token ? null : current))
+        }, 1800)
+      } catch {
+        setPartnerInviteError('Não foi possível copiar o link agora.')
+      }
+    },
+    [buildInviteUrl],
+  )
+
+  const handleRotatePartnerInvite = useCallback(async () => {
+    if (!event) return
+    setPartnerInviteError(null)
+    setIsRotatingInvite(true)
+    try {
+      await rotatePartnerInvite({ eventId: event._id })
+    } catch (caught) {
+      setPartnerInviteError(
+        caught instanceof Error
+          ? caught.message
+          : 'Não foi possível gerar um novo link agora.',
+      )
+    } finally {
+      setIsRotatingInvite(false)
+    }
+  }, [event, rotatePartnerInvite])
+
+  const handleRevokePartnerInvite = useCallback(
+    async (inviteId: Id<'eventInvites'>) => {
+      setPartnerInviteError(null)
+      setRevokingInviteId(inviteId)
+      try {
+        await revokePartnerInvite({ inviteId })
+      } catch (caught) {
+        setPartnerInviteError(
+          caught instanceof Error
+            ? caught.message
+            : 'Não foi possível revogar o convite agora.',
+        )
+      } finally {
+        setRevokingInviteId(null)
+      }
+    },
+    [revokePartnerInvite],
+  )
 
   useEffect(() => {
     if (!isHostView || !newGiftReferenceTouched) {
@@ -1137,30 +1255,53 @@ function EventGiftsPageShell() {
 
       {/* ═══ HOST PANEL — Collapsible ═══ */}
       {isHostView && (
-        <section className="px-6 pb-6 pt-6 max-w-5xl mx-auto">
-          <div className="rounded-2xl border border-muted-rose/25 bg-blush/8 overflow-hidden">
+        <section className="px-4 sm:px-6 pb-6 pt-8 md:pt-10 max-w-5xl mx-auto">
+          <div className={PANEL_SHELL_CLASS}>
+            {/* Decorative top hairline — muted-rose gradient */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-muted-rose/45 to-transparent"
+            />
             <button
               type="button"
               onClick={() => setIsHostPanelOpen((prev) => !prev)}
-              className="w-full flex items-center justify-between gap-3 px-5 py-4 transition-all duration-200 hover:bg-blush/15 cursor-pointer"
+              className={cn(
+                PANEL_HEADER_BASE_CLASS,
+                'hover:bg-blush/14',
+                isHostPanelOpen && 'bg-blush/10',
+              )}
             >
-              <div className="flex items-center gap-3">
-                <Settings2 className="size-4 text-muted-rose/70" />
-                <div className="text-left">
-                  <p className="text-sm font-medium text-espresso">
-                    Painel do anfitrião
+              <div className="flex items-center gap-4 min-w-0">
+                <span
+                  aria-hidden
+                  className="relative inline-flex items-center justify-center size-11 sm:size-12 rounded-2xl bg-gradient-to-br from-blush via-blush/75 to-muted-rose/40 ring-1 ring-warm-white/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_2px_6px_rgba(201,169,166,0.25)] shrink-0"
+                >
+                  <Settings2
+                    className="size-5 text-espresso/80"
+                    strokeWidth={1.6}
+                  />
+                </span>
+                <div className="min-w-0">
+                  <p className={SECTION_EYEBROW_CLASS}>
+                    <span className="inline-block h-px w-5 bg-muted-rose/40" />
+                    Para você
                   </p>
-                  <p className="text-xs text-warm-gray/70">
+                  <h3 className="font-display italic text-xl sm:text-[1.4rem] text-espresso mt-1.5 leading-tight">
+                    Painel do anfitrião
+                  </h3>
+                  <p className="text-xs sm:text-[13px] text-warm-gray/75 mt-1 leading-snug">
                     Edite o evento, gerencie presentes e compartilhe.
                   </p>
                 </div>
               </div>
-              <ChevronDown
+              <span
                 className={cn(
-                  'size-4 text-warm-gray transition-transform duration-300',
-                  isHostPanelOpen && 'rotate-180',
+                  'inline-flex items-center justify-center size-9 rounded-full bg-warm-white/80 border border-muted-rose/25 shadow-sm transition-all duration-300 shrink-0',
+                  isHostPanelOpen && 'rotate-180 bg-blush/40 border-muted-rose/50',
                 )}
-              />
+              >
+                <ChevronDown className="size-4 text-espresso/70" strokeWidth={1.8} />
+              </span>
             </button>
 
             <AnimatePresence>
@@ -1169,12 +1310,22 @@ function EventGiftsPageShell() {
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.35, ease }}
-                  className="overflow-hidden border-t border-muted-rose/20"
+                  transition={{ duration: 0.4, ease }}
+                  className={PANEL_BODY_WRAPPER_CLASS}
                 >
-                  <div className="p-5 md:p-6 space-y-8 bg-warm-white/45">
+                  <div className="p-6 sm:p-8 md:p-10 space-y-8 md:space-y-10 bg-gradient-to-b from-cream/40 via-warm-white/60 to-warm-white/40">
                   {editableEvent && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+                    <section className={SECTION_BLOCK_CLASS}>
+                      <div>
+                        <p className={SECTION_EYEBROW_CLASS}>
+                          <span className="inline-block h-px w-5 bg-muted-rose/40" />
+                          Detalhes
+                        </p>
+                        <h4 className="font-display italic text-lg text-espresso mt-1 leading-tight">
+                          Sobre o evento
+                        </h4>
+                      </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-5">
                       <Input
                         label="Nome do evento"
                         value={editableEvent.name}
@@ -1202,9 +1353,11 @@ function EventGiftsPageShell() {
                               </option>
                             ))}
                           </select>
-                          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-warm-gray/60 text-xs">
-                            ▼
-                          </span>
+                          <ChevronDown
+                            aria-hidden
+                            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-warm-gray/55"
+                            strokeWidth={1.8}
+                          />
                         </div>
                       </div>
                       {editableEvent.eventType === 'other' && (
@@ -1223,14 +1376,20 @@ function EventGiftsPageShell() {
                           }
                         />
                       )}
-                      <div className="md:col-span-2 rounded-xl border border-dashed border-muted-rose/30 bg-blush/6 p-4 md:p-5 space-y-4">
+                      <div className="md:col-span-2 space-y-4 pt-2">
                         <div>
-                          <p className="text-sm font-medium text-espresso/85">
+                          <p className={SECTION_EYEBROW_CLASS}>
+                            <span className="inline-block h-px w-5 bg-muted-rose/40" />
                             {PAIR_EVENT_TYPES.has(editableEvent.eventType)
-                              ? 'Anfitriões do casal'
+                              ? 'Casal'
                               : 'Anfitriões'}
                           </p>
-                          <p className="text-xs text-warm-gray/60 mt-1">
+                          <h4 className="font-display italic text-base text-espresso mt-1 leading-tight">
+                            {PAIR_EVENT_TYPES.has(editableEvent.eventType)
+                              ? 'Quem está se casando'
+                              : 'Quem está organizando'}
+                          </h4>
+                          <p className="text-[11.5px] text-warm-gray/65 mt-1 leading-snug">
                             {PAIR_EVENT_TYPES.has(editableEvent.eventType)
                               ? 'Defina os nomes do casal e quem está gerenciando o evento.'
                               : 'Adicione até 5 anfitriões para este evento.'}
@@ -1252,11 +1411,11 @@ function EventGiftsPageShell() {
                                 placeholder="Nome da pessoa 2"
                               />
                             </div>
-                            <div className="rounded-xl border border-dashed border-muted-rose/25 bg-warm-white/55 p-4">
-                              <p className="text-sm font-medium text-espresso/80 mb-1">
+                            <div className="pt-1">
+                              <p className="text-sm font-medium text-espresso/85">
                                 Qual dos parceiros é você?
                               </p>
-                              <p className="text-xs text-warm-gray/60 mb-3">
+                              <p className="text-[11.5px] text-warm-gray/65 mb-3 leading-snug">
                                 Você pode convidar o outro parceiro depois.
                               </p>
                               <div className="flex flex-wrap gap-2">
@@ -1411,25 +1570,34 @@ function EventGiftsPageShell() {
                         </p>
                       </div>
                     </div>
+                    </section>
                   )}
 
-                  <div className="rounded-xl border border-dashed border-muted-rose/30 bg-blush/6 p-5 space-y-4">
-                    <p className="text-sm font-medium text-espresso/85">
-                      Imagem de capa do evento
-                    </p>
-                    <p className="text-xs text-warm-gray/60">
-                      A capa aparece no topo da página para todos os convidados.
-                    </p>
-                    <p className="text-[11px] text-warm-gray/60 leading-relaxed">
-                      Recomendação: JPG/WEBP em 16:9. Ideal 1920x1080 (mínimo
-                      1280x720), até 8MB.
+                  <div className={SECTION_HAIRLINE_CLASS} aria-hidden />
+
+                  <section className={SECTION_BLOCK_CLASS}>
+                    <div>
+                      <p className={SECTION_EYEBROW_CLASS}>
+                        <span className="inline-block h-px w-5 bg-muted-rose/40" />
+                        Capa
+                      </p>
+                      <h4 className="font-display italic text-lg text-espresso mt-1 leading-tight">
+                        Imagem do convite
+                      </h4>
+                      <p className="text-xs text-warm-gray/70 mt-1">
+                        A capa aparece no topo da página para todos os convidados.
+                      </p>
+                    </div>
+                    <p className="text-[11px] text-warm-gray/55 leading-relaxed">
+                      Recomendação: JPG/WEBP em 16:9. Ideal 1920×1080 (mínimo
+                      1280×720), até 8MB.
                     </p>
                     {coverImageUrl ? (
-                      <div className="rounded-xl overflow-hidden relative group">
+                      <div className="rounded-xl overflow-hidden relative group shadow-dreamy border border-muted-rose/15">
                         <img
                           src={coverImageUrl}
                           alt="Capa do evento"
-                          className="w-full max-h-[22rem] object-contain"
+                          className="w-full max-h-[22rem] object-contain bg-warm-white"
                           loading="lazy"
                         />
                         <label className="absolute bottom-3 right-3 inline-flex">
@@ -1486,37 +1654,22 @@ function EventGiftsPageShell() {
                     {isUploadingCover && (
                       <p className="text-xs text-warm-gray/60">Enviando imagem...</p>
                     )}
-                  </div>
+                  </section>
 
-                  <div className="flex flex-wrap gap-3">
-                    <Button
-                      type="button"
-                      variant="default"
-                      size="sm"
-                      onClick={() => void handleSaveEvent()}
-                      className={PRIMARY_ACTION_CLASS}
-                      isLoading={eventSaving}
-                    >
-                      Salvar alterações
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive"
-                      onClick={() => void handleDeleteEvent()}
-                      isLoading={eventDeleting}
-                    >
-                      Excluir evento
-                    </Button>
-                  </div>
+                  <div className={SECTION_HAIRLINE_CLASS} aria-hidden />
 
-                  <div className="rounded-xl border border-dashed border-muted-rose/30 bg-blush/6 p-5 space-y-4">
-                    <p className="text-sm font-medium text-espresso flex items-center gap-2">
-                      <Link2 className="size-4 text-muted-rose/60" />
-                      Links para compartilhar
-                    </p>
-                    <div className="inline-flex rounded-xl border border-border/50 p-1 bg-warm-white">
+                  <section className={SECTION_BLOCK_CLASS}>
+                    <div>
+                      <p className={SECTION_EYEBROW_CLASS}>
+                        <span className="inline-block h-px w-5 bg-muted-rose/40" />
+                        Compartilhar
+                      </p>
+                      <h4 className="font-display italic text-lg text-espresso mt-1 leading-tight flex items-center gap-2">
+                        <Link2 className="size-4 text-muted-rose/70" strokeWidth={1.8} />
+                        Links do convite
+                      </h4>
+                    </div>
+                    <div className="inline-flex rounded-xl border border-muted-rose/20 p-1 bg-warm-white shadow-sm">
                       <Button
                         type="button"
                         size="sm"
@@ -1535,21 +1688,22 @@ function EventGiftsPageShell() {
                       </Button>
                     </div>
                     {shareLinkTab === 'partner' ? (
-                      <div>
-                        <p className="text-xs text-warm-gray/70 mb-1.5">
-                          Convite para o outro anfitrião
-                        </p>
-                        <Input readOnly value={`/events/${event.slug}/convite-parceiro`} />
-                        {canSharePartnerInvite ? (
-                          <p className="text-[11px] text-warm-gray/50 mt-1 pl-0.5">
-                            Envie somente para o outro anfitrião.
-                          </p>
-                        ) : (
-                          <p className="text-[11px] text-warm-gray/50 mt-1 pl-0.5">
-                            Dica: este convite é ideal para eventos com dois anfitriões.
-                          </p>
-                        )}
-                      </div>
+                      <PartnerInviteSection
+                        invites={partnerInvites}
+                        activeInvite={activePartnerInvite}
+                        hasUsedInvite={hasUsedPartnerInvite}
+                        canSharePartnerInvite={canSharePartnerInvite}
+                        buildInviteUrl={buildInviteUrl}
+                        copiedInviteToken={copiedInviteToken}
+                        revokingInviteId={revokingInviteId}
+                        isGeneratingInvite={isGeneratingInvite}
+                        isRotatingInvite={isRotatingInvite}
+                        error={partnerInviteError}
+                        onGenerate={handleGeneratePartnerInvite}
+                        onCopy={handleCopyInvite}
+                        onRevoke={handleRevokePartnerInvite}
+                        onRotate={handleRotatePartnerInvite}
+                      />
                     ) : (
                       <div>
                         <p className="text-xs text-warm-gray/70 mb-1.5">
@@ -1561,6 +1715,37 @@ function EventGiftsPageShell() {
                         </p>
                       </div>
                     )}
+                  </section>
+
+                  <div className="pt-1">
+                    <div className="flex items-center gap-3 mb-5">
+                      <span className="h-px flex-1 bg-gradient-to-r from-transparent via-muted-rose/35 to-transparent" />
+                      <OrnamentDivider className="w-16 text-muted-rose/50" />
+                      <span className="h-px flex-1 bg-gradient-to-r from-transparent via-muted-rose/35 to-transparent" />
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="sm"
+                        onClick={() => void handleSaveEvent()}
+                        className={PRIMARY_ACTION_CLASS}
+                        isLoading={eventSaving}
+                      >
+                        Salvar alterações
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:bg-destructive/10"
+                        onClick={() => void handleDeleteEvent()}
+                        isLoading={eventDeleting}
+                      >
+                        <Trash2 className="size-4" />
+                        Excluir evento
+                      </Button>
+                    </div>
                   </div>
                 </div>
                 </motion.div>
@@ -1581,28 +1766,50 @@ function EventGiftsPageShell() {
 
       {/* ═══ ADD GIFT (Host) ═══ */}
       {isHostView && (
-        <section className="px-6 pb-8 max-w-5xl mx-auto">
-          <div className="rounded-2xl border border-sage/30 bg-sage/5 overflow-hidden">
+        <section className="px-4 sm:px-6 pb-10 max-w-5xl mx-auto">
+          <div className={cn(PANEL_SHELL_CLASS, 'border-sage/30')}>
+            {/* Decorative top hairline — sage gradient */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sage/55 to-transparent"
+            />
             <button
               type="button"
               onClick={() => setIsAddGiftPanelOpen((prev) => !prev)}
-              className="w-full flex items-center justify-between gap-3 px-5 py-4 transition-all duration-200 hover:bg-sage/10 cursor-pointer"
+              className={cn(
+                PANEL_HEADER_BASE_CLASS,
+                'hover:bg-sage/10',
+                isAddGiftPanelOpen && 'bg-sage/8',
+              )}
             >
-              <div className="flex items-center gap-3 text-left">
-                <Gift className="size-4 text-sage" />
-                <div>
-                  <p className="text-sm font-medium text-espresso">Adicionar presente</p>
-                  <p className="text-xs text-warm-gray/70">
+              <div className="flex items-center gap-4 min-w-0">
+                <span
+                  aria-hidden
+                  className="relative inline-flex items-center justify-center size-11 sm:size-12 rounded-2xl bg-gradient-to-br from-sage via-sage/75 to-sage/40 ring-1 ring-warm-white/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_2px_6px_rgba(168,197,168,0.3)] shrink-0"
+                >
+                  <Gift className="size-5 text-espresso/80" strokeWidth={1.6} />
+                </span>
+                <div className="min-w-0">
+                  <p className="flex items-center gap-2 text-[10.5px] uppercase tracking-[0.22em] text-sage/90 font-medium">
+                    <span className="inline-block h-px w-5 bg-sage/60" />
+                    Novo na lista
+                  </p>
+                  <h3 className="font-display italic text-xl sm:text-[1.4rem] text-espresso mt-1.5 leading-tight">
+                    Adicionar presente
+                  </h3>
+                  <p className="text-xs sm:text-[13px] text-warm-gray/75 mt-1 leading-snug">
                     Crie novos itens da lista e organize imagens e links.
                   </p>
                 </div>
               </div>
-              <ChevronDown
+              <span
                 className={cn(
-                  'size-4 text-warm-gray transition-transform duration-300',
-                  isAddGiftPanelOpen && 'rotate-180',
+                  'inline-flex items-center justify-center size-9 rounded-full bg-warm-white/80 border border-sage/30 shadow-sm transition-all duration-300 shrink-0',
+                  isAddGiftPanelOpen && 'rotate-180 bg-sage/30 border-sage/60',
                 )}
-              />
+              >
+                <ChevronDown className="size-4 text-espresso/70" strokeWidth={1.8} />
+              </span>
             </button>
 
             <AnimatePresence>
@@ -1611,10 +1818,10 @@ function EventGiftsPageShell() {
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3, ease }}
-                  className="overflow-hidden border-t border-sage/20"
+                  transition={{ duration: 0.35, ease }}
+                  className="overflow-hidden border-t border-dashed border-sage/35"
                 >
-                  <div className="p-5 md:p-6 space-y-4 bg-warm-white/40">
+                  <div className="p-6 sm:p-8 md:p-10 space-y-6 bg-gradient-to-b from-sage/8 via-warm-white/60 to-warm-white/40">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Input
                         label="Nome do presente"
@@ -1649,9 +1856,11 @@ function EventGiftsPageShell() {
                               </option>
                             ))}
                           </select>
-                          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-warm-gray/60 text-xs">
-                            ▼
-                          </span>
+                          <ChevronDown
+                            aria-hidden
+                            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-warm-gray/55"
+                            strokeWidth={1.8}
+                          />
                         </div>
                       </div>
                       <div className="space-y-1.5">
@@ -1811,18 +2020,25 @@ function EventGiftsPageShell() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex justify-end">
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => void handleCreateGift()}
-                        className={PRIMARY_ACTION_CLASS}
-                        isLoading={isCreatingGift}
-                        disabled={!newGiftForm.name.trim() || isNewGiftImageProcessing}
-                      >
-                        <Plus className="size-3.5" />
-                        Adicionar
-                      </Button>
+                    <div className="pt-2">
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="h-px flex-1 bg-gradient-to-r from-transparent via-sage/40 to-transparent" />
+                        <OrnamentDivider className="w-14 text-sage/60" />
+                        <span className="h-px flex-1 bg-gradient-to-r from-transparent via-sage/40 to-transparent" />
+                      </div>
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => void handleCreateGift()}
+                          className={PRIMARY_ACTION_CLASS}
+                          isLoading={isCreatingGift}
+                          disabled={!newGiftForm.name.trim() || isNewGiftImageProcessing}
+                        >
+                          <Plus className="size-3.5" />
+                          Adicionar à lista
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -2049,9 +2265,11 @@ function EventGiftsPageShell() {
                               </option>
                             ))}
                           </select>
-                          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-warm-gray/60 text-xs">
-                            ▼
-                          </span>
+                          <ChevronDown
+                            aria-hidden
+                            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-warm-gray/55"
+                            strokeWidth={1.8}
+                          />
                         </div>
                       </div>
                       <div className="space-y-1.5">
@@ -2142,7 +2360,7 @@ function EventGiftsPageShell() {
                         )}
                       </div>
                       <div className="flex items-start justify-between gap-2 min-h-12">
-                        <h4 className="font-display text-base leading-snug text-espresso">
+                        <h4 className="font-display italic text-base leading-snug text-espresso">
                           {gift.name}
                         </h4>
                         <Badge variant={gift.status} className="shrink-0">
@@ -2150,8 +2368,8 @@ function EventGiftsPageShell() {
                         </Badge>
                       </div>
 
-                      <p className="text-xs text-warm-gray/60 mt-1 min-h-4">
-                        {gift.category || 'Sem categoria'}
+                      <p className="font-accent text-base text-muted-rose/85 leading-none mt-1 min-h-4">
+                        {gift.category || ''}
                       </p>
 
                       <div className="mt-3 min-h-16">
@@ -2430,6 +2648,226 @@ function EventGiftsPageShell() {
           </div>
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+type PartnerInviteEntry = {
+  _id: Id<'eventInvites'>
+  token: string
+  createdAt: number
+  usedAt?: number
+  revokedAt?: number
+  status: 'active' | 'used' | 'revoked'
+  usedByName?: string
+  usedByEmail?: string
+}
+
+function formatInviteDate(timestamp: number) {
+  try {
+    return new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(timestamp))
+  } catch {
+    return ''
+  }
+}
+
+function PartnerInviteSection({
+  invites,
+  activeInvite,
+  hasUsedInvite,
+  canSharePartnerInvite,
+  buildInviteUrl,
+  copiedInviteToken,
+  revokingInviteId,
+  isGeneratingInvite,
+  isRotatingInvite,
+  error,
+  onGenerate,
+  onCopy,
+  onRevoke,
+  onRotate,
+}: {
+  invites: Array<PartnerInviteEntry> | undefined
+  activeInvite: PartnerInviteEntry | null
+  hasUsedInvite: boolean
+  canSharePartnerInvite: boolean
+  buildInviteUrl: (token: string) => string
+  copiedInviteToken: string | null
+  revokingInviteId: Id<'eventInvites'> | null
+  isGeneratingInvite: boolean
+  isRotatingInvite: boolean
+  error: string | null
+  onGenerate: () => void | Promise<void>
+  onCopy: (token: string) => void | Promise<void>
+  onRevoke: (inviteId: Id<'eventInvites'>) => void | Promise<void>
+  onRotate: () => void | Promise<void>
+}) {
+  const audienceHint = canSharePartnerInvite
+    ? 'para o outro anfitrião'
+    : 'para quem vai coorganizar'
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-muted-rose/30 bg-blush/15 p-4 space-y-2">
+        <p className="text-[11px] uppercase tracking-[0.22em] text-muted-rose/90 font-medium">
+          Como funciona
+        </p>
+        <ul className="text-sm text-espresso/85 leading-relaxed space-y-1.5 list-disc pl-5 marker:text-muted-rose/70">
+          <li>
+            Compartilhe o link <strong>{audienceHint}</strong>. Quem abrir e
+            entrar com a conta Google vira coanfitrião e pode editar tudo.
+          </li>
+          <li>
+            <strong>Não pedimos código nem confirmação extra</strong> — quem
+            tiver o link consegue aceitar. Envie só para a pessoa certa.
+          </li>
+          <li>
+            Cada link funciona <strong>uma única vez</strong>. Depois que for
+            usado, perde a validade automaticamente.
+          </li>
+        </ul>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h5 className="font-display italic text-base text-espresso">
+          Seus links de convite
+        </h5>
+        {invites && invites.length > 0 ? (
+          <Button
+            type="button"
+            size="sm"
+            variant={activeInvite ? 'ghost' : 'default'}
+            onClick={() => {
+              if (activeInvite) {
+                void onRotate()
+              } else {
+                void onGenerate()
+              }
+            }}
+            isLoading={isRotatingInvite || isGeneratingInvite}
+          >
+            {activeInvite ? 'Gerar novo link' : 'Gerar link'}
+          </Button>
+        ) : null}
+      </div>
+
+      {invites === undefined ? (
+        <p className="text-sm text-warm-gray/60">Carregando convites...</p>
+      ) : invites.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-muted-rose/30 bg-warm-white/70 p-5 text-center space-y-3">
+          <p className="text-sm text-warm-gray/80">
+            Você ainda não gerou nenhum link de convite.
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => void onGenerate()}
+            isLoading={isGeneratingInvite}
+          >
+            Gerar primeiro link
+          </Button>
+        </div>
+      ) : (
+        <ul className="space-y-2.5">
+          {invites.map((invite) => {
+            const url = buildInviteUrl(invite.token)
+            const isCopied = copiedInviteToken === invite.token
+            const isRevoking = revokingInviteId === invite._id
+            const statusBadge =
+              invite.status === 'active'
+                ? {
+                    label: 'Pendente',
+                    className: 'bg-sage/25 text-espresso border-sage/40',
+                  }
+                : invite.status === 'used'
+                  ? {
+                      label: 'Aceito',
+                      className:
+                        'bg-muted-rose/25 text-espresso border-muted-rose/45',
+                    }
+                  : {
+                      label: 'Revogado',
+                      className: 'bg-warm-gray/15 text-warm-gray border-warm-gray/30',
+                    }
+            const acceptedBy =
+              invite.status === 'used'
+                ? (invite.usedByName ?? invite.usedByEmail ?? '')
+                : ''
+            const subline =
+              invite.status === 'used' && invite.usedAt
+                ? acceptedBy
+                  ? `Aceito por ${acceptedBy} em ${formatInviteDate(invite.usedAt)}`
+                  : `Aceito em ${formatInviteDate(invite.usedAt)}`
+                : invite.status === 'revoked' && invite.revokedAt
+                  ? `Revogado em ${formatInviteDate(invite.revokedAt)}`
+                  : `Criado em ${formatInviteDate(invite.createdAt)}`
+            return (
+              <li
+                key={invite._id}
+                className="rounded-xl border border-muted-rose/25 bg-warm-white/90 p-4 space-y-3"
+              >
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <span
+                    className={cn(
+                      'inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium tracking-wide',
+                      statusBadge.className,
+                    )}
+                  >
+                    {statusBadge.label}
+                  </span>
+                  <span className="text-xs text-warm-gray/70 truncate min-w-0">
+                    {subline}
+                  </span>
+                </div>
+
+                {invite.status === 'active' && (
+                  <>
+                    <Input
+                      readOnly
+                      value={url}
+                      className="text-xs w-full"
+                      onFocus={(e) => e.currentTarget.select()}
+                    />
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => void onCopy(invite.token)}
+                      >
+                        {isCopied ? 'Link copiado!' : 'Copiar link'}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:bg-destructive/10"
+                        onClick={() => void onRevoke(invite._id)}
+                        isLoading={isRevoking}
+                      >
+                        Revogar
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      {hasUsedInvite && (
+        <p className="text-[11px] text-warm-gray/55 leading-relaxed">
+          Convites utilizados ficam no histórico apenas para sua referência —
+          eles não podem mais ser reaproveitados.
+        </p>
+      )}
+
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   )
 }

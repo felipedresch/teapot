@@ -11,6 +11,7 @@
 import type * as auth from "../auth.js";
 import type * as config from "../config.js";
 import type * as eventConfig from "../eventConfig.js";
+import type * as eventInvites from "../eventInvites.js";
 import type * as events from "../events.js";
 import type * as gifts from "../gifts.js";
 import type * as http from "../http.js";
@@ -27,6 +28,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   config: typeof config;
   eventConfig: typeof eventConfig;
+  eventInvites: typeof eventInvites;
   events: typeof events;
   gifts: typeof gifts;
   http: typeof http;

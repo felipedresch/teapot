@@ -57,6 +57,20 @@ const schema = defineSchema({
     .index('by_event', ['eventId'])
     .index('by_event_and_user', ['eventId', 'userId']),
 
+  // Convites para co-anfitriões via link (in-house, sem email/sms)
+  eventInvites: defineTable({
+    eventId: v.id('events'),
+    token: v.string(),
+    role: v.literal('host'),
+    createdByUserId: v.id('users'),
+    createdAt: v.number(),
+    usedByUserId: v.optional(v.id('users')),
+    usedAt: v.optional(v.number()),
+    revokedAt: v.optional(v.number()),
+  })
+    .index('by_token', ['token'])
+    .index('by_event', ['eventId']),
+
   // Configurações por evento
   eventConfig: defineTable({
     eventId: v.id('events'),

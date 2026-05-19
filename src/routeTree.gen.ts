@@ -20,6 +20,7 @@ import { Route as EventsSlugRouteImport } from './routes/events.$slug'
 import { Route as DemoPosthogRouteImport } from './routes/demo/posthog'
 import { Route as DemoConvexRouteImport } from './routes/demo/convex'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
+import { Route as EventsSlugConviteParceiroRouteImport } from './routes/events.$slug_.convite-parceiro'
 import { Route as ApiSlopRevalidateRouteImport } from './routes/api.slop.revalidate'
 
 const HowItWorksRoute = HowItWorksRouteImport.update({
@@ -77,6 +78,12 @@ const BlogSlugRoute = BlogSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => BlogRoute,
 } as any)
+const EventsSlugConviteParceiroRoute =
+  EventsSlugConviteParceiroRouteImport.update({
+    id: '/events/$slug_/convite-parceiro',
+    path: '/events/$slug/convite-parceiro',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiSlopRevalidateRoute = ApiSlopRevalidateRouteImport.update({
   id: '/api/slop/revalidate',
   path: '/api/slop/revalidate',
@@ -96,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/sitemap/xml': typeof SitemapXmlRoute
   '/blog/': typeof BlogIndexRoute
   '/api/slop/revalidate': typeof ApiSlopRevalidateRoute
+  '/events/$slug/convite-parceiro': typeof EventsSlugConviteParceiroRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -109,6 +117,7 @@ export interface FileRoutesByTo {
   '/sitemap/xml': typeof SitemapXmlRoute
   '/blog': typeof BlogIndexRoute
   '/api/slop/revalidate': typeof ApiSlopRevalidateRoute
+  '/events/$slug/convite-parceiro': typeof EventsSlugConviteParceiroRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -124,6 +133,7 @@ export interface FileRoutesById {
   '/sitemap/xml': typeof SitemapXmlRoute
   '/blog/': typeof BlogIndexRoute
   '/api/slop/revalidate': typeof ApiSlopRevalidateRoute
+  '/events/$slug_/convite-parceiro': typeof EventsSlugConviteParceiroRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -140,6 +150,7 @@ export interface FileRouteTypes {
     | '/sitemap/xml'
     | '/blog/'
     | '/api/slop/revalidate'
+    | '/events/$slug/convite-parceiro'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -153,6 +164,7 @@ export interface FileRouteTypes {
     | '/sitemap/xml'
     | '/blog'
     | '/api/slop/revalidate'
+    | '/events/$slug/convite-parceiro'
   id:
     | '__root__'
     | '/'
@@ -167,6 +179,7 @@ export interface FileRouteTypes {
     | '/sitemap/xml'
     | '/blog/'
     | '/api/slop/revalidate'
+    | '/events/$slug_/convite-parceiro'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -180,6 +193,7 @@ export interface RootRouteChildren {
   EventsCreateRoute: typeof EventsCreateRoute
   SitemapXmlRoute: typeof SitemapXmlRoute
   ApiSlopRevalidateRoute: typeof ApiSlopRevalidateRoute
+  EventsSlugConviteParceiroRoute: typeof EventsSlugConviteParceiroRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -261,6 +275,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof BlogRoute
     }
+    '/events/$slug_/convite-parceiro': {
+      id: '/events/$slug_/convite-parceiro'
+      path: '/events/$slug/convite-parceiro'
+      fullPath: '/events/$slug/convite-parceiro'
+      preLoaderRoute: typeof EventsSlugConviteParceiroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/slop/revalidate': {
       id: '/api/slop/revalidate'
       path: '/api/slop/revalidate'
@@ -294,6 +315,7 @@ const rootRouteChildren: RootRouteChildren = {
   EventsCreateRoute: EventsCreateRoute,
   SitemapXmlRoute: SitemapXmlRoute,
   ApiSlopRevalidateRoute: ApiSlopRevalidateRoute,
+  EventsSlugConviteParceiroRoute: EventsSlugConviteParceiroRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
