@@ -20,7 +20,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'Preciso pagar para usar o MyWish?',
-    answer: 'Não. O MyWish oferece criação e compartilhamento de listas de presentes gratuitamente.',
+    answer: 'O MyWish oferece criação ilimitada de listas de presentes gratuitamente. Tornar a lista compartilhável exige um pagamento único.',
   },
 ]
 

@@ -672,8 +672,7 @@ function MyEventCard({
 }
 
 const SHOWCASE_EVENT = {
-  coverImageUrl:
-    'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&auto=format&fit=crop&q=80',
+  coverImageUrl: '/example-event.png',
   eventName: 'Nosso novo lar',
   eventTypeLabel: 'Chá de casa nova',
   hosts: ['Mariana', 'Lucas'],
