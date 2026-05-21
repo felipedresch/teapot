@@ -105,6 +105,30 @@ export const createEvent = mutation({
 
     const partnerOneName = normalizedHosts[0] ?? ''
     const partnerTwoName = normalizedHosts[1] ?? ''
+
+    // Idempotência: se o mesmo usuário já criou um evento "igual" nos últimos
+    // 10 minutos, retorna o existente em vez de inserir outro. Defende contra
+    // retries após reload/OAuth que recriam a partir do draft persistido.
+    const DUPLICATE_WINDOW_MS = 10 * 60 * 1000
+    const recentMemberships = await ctx.db
+      .query('eventMembers')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect()
+    const cutoff = Date.now() - DUPLICATE_WINDOW_MS
+    for (const membership of recentMemberships) {
+      if (membership.role !== 'host') continue
+      const existing = await ctx.db.get(membership.eventId)
+      if (!existing) continue
+      if (existing._creationTime < cutoff) continue
+      if (existing.createdByUserId !== userId) continue
+      if (existing.name !== args.name) continue
+      if (existing.eventType !== args.eventType) continue
+      if ((existing.date ?? '') !== (args.date ?? '')) continue
+      if (existing.partnerOneName !== partnerOneName) continue
+      if (existing.partnerTwoName !== partnerTwoName) continue
+      return { eventId: existing._id, slug: existing.slug }
+    }
+
     const hasLifetimeAccess = await hasActiveLifetimeAccess(ctx, userId)
 
     // Free users always start as draft. Lifetime users can pick anything;
@@ -595,8 +619,23 @@ export const listRecentPublicEvents = query({
       coverImageUrl: string
     }> = []
 
+    // Dedup por chave composta (mesmo criador + mesmo evento "lógico").
+    // Como `candidates` já vem ordenado por _creationTime desc, o primeiro a
+    // ocupar uma chave é o mais recente — os subsequentes são quase-duplicatas.
+    const seenDedupKeys = new Set<string>()
+
     for (const event of candidates) {
       if (!event.coverImageId) continue
+      const dedupKey = [
+        event.createdByUserId,
+        event.name,
+        event.eventType ?? '',
+        event.date ?? '',
+        event.partnerOneName,
+        event.partnerTwoName,
+      ].join('|')
+      if (seenDedupKeys.has(dedupKey)) continue
+      seenDedupKeys.add(dedupKey)
       const coverImageUrl = await ctx.storage.getUrl(event.coverImageId)
       if (!coverImageUrl) continue
 

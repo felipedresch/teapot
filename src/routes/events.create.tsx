@@ -196,6 +196,7 @@ function EventCreatePageShell() {
     draftGifts,
     isHydrated: isCreationStoreHydrated,
     setDraftEvent,
+    clearDraftEvent,
     addDraftGift,
     removeDraftGift,
     customGiftCategories,
@@ -541,6 +542,13 @@ function EventCreatePageShell() {
         coverImageId: uploadedCoverImageId,
       })
 
+      // Desarma o draft persistido imediatamente após o evento ser criado.
+      // Se a pessoa der reload no meio da criação dos gifts (ou no fluxo de
+      // OAuth), o formulário não fica armado para um novo submit.
+      setPendingPublish(false)
+      clearDraftEvent()
+      setCreatedSlug(slug)
+
       track.eventCreated({
         eventType: draftEvent.eventType,
         isPublic: draftEvent.visibility === 'public',
@@ -574,8 +582,6 @@ function EventCreatePageShell() {
         })
       }
 
-      setPendingPublish(false)
-      setCreatedSlug(slug)
       resetAll()
       await navigate({
         to: '/events/$slug',
@@ -597,6 +603,7 @@ function EventCreatePageShell() {
     draftGifts,
     navigate,
     resetAll,
+    clearDraftEvent,
     setPendingPublish,
     normalizeHosts,
     isPairEventType,
