@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as abacatepayWebhook from "../abacatepayWebhook.js";
+import type * as analytics from "../analytics.js";
 import type * as auth from "../auth.js";
 import type * as config from "../config.js";
 import type * as eventConfig from "../eventConfig.js";
@@ -15,6 +17,7 @@ import type * as eventInvites from "../eventInvites.js";
 import type * as events from "../events.js";
 import type * as gifts from "../gifts.js";
 import type * as http from "../http.js";
+import type * as payments from "../payments.js";
 import type * as todos from "../todos.js";
 import type * as users from "../users.js";
 
@@ -25,6 +28,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  abacatepayWebhook: typeof abacatepayWebhook;
+  analytics: typeof analytics;
   auth: typeof auth;
   config: typeof config;
   eventConfig: typeof eventConfig;
@@ -32,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   events: typeof events;
   gifts: typeof gifts;
   http: typeof http;
+  payments: typeof payments;
   todos: typeof todos;
   users: typeof users;
 }>;

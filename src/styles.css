@@ -403,11 +403,22 @@ body::after {
      background. Reads as real paper without looking aged or yellowed. */
   background: linear-gradient(
     168deg,
-    #f5f1e9 0%,
-    #ede8dc 45%,
-    #e4dccc 100%
+    #fbf8f2 0%,
+    #f5f1e9 55%,
+    #ede8dc 100%
   );
   position: relative;
+}
+
+/* Brighter variant for surfaces that need high text legibility (paywall, forms).
+   Keeps a hint of the same warm gradient so it still reads as paper. */
+.paper-card-bright {
+  background: linear-gradient(
+    168deg,
+    #fdfbf6 0%,
+    #f9f5ed 60%,
+    #f3ede1 100%
+  );
 }
 
 /* Paper fiber texture — fine grain visible on the surface */
