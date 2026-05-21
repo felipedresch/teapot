@@ -1,5 +1,10 @@
 import { getAuthUserId } from '@convex-dev/auth/server'
-import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server'
+import {
+  mutation,
+  query,
+  type MutationCtx,
+  type QueryCtx,
+} from './_generated/server'
 import type { Id } from './_generated/dataModel'
 import { v } from 'convex/values'
 
@@ -12,12 +17,18 @@ const DEFAULT_EVENT_TYPES: Array<{
   { value: 'bridal-shower', label: 'Chá de panela', supportsPairNames: true },
   { value: 'birthday', label: 'Aniversário', supportsPairNames: false },
   { value: 'baby-shower', label: 'Chá de bebê', supportsPairNames: false },
-  { value: 'housewarming', label: 'Chá de casa nova', supportsPairNames: false },
+  {
+    value: 'housewarming',
+    label: 'Chá de casa nova',
+    supportsPairNames: false,
+  },
   { value: 'graduation', label: 'Formatura', supportsPairNames: false },
   { value: 'other', label: 'Outro', supportsPairNames: false },
 ]
 
 type EventRole = 'host' | 'guest'
+
+type EventVisibility = 'draft' | 'unlisted' | 'public'
 
 type EventSummary = {
   eventId: Id<'events'>
@@ -28,8 +39,10 @@ type EventSummary = {
   customEventType?: string
   hosts: Array<string>
   isPublic: boolean
+  visibility: EventVisibility
   partnerOneName: string
   partnerTwoName: string
+  coverImageUrl?: string
 }
 
 export const listEventTypes = query({
@@ -52,7 +65,13 @@ export const createEvent = mutation({
     eventType: v.string(),
     customEventType: v.optional(v.string()),
     hosts: v.array(v.string()),
-    isPublic: v.boolean(),
+    visibility: v.optional(
+      v.union(
+        v.literal('draft'),
+        v.literal('unlisted'),
+        v.literal('public'),
+      ),
+    ),
     createdByPartner: v.optional(
       v.union(v.literal('partnerOne'), v.literal('partnerTwo')),
     ),
@@ -72,7 +91,9 @@ export const createEvent = mutation({
     }
 
     const normalizedHosts = normalizeHosts(args.hosts)
-    const normalizedCustomEventType = normalizeOptionalText(args.customEventType)
+    const normalizedCustomEventType = normalizeOptionalText(
+      args.customEventType,
+    )
     if (args.eventType === 'other' && !normalizedCustomEventType) {
       throw new Error('Informe o tipo de evento quando selecionar "Outro".')
     }
@@ -85,13 +106,47 @@ export const createEvent = mutation({
     const partnerOneName = normalizedHosts[0] ?? ''
     const partnerTwoName = normalizedHosts[1] ?? ''
 
+    // Idempotência: se o mesmo usuário já criou um evento "igual" nos últimos
+    // 10 minutos, retorna o existente em vez de inserir outro. Defende contra
+    // retries após reload/OAuth que recriam a partir do draft persistido.
+    const DUPLICATE_WINDOW_MS = 10 * 60 * 1000
+    const recentMemberships = await ctx.db
+      .query('eventMembers')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect()
+    const cutoff = Date.now() - DUPLICATE_WINDOW_MS
+    for (const membership of recentMemberships) {
+      if (membership.role !== 'host') continue
+      const existing = await ctx.db.get(membership.eventId)
+      if (!existing) continue
+      if (existing._creationTime < cutoff) continue
+      if (existing.createdByUserId !== userId) continue
+      if (existing.name !== args.name) continue
+      if (existing.eventType !== args.eventType) continue
+      if ((existing.date ?? '') !== (args.date ?? '')) continue
+      if (existing.partnerOneName !== partnerOneName) continue
+      if (existing.partnerTwoName !== partnerTwoName) continue
+      return { eventId: existing._id, slug: existing.slug }
+    }
+
+    const hasLifetimeAccess = await hasActiveLifetimeAccess(ctx, userId)
+
+    // Free users always start as draft. Lifetime users can pick anything;
+    // default to draft if they didn't ask for something specific.
+    const requestedVisibility = args.visibility ?? 'draft'
+    const visibility: EventVisibility = hasLifetimeAccess
+      ? requestedVisibility
+      : 'draft'
+    const isPublic = visibility === 'public'
+
     const eventId = await ctx.db.insert('events', {
       name: args.name,
       slug,
       eventType: args.eventType,
       customEventType: normalizedCustomEventType,
       hosts: normalizedHosts,
-      isPublic: args.isPublic,
+      visibility,
+      isPublic,
       partnerOneName,
       partnerTwoName,
       createdByUserId: userId,
@@ -103,6 +158,8 @@ export const createEvent = mutation({
       location: args.location,
       description: args.description,
       coverImageId: args.coverImageId,
+      monetizationStatus: hasLifetimeAccess ? 'paid' : 'requires_payment',
+      paidAt: hasLifetimeAccess ? Date.now() : undefined,
     })
 
     await ctx.db.insert('eventMembers', {
@@ -131,8 +188,14 @@ export const listEventsForCurrentUser = query({
       customEventType: v.optional(v.string()),
       hosts: v.array(v.string()),
       isPublic: v.boolean(),
+      visibility: v.union(
+        v.literal('draft'),
+        v.literal('unlisted'),
+        v.literal('public'),
+      ),
       partnerOneName: v.string(),
       partnerTwoName: v.string(),
+      coverImageUrl: v.optional(v.string()),
     }),
   ),
   handler: async (ctx) => {
@@ -163,8 +226,14 @@ export const listMyEventsGrouped = query({
         customEventType: v.optional(v.string()),
         hosts: v.array(v.string()),
         isPublic: v.boolean(),
+        visibility: v.union(
+          v.literal('draft'),
+          v.literal('unlisted'),
+          v.literal('public'),
+        ),
         partnerOneName: v.string(),
         partnerTwoName: v.string(),
+        coverImageUrl: v.optional(v.string()),
       }),
     ),
     attending: v.array(
@@ -177,8 +246,14 @@ export const listMyEventsGrouped = query({
         customEventType: v.optional(v.string()),
         hosts: v.array(v.string()),
         isPublic: v.boolean(),
+        visibility: v.union(
+          v.literal('draft'),
+          v.literal('unlisted'),
+          v.literal('public'),
+        ),
         partnerOneName: v.string(),
         partnerTwoName: v.string(),
+        coverImageUrl: v.optional(v.string()),
       }),
     ),
   }),
@@ -216,10 +291,18 @@ export const getEventBySlug = query({
       customEventType: v.optional(v.string()),
       hosts: v.array(v.string()),
       isPublic: v.boolean(),
+      visibility: v.union(
+        v.literal('draft'),
+        v.literal('unlisted'),
+        v.literal('public'),
+      ),
       partnerOneName: v.string(),
       partnerTwoName: v.string(),
       createdByUserId: v.id('users'),
-      createdByPartner: v.union(v.literal('partnerOne'), v.literal('partnerTwo')),
+      createdByPartner: v.union(
+        v.literal('partnerOne'),
+        v.literal('partnerTwo'),
+      ),
       date: v.optional(v.string()),
       location: v.optional(v.string()),
       description: v.optional(v.string()),
@@ -234,6 +317,30 @@ export const getEventBySlug = query({
       .unique()
 
     if (!event) return null
+    const userId = await getAuthUserId(ctx)
+    const hostHasLifetime = await hasActiveLifetimeAccess(
+      ctx,
+      event.createdByUserId,
+    )
+    const unlocked = isEventUnlocked(event, hostHasLifetime)
+    const effectiveVisibility = getEffectiveVisibility(event, unlocked)
+
+    if (effectiveVisibility === 'draft') {
+      const membership = userId
+        ? await ctx.db
+            .query('eventMembers')
+            .withIndex('by_event_and_user', (q) =>
+              q.eq('eventId', event._id).eq('userId', userId),
+            )
+            .unique()
+        : null
+
+      if (!membership) {
+        return null
+      }
+    }
+    const isPublic = effectiveVisibility === 'public'
+
     const coverImageUrl = event.coverImageId
       ? ((await ctx.storage.getUrl(event.coverImageId)) ?? undefined)
       : undefined
@@ -245,8 +352,13 @@ export const getEventBySlug = query({
       slug: event.slug,
       eventType: getEventTypeValue(event.eventType),
       customEventType: normalizeOptionalText(event.customEventType),
-      hosts: getEventHosts(event.hosts, event.partnerOneName, event.partnerTwoName),
-      isPublic: getEventVisibility(event.isPublic),
+      hosts: getEventHosts(
+        event.hosts,
+        event.partnerOneName,
+        event.partnerTwoName,
+      ),
+      isPublic,
+      visibility: effectiveVisibility,
       partnerOneName: event.partnerOneName,
       partnerTwoName: event.partnerTwoName,
       createdByUserId: event.createdByUserId,
@@ -350,9 +462,7 @@ async function generateUniqueEventSlug(
   },
 ) {
   const hostPart = input.hosts.slice(0, 2).join('-')
-  const base = normalizeSlugPart(
-    `${hostPart}-${input.eventName}`,
-  )
+  const base = normalizeSlugPart(`${hostPart}-${input.eventName}`)
 
   for (let attempt = 0; attempt < 10; attempt += 1) {
     const suffix = generateNumericSuffix()
@@ -420,8 +530,13 @@ export const searchPublicEvents = query({
     }> = []
 
     for (const event of events) {
-      const isPublic = getEventVisibility(event.isPublic)
-      if (!isPublic) continue
+      const hostHasLifetime = await hasActiveLifetimeAccess(
+        ctx,
+        event.createdByUserId,
+      )
+      const unlocked = isEventUnlocked(event, hostHasLifetime)
+      const effectiveVisibility = getEffectiveVisibility(event, unlocked)
+      if (effectiveVisibility !== 'public') continue
       const hosts = getEventHosts(
         event.hosts,
         event.partnerOneName,
@@ -504,8 +619,23 @@ export const listRecentPublicEvents = query({
       coverImageUrl: string
     }> = []
 
+    // Dedup por chave composta (mesmo criador + mesmo evento "lógico").
+    // Como `candidates` já vem ordenado por _creationTime desc, o primeiro a
+    // ocupar uma chave é o mais recente — os subsequentes são quase-duplicatas.
+    const seenDedupKeys = new Set<string>()
+
     for (const event of candidates) {
       if (!event.coverImageId) continue
+      const dedupKey = [
+        event.createdByUserId,
+        event.name,
+        event.eventType ?? '',
+        event.date ?? '',
+        event.partnerOneName,
+        event.partnerTwoName,
+      ].join('|')
+      if (seenDedupKeys.has(dedupKey)) continue
+      seenDedupKeys.add(dedupKey)
       const coverImageUrl = await ctx.storage.getUrl(event.coverImageId)
       if (!coverImageUrl) continue
 
@@ -571,7 +701,13 @@ export const updateEvent = mutation({
     eventType: v.optional(v.string()),
     customEventType: v.optional(v.string()),
     hosts: v.optional(v.array(v.string())),
-    isPublic: v.optional(v.boolean()),
+    visibility: v.optional(
+      v.union(
+        v.literal('draft'),
+        v.literal('unlisted'),
+        v.literal('public'),
+      ),
+    ),
     createdByPartner: v.optional(
       v.union(v.literal('partnerOne'), v.literal('partnerTwo')),
     ),
@@ -617,19 +753,41 @@ export const updateEvent = mutation({
     const nextEventType = args.eventType ?? getEventTypeValue(event.eventType)
     const nextCustomEventType =
       nextEventType === 'other'
-        ? normalizeOptionalText(args.customEventType) ?? event.customEventType
+        ? (normalizeOptionalText(args.customEventType) ?? event.customEventType)
         : normalizeOptionalText(args.customEventType)
 
     if (nextEventType === 'other' && !nextCustomEventType) {
       throw new Error('Informe o tipo de evento quando selecionar "Outro".')
     }
 
+    const hasLifetimeAccess = await hasActiveLifetimeAccess(ctx, userId)
+    const currentMonetizationStatus =
+      event.monetizationStatus ?? 'grandfathered'
+    const isUnlocked =
+      hasLifetimeAccess ||
+      currentMonetizationStatus === 'grandfathered' ||
+      currentMonetizationStatus === 'paid'
+
+    const currentVisibility = getStoredVisibility(event)
+    const requestedVisibility = args.visibility ?? currentVisibility
+
+    if (requestedVisibility !== 'draft' && !isUnlocked) {
+      throw new Error('Pagamento necessário para compartilhar este evento.')
+    }
+
+    const nextIsPublic = requestedVisibility === 'public'
+
     await ctx.db.patch('events', args.eventId, {
       name: args.name ?? event.name,
       eventType: nextEventType,
       customEventType: nextCustomEventType,
       hosts: nextHosts,
-      isPublic: args.isPublic ?? event.isPublic,
+      visibility: requestedVisibility,
+      isPublic: nextIsPublic,
+      monetizationStatus: hasLifetimeAccess
+        ? 'paid'
+        : currentMonetizationStatus,
+      paidAt: hasLifetimeAccess ? Date.now() : event.paidAt,
       createdByPartner: args.createdByPartner ?? event.createdByPartner,
       partnerOneName: nextPartnerOneName,
       partnerTwoName: nextPartnerTwoName,
@@ -749,8 +907,51 @@ function getEventTypeValue(eventType: string | undefined) {
   return eventType?.trim() || 'other'
 }
 
-function getEventVisibility(isPublic: boolean | undefined) {
-  return isPublic ?? true
+type EventVisibilityFields = {
+  visibility?: EventVisibility
+  isPublic?: boolean
+  monetizationStatus?: 'grandfathered' | 'requires_payment' | 'paid'
+}
+
+export function getStoredVisibility(
+  event: EventVisibilityFields,
+): EventVisibility {
+  if (event.visibility) return event.visibility
+  // Legacy events without `visibility`: derive from `isPublic`.
+  // isPublic=false historically meant members-only (now: draft).
+  // isPublic=true|undefined meant link works for anyone (now: public).
+  if (event.isPublic === false) return 'draft'
+  return 'public'
+}
+
+export function isEventUnlocked(
+  event: EventVisibilityFields,
+  hostHasLifetime: boolean,
+): boolean {
+  const status = event.monetizationStatus ?? 'grandfathered'
+  return hostHasLifetime || status === 'grandfathered' || status === 'paid'
+}
+
+export function getEffectiveVisibility(
+  event: EventVisibilityFields,
+  isUnlocked: boolean,
+): EventVisibility {
+  if (!isUnlocked) return 'draft'
+  return getStoredVisibility(event)
+}
+
+async function hasActiveLifetimeAccess(
+  ctx: QueryCtx | MutationCtx,
+  userId: Id<'users'>,
+) {
+  const entitlement = await ctx.db
+    .query('userEntitlements')
+    .withIndex('by_user_and_type', (q) =>
+      q.eq('userId', userId).eq('type', 'lifetime'),
+    )
+    .unique()
+
+  return entitlement?.status === 'active'
 }
 
 async function mapMembershipsToEventSummaries(
@@ -766,6 +967,17 @@ async function mapMembershipsToEventSummaries(
     const event = await ctx.db.get(membership.eventId)
     if (!event) continue
 
+    const hostHasLifetime = await hasActiveLifetimeAccess(
+      ctx,
+      event.createdByUserId,
+    )
+    const unlocked = isEventUnlocked(event, hostHasLifetime)
+    const effectiveVisibility = getEffectiveVisibility(event, unlocked)
+
+    const coverImageUrl = event.coverImageId
+      ? ((await ctx.storage.getUrl(event.coverImageId)) ?? undefined)
+      : undefined
+
     results.push({
       eventId: event._id,
       role: membership.role,
@@ -773,13 +985,18 @@ async function mapMembershipsToEventSummaries(
       slug: event.slug,
       eventType: getEventTypeValue(event.eventType),
       customEventType: normalizeOptionalText(event.customEventType),
-      hosts: getEventHosts(event.hosts, event.partnerOneName, event.partnerTwoName),
-      isPublic: getEventVisibility(event.isPublic),
+      hosts: getEventHosts(
+        event.hosts,
+        event.partnerOneName,
+        event.partnerTwoName,
+      ),
+      isPublic: effectiveVisibility === 'public',
+      visibility: effectiveVisibility,
       partnerOneName: event.partnerOneName,
       partnerTwoName: event.partnerTwoName,
+      coverImageUrl,
     })
   }
 
   return results
 }
-

@@ -40,7 +40,7 @@ export default function Footer() {
 
         {isEventPage ? (
           <p className="text-sm text-warm-gray leading-relaxed">
-            Feito com carinho para{' '}
+            Feito com carinho por{' '}
             <span className="font-display italic text-espresso">
               {hostNames}
             </span>

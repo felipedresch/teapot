@@ -42,6 +42,9 @@ import { EventInvitationHero } from '../components/EventInvitationHero'
 import { UserAvatar } from '../components/UserAvatar'
 import { OrnamentDivider } from '../components/OrnamentDivider'
 import { SITE_NAME, absoluteUrl, toJsonLd } from '../lib/seo'
+import { PaywallDialog } from '../components/paywall/Paywall'
+import { usePaywallState } from '../hooks/usePaywall'
+import { track } from '../integrations/posthog/events'
 
 export const Route = createFileRoute('/events/$slug')({
   head: () => ({
@@ -301,6 +304,17 @@ function EventGiftsPageShell() {
   )
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [didCopyShareLink, setDidCopyShareLink] = useState(false)
+  const [isPaywallOpen, setIsPaywallOpen] = useState(false)
+  const { paywall } = usePaywallState(event?._id as Id<'events'> | undefined)
+  const isEventLocked = Boolean(paywall && !paywall.isUnlocked)
+  const giftsForPreview = useMemo(
+    () =>
+      gifts
+        .filter((g) => g.imageUrl)
+        .slice(0, 3)
+        .map((g) => ({ _id: g._id, name: g.name, imageUrl: g.imageUrl })),
+    [gifts],
+  )
   const [expandDescriptions, setExpandDescriptions] = useState(false)
   const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null)
   const newGiftExtractionIdRef = useRef(0)
@@ -314,7 +328,7 @@ function EventGiftsPageShell() {
     customEventType?: string
     hosts: Array<string>
     createdByPartner: 'partnerOne' | 'partnerTwo'
-    isPublic: boolean
+    visibility: 'draft' | 'unlisted' | 'public'
     date?: string
     location?: string
     description?: string
@@ -609,7 +623,7 @@ function EventGiftsPageShell() {
         customEventType: event.customEventType ?? '',
         hosts: event.hosts,
         createdByPartner: event.createdByPartner,
-        isPublic: event.isPublic,
+        visibility: event.visibility,
         date: event.date ?? undefined,
         location: event.location ?? undefined,
         description: event.description ?? undefined,
@@ -625,6 +639,12 @@ function EventGiftsPageShell() {
       setError(null)
       try {
         await reserveGift({ giftId, message })
+        if (event) {
+          track.giftReserved({
+            eventId: String(event._id),
+            eventType: event.eventType,
+          })
+        }
         setLocallyReservedGiftIds((current) => {
           const next = new Set(current)
           next.add(giftId)
@@ -640,7 +660,7 @@ function EventGiftsPageShell() {
         setReservingGiftId(null)
       }
     },
-    [reserveGift],
+    [reserveGift, event],
   )
 
   const handleReserveGift = useCallback(
@@ -782,6 +802,10 @@ function EventGiftsPageShell() {
       setError('Informe ao menos um anfitrião.')
       return
     }
+    if (editableEvent.visibility !== 'draft' && isEventLocked) {
+      setIsPaywallOpen(true)
+      return
+    }
     const nextName = editableEvent.name ? capitalizeFirst(editableEvent.name) : event.name
     const nextCustomEventType = editableEvent.customEventType?.trim() || undefined
     const nextDate = editableEvent.date?.trim() || undefined
@@ -801,7 +825,7 @@ function EventGiftsPageShell() {
         customEventType: nextCustomEventType,
         hosts: normalizedHosts,
         createdByPartner: isPair ? editableEvent.createdByPartner : undefined,
-        isPublic: editableEvent.isPublic,
+        visibility: editableEvent.visibility,
         date: nextDate,
         location: nextLocation,
         description: nextDescription,
@@ -827,7 +851,7 @@ function EventGiftsPageShell() {
     } finally {
       setEventSaving(false)
     }
-  }, [event, isHostView, editableEvent, updateEvent, isPairEventType])
+  }, [event, isHostView, editableEvent, updateEvent, isPairEventType, isEventLocked])
 
   const handleDeleteEvent = useCallback(async () => {
     if (!event || !isHostView) return
@@ -1083,6 +1107,12 @@ function EventGiftsPageShell() {
         category: newGiftForm.category.trim() || undefined,
         referenceUrl: newGiftForm.referenceUrl.trim() || undefined,
       })
+      track.giftAdded({
+        eventId: String(event._id),
+        eventType: event.eventType,
+        totalGifts: gifts.length + 1,
+        hasImage: Boolean(newGiftForm.imageId || newGiftForm.imageUrl),
+      })
       setNewGiftForm({
         name: '',
         description: '',
@@ -1102,7 +1132,7 @@ function EventGiftsPageShell() {
     } finally {
       setIsCreatingGift(false)
     }
-  }, [createGift, event, isHostView, newGiftForm])
+  }, [createGift, event, isHostView, newGiftForm, gifts.length])
 
   const handleSaveGift = useCallback(async () => {
     if (!editingGiftId || !isHostView) return
@@ -1310,6 +1340,16 @@ function EventGiftsPageShell() {
         date={headerEvent.date}
         description={headerEvent.description}
         onShareClick={() => {
+          track.shareClicked({
+            eventId: String(event._id),
+            eventType: headerEvent.eventType,
+            totalGifts: gifts.length,
+            isUnlocked: !isEventLocked,
+          })
+          if (isEventLocked && isHostView) {
+            setIsPaywallOpen(true)
+            return
+          }
           setDidCopyShareLink(false)
           setIsShareDialogOpen(true)
         }}
@@ -1606,31 +1646,88 @@ function EventGiftsPageShell() {
                           <Button
                             type="button"
                             size="sm"
-                            variant={editableEvent.isPublic ? 'default' : 'secondary'}
+                            variant={editableEvent.visibility === 'draft' ? 'default' : 'secondary'}
                             onClick={() =>
                               setEditableEvent((c) =>
-                                c ? { ...c, isPublic: true } : c,
+                                c ? { ...c, visibility: 'draft' } : c,
                               )
                             }
                           >
-                            Público
+                            Rascunho
                           </Button>
                           <Button
                             type="button"
                             size="sm"
-                            variant={!editableEvent.isPublic ? 'default' : 'secondary'}
-                            onClick={() =>
+                            variant={editableEvent.visibility === 'unlisted' ? 'default' : 'secondary'}
+                            onClick={() => {
+                              if (isEventLocked) {
+                                setIsPaywallOpen(true)
+                                return
+                              }
                               setEditableEvent((c) =>
-                                c ? { ...c, isPublic: false } : c,
+                                c ? { ...c, visibility: 'unlisted' } : c,
                               )
-                            }
+                            }}
                           >
                             Somente com link
+                            {isEventLocked && (
+                              <Lock className="size-3 ml-1 opacity-70" />
+                            )}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={editableEvent.visibility === 'public' ? 'default' : 'secondary'}
+                            onClick={() => {
+                              if (isEventLocked) {
+                                setIsPaywallOpen(true)
+                                return
+                              }
+                              setEditableEvent((c) =>
+                                c ? { ...c, visibility: 'public' } : c,
+                              )
+                            }}
+                          >
+                            Público
+                            {isEventLocked && (
+                              <Lock className="size-3 ml-1 opacity-70" />
+                            )}
                           </Button>
                         </div>
-                        <p className="text-[11px] text-warm-gray/60 pl-0.5">
-                          Eventos não públicos ficam ocultos da busca da home.
+                        <p className="text-[11px] text-warm-gray/60 pl-0.5 leading-relaxed">
+                          {editableEvent.visibility === 'draft' && (
+                            <>
+                              <strong className="text-espresso/80">Rascunho:</strong>{' '}
+                              só você e os anfitriões enxergam. O link do
+                              evento <em>não funciona</em> pra ninguém de fora
+                              — mesmo se você copiar e mandar.
+                            </>
+                          )}
+                          {editableEvent.visibility === 'unlisted' && (
+                            <>
+                              <strong className="text-espresso/80">Somente com link:</strong>{' '}
+                              quem tiver o link consegue abrir e reservar.
+                              O evento não aparece na busca nem na home.
+                            </>
+                          )}
+                          {editableEvent.visibility === 'public' && (
+                            <>
+                              <strong className="text-espresso/80">Público:</strong>{' '}
+                              qualquer pessoa pode encontrar o evento pela
+                              home e pela busca.
+                            </>
+                          )}
                         </p>
+                        {isEventLocked && (
+                          <button
+                            type="button"
+                            onClick={() => setIsPaywallOpen(true)}
+                            className="mt-2 inline-flex items-center gap-1.5 text-muted-rose hover:text-soft-terracotta text-sm tracking-wide underline-offset-4 hover:underline"
+                          >
+                            <Lock className="size-3.5" />
+                            sua lista ainda está em rascunho · liberar pra compartilhar
+                          </button>
+                        )}
                       </div>
                     </div>
                     </section>
@@ -2836,6 +2933,19 @@ function EventGiftsPageShell() {
         </DialogContent>
       </Dialog>
 
+      {/* ═══ PAYWALL DIALOG ═══ */}
+      <PaywallDialog
+        open={isPaywallOpen}
+        onOpenChange={setIsPaywallOpen}
+        eventId={event._id}
+        gifts={giftsForPreview}
+        totalGifts={gifts.length}
+        onContinueToShare={() => {
+          setDidCopyShareLink(false)
+          setIsShareDialogOpen(true)
+        }}
+      />
+
       {/* ═══ SHARE EVENT DIALOG ═══ */}
       <Dialog
         open={isShareDialogOpen}
@@ -2858,6 +2968,15 @@ function EventGiftsPageShell() {
           <div className="rounded-xl border border-border/60 bg-warm-white p-3 mt-2">
             <Input readOnly value={guestShareUrl} />
           </div>
+
+          {event?.visibility === 'draft' && (
+            <div className="rounded-lg border border-muted-rose/40 bg-blush/15 px-3 py-2.5 text-left text-[12px] text-espresso/80 leading-relaxed">
+              <strong className="text-espresso">Esse link ainda não funciona.</strong>{' '}
+              Seu evento está em <em>rascunho</em>, então só anfitriões
+              conseguem abrir. Mude pra <em>somente com link</em> ou{' '}
+              <em>público</em> nas configurações pra liberar.
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
             <Button

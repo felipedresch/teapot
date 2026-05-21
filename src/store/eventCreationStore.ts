@@ -28,7 +28,7 @@ type DraftEvent = {
   customEventType?: string
   hosts: Array<string>
   createdByPartner: 'partnerOne' | 'partnerTwo'
-  isPublic: boolean
+  visibility: 'draft' | 'unlisted' | 'public'
   date?: string
   location?: string
   description?: string

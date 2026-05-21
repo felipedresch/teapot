@@ -35,7 +35,17 @@ const schema = defineSchema({
     eventType: v.optional(v.string()),
     customEventType: v.optional(v.string()),
     hosts: v.optional(v.array(v.string())),
+    // Legacy flag kept in sync with `visibility` for backward compatibility and
+    // for the `by_is_public` index used by the public showcase queries.
+    // visibility === 'public' && unlocked => isPublic = true.
     isPublic: v.optional(v.boolean()),
+    visibility: v.optional(
+      v.union(
+        v.literal('draft'),
+        v.literal('unlisted'),
+        v.literal('public'),
+      ),
+    ),
     partnerOneName: v.string(),
     partnerTwoName: v.string(),
     createdByUserId: v.id('users'),
@@ -44,6 +54,15 @@ const schema = defineSchema({
     location: v.optional(v.string()),
     description: v.optional(v.string()),
     coverImageId: v.optional(v.id('_storage')),
+    monetizationStatus: v.optional(
+      v.union(
+        v.literal('grandfathered'),
+        v.literal('requires_payment'),
+        v.literal('paid'),
+      ),
+    ),
+    paidAt: v.optional(v.number()),
+    paidByPaymentId: v.optional(v.id('payments')),
   })
     .index('by_slug', ['slug'])
     .index('by_is_public', ['isPublic']),
@@ -111,6 +130,69 @@ const schema = defineSchema({
   })
     .index('by_image_id', ['imageId'])
     .index('by_expires_at', ['expiresAt']),
+
+  payments: defineTable({
+    eventId: v.id('events'),
+    userId: v.id('users'),
+    tier: v.union(v.literal('single'), v.literal('lifetime')),
+    category: v.union(v.literal('common'), v.literal('premium')),
+    amount: v.number(),
+    currency: v.string(),
+    status: v.union(
+      v.literal('pending'),
+      v.literal('paid'),
+      v.literal('expired'),
+      v.literal('cancelled'),
+      v.literal('failed'),
+      v.literal('refunded'),
+      v.literal('disputed'),
+    ),
+    provider: v.literal('abacatepay'),
+    providerCheckoutId: v.optional(v.string()),
+    externalId: v.string(),
+    brCode: v.optional(v.string()),
+    brCodeBase64: v.optional(v.string()),
+    expiresAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    paidAt: v.optional(v.number()),
+    platformFee: v.optional(v.number()),
+    receiptUrl: v.optional(v.string()),
+    failureReason: v.optional(v.string()),
+  })
+    .index('by_event', ['eventId'])
+    .index('by_user', ['userId'])
+    .index('by_event_and_user', ['eventId', 'userId'])
+    .index('by_external_id', ['externalId'])
+    .index('by_provider_checkout_id', ['providerCheckoutId']),
+
+  userEntitlements: defineTable({
+    userId: v.id('users'),
+    type: v.literal('lifetime'),
+    status: v.union(v.literal('active'), v.literal('revoked')),
+    sourcePaymentId: v.id('payments'),
+    grantedAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_user', ['userId'])
+    .index('by_user_and_type', ['userId', 'type']),
+
+  paymentWebhookEvents: defineTable({
+    provider: v.literal('abacatepay'),
+    providerEventId: v.string(),
+    eventName: v.string(),
+    processedStatus: v.union(
+      v.literal('processing'),
+      v.literal('processed'),
+      v.literal('failed'),
+    ),
+    rawPayload: v.any(),
+    receivedAt: v.number(),
+    processedAt: v.optional(v.number()),
+    processingError: v.optional(v.string()),
+  })
+    .index('by_provider_event_id', ['providerEventId'])
+    .index('by_event_name', ['eventName']),
 
   // Configurações do site (textos, nomes, etc.)
   config: defineTable({

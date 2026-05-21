@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { useAction, useMutation, useQuery } from 'convex/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Gift, ImagePlus, Plus, Sparkles, Trash2, X } from 'lucide-react'
+import { ChevronDown, Gift, ImagePlus, Loader2, Plus, Sparkles, Trash2, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
@@ -15,7 +15,9 @@ import { cn } from '@/lib/utils'
 import { Badge } from '../components/ui/badge'
 import { DatePicker } from '../components/ui/date-picker'
 import { DEFAULT_GIFT_CATEGORIES } from '../constants/giftCategories'
+import { EventInvitationHero } from '../components/EventInvitationHero'
 import { SITE_NAME, absoluteUrl } from '../lib/seo'
+import { track } from '../integrations/posthog/events'
 
 export const Route = createFileRoute('/events/create')({
   head: () => ({
@@ -194,6 +196,7 @@ function EventCreatePageShell() {
     draftGifts,
     isHydrated: isCreationStoreHydrated,
     setDraftEvent,
+    clearDraftEvent,
     addDraftGift,
     removeDraftGift,
     customGiftCategories,
@@ -214,6 +217,7 @@ function EventCreatePageShell() {
     null,
   )
   const [isPreparingCoverImage, setIsPreparingCoverImage] = useState(false)
+  const [isCoverSectionExpanded, setIsCoverSectionExpanded] = useState(true)
   const [isPreparingGiftImage, setIsPreparingGiftImage] = useState(false)
   const [isExtractingGiftImage, setIsExtractingGiftImage] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
@@ -221,6 +225,8 @@ function EventCreatePageShell() {
   const [createdSlug, setCreatedSlug] = useState<string | null>(null)
   const descriptionTextareaRef = useRef<HTMLTextAreaElement>(null)
   const latestGiftReferenceExtractionId = useRef(0)
+  const giftImageIdRef = useRef<Id<'_storage'> | undefined>(undefined)
+  giftImageIdRef.current = giftImageId
 
   const availableGiftCategories = useMemo(
     () => [...DEFAULT_GIFT_CATEGORIES, ...customGiftCategories],
@@ -235,7 +241,7 @@ function EventCreatePageShell() {
       customEventType: draftEvent?.customEventType ?? '',
       hosts: draftEvent?.hosts?.length ? draftEvent.hosts : [''],
       createdByPartner: draftEvent?.createdByPartner ?? 'partnerOne',
-      isPublic: draftEvent?.isPublic ?? true,
+      visibility: draftEvent?.visibility ?? 'draft',
       date: draftEvent?.date ?? '',
       location: draftEvent?.location ?? '',
       description: draftEvent?.description ?? '',
@@ -294,8 +300,9 @@ function EventCreatePageShell() {
           }
 
           setGiftReferenceImageError(null)
-          if (giftImageId && giftImageId !== result.imageId) {
-            void discardTemporaryGiftImage({ imageId: giftImageId })
+          const prevImageId = giftImageIdRef.current
+          if (prevImageId && prevImageId !== result.imageId) {
+            void discardTemporaryGiftImage({ imageId: prevImageId })
           }
           setGiftImageId(result.imageId)
           setGiftImageUrl(result.imageUrl)
@@ -319,7 +326,7 @@ function EventCreatePageShell() {
     return () => {
       window.clearTimeout(timeout)
     }
-  }, [discardTemporaryGiftImage, extractGiftImageFromReferenceUrl, giftImageId, giftReferenceUrl])
+  }, [discardTemporaryGiftImage, extractGiftImageFromReferenceUrl, giftReferenceUrl])
 
   const updateEvent = useCallback(
     (patch: Partial<typeof eventData>) => {
@@ -452,6 +459,7 @@ function EventCreatePageShell() {
           coverImageId: undefined,
           coverImageUrl: previewUrl,
         })
+        setIsCoverSectionExpanded(false)
       } catch (imageError) {
         setError(
           imageError instanceof Error
@@ -470,6 +478,7 @@ function EventCreatePageShell() {
       coverImageId: undefined,
       coverImageUrl: undefined,
     })
+    setIsCoverSectionExpanded(true)
   }, [updateEvent])
 
   const finalizeCreation = useCallback(async () => {
@@ -523,7 +532,7 @@ function EventCreatePageShell() {
         eventType: draftEvent.eventType,
         customEventType: draftEvent.customEventType?.trim() || undefined,
         hosts: normalizedHosts,
-        isPublic: draftEvent.isPublic,
+        visibility: draftEvent.visibility,
         createdByPartner: isPair ? draftEvent.createdByPartner : undefined,
         date: draftEvent.date?.trim() || undefined,
         location: draftEvent.location ? capitalizeFirst(draftEvent.location) : undefined,
@@ -531,6 +540,18 @@ function EventCreatePageShell() {
           ? capitalizeFirst(draftEvent.description)
           : undefined,
         coverImageId: uploadedCoverImageId,
+      })
+
+      // Desarma o draft persistido imediatamente após o evento ser criado.
+      // Se a pessoa der reload no meio da criação dos gifts (ou no fluxo de
+      // OAuth), o formulário não fica armado para um novo submit.
+      setPendingPublish(false)
+      clearDraftEvent()
+      setCreatedSlug(slug)
+
+      track.eventCreated({
+        eventType: draftEvent.eventType,
+        isPublic: draftEvent.visibility === 'public',
       })
 
       for (const draftGift of draftGifts) {
@@ -554,10 +575,13 @@ function EventCreatePageShell() {
           category: draftGift.category?.trim() || undefined,
           referenceUrl: draftGift.referenceUrl?.trim() || undefined,
         })
+        track.giftAdded({
+          eventId: String(eventId),
+          eventType: draftEvent.eventType,
+          hasImage: Boolean(uploadedImageId || draftGift.imageUrl),
+        })
       }
 
-      setPendingPublish(false)
-      setCreatedSlug(slug)
       resetAll()
       await navigate({
         to: '/events/$slug',
@@ -579,6 +603,7 @@ function EventCreatePageShell() {
     draftGifts,
     navigate,
     resetAll,
+    clearDraftEvent,
     setPendingPublish,
     normalizeHosts,
     isPairEventType,
@@ -866,33 +891,6 @@ function EventCreatePageShell() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-border/40 bg-warm-white/60 p-5">
-              <p className="text-sm font-medium text-espresso/80 mb-1">
-                Visibilidade do evento
-              </p>
-              <p className="text-xs text-warm-gray/60 mb-4">
-                Evento público aparece na busca da home. No modo "somente com link",
-                seu evento fica acessível apenas para quem tiver o link.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant={eventData.isPublic ? 'default' : 'secondary'}
-                  size="sm"
-                  onClick={() => updateEvent({ isPublic: true })}
-                >
-                  Público (aparece na home)
-                </Button>
-                <Button
-                  type="button"
-                  variant={!eventData.isPublic ? 'default' : 'secondary'}
-                  size="sm"
-                  onClick={() => updateEvent({ isPublic: false })}
-                >
-                  Somente com o link
-                </Button>
-              </div>
-            </div>
 
             <div className="space-y-1.5">
               <label
@@ -919,113 +917,199 @@ function EventCreatePageShell() {
               />
             </div>
 
-            <div className="rounded-xl border border-dashed border-muted-rose/30 bg-blush/6 p-5 space-y-4">
-              <p className="text-sm font-medium text-espresso/85">
-                Imagem de capa do evento (opcional)
-              </p>
-              <p className="text-xs text-warm-gray/60">
-                A capa aparece no topo da página para todos os convidados.
-              </p>
-              <p className="text-[11px] text-warm-gray/60 leading-relaxed max-w-md">
-                Recomendação: JPG/WEBP em 16:9. Ideal 1920×1080 (mínimo 1280×720),
-                até 8MB.
-              </p>
-              {eventData.coverImageUrl ? (
-                <div className="rounded-xl overflow-hidden relative group">
+            <motion.div
+              layout
+              transition={{
+                layout: { duration: 0.42, ease: [0.32, 0.72, 0, 1] },
+              }}
+              className="relative rounded-xl border border-dashed border-muted-rose/30 bg-blush/6 overflow-hidden"
+            >
+              {eventData.coverImageUrl && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setIsCoverSectionExpanded((current) => !current)
+                  }
+                  aria-label={
+                    isCoverSectionExpanded
+                      ? 'Recolher seção de capa'
+                      : 'Expandir seção de capa'
+                  }
+                  aria-expanded={isCoverSectionExpanded}
+                  className="absolute top-3 right-3 z-10 inline-flex items-center justify-center size-8 rounded-md text-warm-gray/70 hover:text-espresso hover:bg-blush/15 transition-colors"
+                >
+                  <motion.span
+                    animate={{ rotate: isCoverSectionExpanded ? 180 : 0 }}
+                    transition={{
+                      duration: 0.42,
+                      ease: [0.32, 0.72, 0, 1],
+                    }}
+                    className="inline-flex"
+                  >
+                    <ChevronDown className="size-4" aria-hidden />
+                  </motion.span>
+                </button>
+              )}
+              <AnimatePresence mode="popLayout" initial={false}>
+              {!isCoverSectionExpanded && eventData.coverImageUrl ? (
+                <motion.button
+                  key="collapsed"
+                  layout
+                  type="button"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{
+                    opacity: { duration: 0.22, ease },
+                    layout: { duration: 0.42, ease: [0.32, 0.72, 0, 1] },
+                  }}
+                  onClick={() => setIsCoverSectionExpanded(true)}
+                  className="w-full flex items-center gap-3 p-3 pr-12 text-left hover:bg-blush/10 transition-colors rounded-xl"
+                  aria-expanded={false}
+                >
                   <img
                     src={eventData.coverImageUrl}
-                    alt="Capa do evento"
-                    className="w-full max-h-[22rem] object-contain"
-                    loading="lazy"
+                    alt=""
+                    className="size-12 rounded-lg object-cover shrink-0"
                   />
-                  <label className="absolute bottom-3 right-3 inline-flex">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="sr-only"
-                      onChange={(e) => void handleSelectCoverImage(e.target.files?.[0])}
-                      disabled={isPreparingCoverImage}
-                    />
-                    <span
-                      className={cn(
-                        UPLOAD_CHIP_CLASS,
-                        isPreparingCoverImage && 'opacity-60 cursor-not-allowed',
-                      )}
-                    >
-                      <ImagePlus className="size-3.5" />
-                      Trocar capa
-                    </span>
-                  </label>
-                </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-espresso/85 truncate">
+                      Capa do evento
+                    </p>
+                    <p className="text-[11px] text-warm-gray/60 truncate">
+                      Pronta — toque pra trocar ou remover
+                    </p>
+                  </div>
+                </motion.button>
               ) : (
-                <label className={cn(UPLOAD_DROPZONE_CLASS, 'h-36 gap-2')}>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="sr-only"
-                    onChange={(e) => void handleSelectCoverImage(e.target.files?.[0])}
-                    disabled={isPreparingCoverImage}
-                  />
-                  <ImagePlus className="size-5 text-muted-rose/70" />
-                  <span>
-                    {isPreparingCoverImage ? 'Preparando capa...' : 'Enviar capa'}
-                  </span>
-                </label>
+                <motion.div
+                  key="expanded"
+                  layout
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{
+                    opacity: { duration: 0.22, ease },
+                    layout: { duration: 0.42, ease: [0.32, 0.72, 0, 1] },
+                  }}
+                  className="p-5 pr-14 space-y-4"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-espresso/85">
+                      Imagem de capa do evento (opcional)
+                    </p>
+                    <p className="text-xs text-warm-gray/60 mt-1">
+                      A capa aparece no topo da página para todos os
+                      convidados.
+                    </p>
+                  </div>
+                  <p className="text-[11px] text-warm-gray/60 leading-relaxed max-w-md">
+                    Recomendação: JPG/WEBP em 16:9. Ideal 1920×1080 (mínimo
+                    1280×720), até 8MB.
+                  </p>
+                  {eventData.coverImageUrl ? (
+                    <div className="rounded-xl overflow-hidden relative group">
+                      <img
+                        src={eventData.coverImageUrl}
+                        alt="Capa do evento"
+                        className="w-full max-h-[22rem] object-contain"
+                        loading="lazy"
+                      />
+                      <label className="absolute bottom-3 right-3 inline-flex">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="sr-only"
+                          onChange={(e) => void handleSelectCoverImage(e.target.files?.[0])}
+                          disabled={isPreparingCoverImage}
+                        />
+                        <span
+                          className={cn(
+                            UPLOAD_CHIP_CLASS,
+                            isPreparingCoverImage && 'opacity-60 cursor-not-allowed',
+                          )}
+                        >
+                          <ImagePlus className="size-3.5" />
+                          Trocar capa
+                        </span>
+                      </label>
+                    </div>
+                  ) : (
+                    <label className={cn(UPLOAD_DROPZONE_CLASS, 'h-36 gap-2')}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="sr-only"
+                        onChange={(e) => void handleSelectCoverImage(e.target.files?.[0])}
+                        disabled={isPreparingCoverImage}
+                      />
+                      <ImagePlus className="size-5 text-muted-rose/70" />
+                      <span>
+                        {isPreparingCoverImage ? 'Preparando capa...' : 'Enviar capa'}
+                      </span>
+                    </label>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    {eventData.coverImageUrl && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive"
+                        onClick={handleRemoveCoverImage}
+                        disabled={isPreparingCoverImage}
+                      >
+                        <Trash2 className="size-4" />
+                        Remover capa
+                      </Button>
+                    )}
+                  </div>
+                  {isPreparingCoverImage && (
+                    <p className="text-xs text-warm-gray/60">Preparando capa...</p>
+                  )}
+                </motion.div>
               )}
-              <div className="flex flex-wrap gap-2">
-                {eventData.coverImageUrl && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive"
-                    onClick={handleRemoveCoverImage}
-                    disabled={isPreparingCoverImage}
-                  >
-                    <Trash2 className="size-4" />
-                    Remover capa
-                  </Button>
-                )}
-              </div>
-              {isPreparingCoverImage && (
-                <p className="text-xs text-warm-gray/60">Preparando capa...</p>
-              )}
-            </div>
+              </AnimatePresence>
+            </motion.div>
           </div>
 
-          {/* Live preview */}
-          {previewHosts.length > 0 && (
+          {/* Live preview — mirrors the hero of the published event page */}
+          {previewHosts.length > 0 && eventData.name.trim() && (
             <motion.div
-              className="mt-8 rounded-2xl border border-blush/40 bg-warm-white/60 p-6 text-center"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
+              className="mt-8"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, ease }}
             >
-              <p className="text-[11px] uppercase tracking-widest text-warm-gray/50 mb-3">
-                prévia
+              <p className="text-[11px] uppercase tracking-widest text-warm-gray/50 mb-3 text-center">
+                prévia · é assim que vai aparecer
               </p>
-              {previewHosts.length === 2 ? (
-                <>
-                  <p className="font-display italic text-2xl md:text-3xl text-espresso leading-[0.95]">
-                    {previewHosts[0]}
-                  </p>
-                  <p className="font-accent text-xl text-muted-rose/50 my-1 inline-block -rotate-6">
-                    &
-                  </p>
-                  <p className="font-display italic text-2xl md:text-3xl text-espresso leading-[0.95]">
-                    {previewHosts[1]}
-                  </p>
-                </>
-              ) : (
-                <p className="font-display italic text-2xl md:text-3xl text-espresso leading-[1.05]">
-                  {previewHosts.join(' • ')}
-                </p>
-              )}
-              {eventData.name && (
-                <p className="text-sm text-warm-gray/60 mt-3">
-                  {capitalizeFirst(eventData.name)}
-                </p>
-              )}
+              <div className="pointer-events-none [&_section]:!pt-2 [&_section]:!pb-4 md:[&_section]:!pt-4 md:[&_section]:!pb-6 [&>section]:!overflow-visible">
+                <EventInvitationHero
+                    coverImageUrl={eventData.coverImageUrl}
+                    eventName={capitalizeFirst(eventData.name)}
+                    eventTypeLabel={
+                      eventData.eventType === 'other'
+                        ? eventData.customEventType?.trim() ||
+                          selectedEventType?.label ||
+                          ''
+                        : (selectedEventType?.label ?? '')
+                    }
+                    hosts={previewHosts}
+                    shouldUsePairLayout={
+                      showPairFields && previewHosts.length === 2
+                    }
+                    location={eventData.location?.trim() || undefined}
+                    date={eventData.date?.trim() || undefined}
+                    description={
+                      eventData.description
+                        ? capitalizeFirst(eventData.description)
+                        : undefined
+                    }
+                    showFloatingDecor={false}
+                    showBackground={false}
+                  />
+              </div>
             </motion.div>
           )}
         </section>
@@ -1114,41 +1198,79 @@ function EventCreatePageShell() {
                   )}
                 />
               </div>
-              <Input
-                label="Link de referência (opcional)"
-                value={giftReferenceUrl}
-                onChange={(e) => {
-                  setGiftReferenceImageError(null)
-                  setGiftReferenceUrl(e.target.value)
-                }}
-                placeholder="https://..."
-              />
+              <div className="space-y-1.5">
+                <Input
+                  label="Link de referência (opcional)"
+                  value={giftReferenceUrl}
+                  onChange={(e) => {
+                    setGiftReferenceImageError(null)
+                    setGiftReferenceUrl(e.target.value)
+                  }}
+                  placeholder="https://..."
+                />
+                <p className="text-[11px] text-warm-gray/65 leading-relaxed pl-0.5">
+                  Cole o link da loja e a gente busca a imagem pra você.
+                </p>
+              </div>
               <div className="md:col-span-2 space-y-2">
                 <p className="text-sm font-medium text-espresso/80 pl-0.5">
                   Imagem do presente (opcional)
                 </p>
-                {isExtractingGiftImage && (
-                  <p className="text-xs text-warm-gray/60 pl-0.5">
-                    Extraindo imagem da URL...
-                  </p>
-                )}
-                {giftReferenceImageError && (
-                  <p className="text-xs text-destructive pl-0.5">
-                    {giftReferenceImageError}
-                  </p>
-                )}
                 <p className="text-[11px] text-warm-gray/60 leading-relaxed max-w-md">
                   Recomendação: JPG/WEBP em 1:1. Ideal 1200×1200 (mínimo 600×600),
                   até 8MB.
                 </p>
-                {giftImageUrl ? (
-                  <div className="rounded-xl overflow-hidden border border-border/30 max-w-sm bg-warm-white relative group">
-                    <img
-                      src={giftImageUrl}
-                      alt="Prévia do presente"
-                      className="w-full h-44 object-contain"
-                    />
-                    <label className="absolute bottom-3 right-3 inline-flex">
+                <div className="max-w-sm">
+                  {isExtractingGiftImage ? (
+                    <div
+                      role="status"
+                      aria-live="polite"
+                      className="rounded-xl border border-dashed border-muted-rose/55 bg-muted-rose/8 h-44 flex flex-col items-center justify-center gap-2 px-4 text-center"
+                    >
+                      <Loader2 className="size-6 text-muted-rose animate-spin" />
+                      <p className="text-sm font-medium text-espresso">
+                        Buscando imagem do link...
+                      </p>
+                      <p className="text-xs text-warm-gray/75">
+                        Isso pode levar alguns segundos
+                      </p>
+                    </div>
+                  ) : giftImageUrl ? (
+                    <div className="rounded-xl overflow-hidden border border-border/30 bg-warm-white relative group">
+                      <img
+                        src={giftImageUrl}
+                        alt="Prévia do presente"
+                        className="w-full h-44 object-contain"
+                      />
+                      {isPreparingGiftImage && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-warm-white/80 backdrop-blur-sm">
+                          <Loader2 className="size-5 text-muted-rose animate-spin" />
+                          <p className="text-sm font-medium text-espresso">
+                            Enviando imagem...
+                          </p>
+                        </div>
+                      )}
+                      <label className="absolute bottom-3 right-3 inline-flex">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="sr-only"
+                          onChange={(e) => void handleSelectGiftImage(e.target.files?.[0])}
+                          disabled={isGiftImageProcessing}
+                        />
+                        <span
+                          className={cn(
+                            UPLOAD_CHIP_CLASS,
+                            isGiftImageProcessing && 'opacity-60 cursor-not-allowed',
+                          )}
+                        >
+                          <ImagePlus className="size-3.5" />
+                          Trocar imagem
+                        </span>
+                      </label>
+                    </div>
+                  ) : (
+                    <label className={cn(UPLOAD_DROPZONE_CLASS, 'h-44 gap-2')}>
                       <input
                         type="file"
                         accept="image/*"
@@ -1156,38 +1278,32 @@ function EventCreatePageShell() {
                         onChange={(e) => void handleSelectGiftImage(e.target.files?.[0])}
                         disabled={isGiftImageProcessing}
                       />
-                      <span
-                        className={cn(
-                          UPLOAD_CHIP_CLASS,
-                          isGiftImageProcessing && 'opacity-60 cursor-not-allowed',
-                        )}
-                      >
-                        <ImagePlus className="size-3.5" />
-                        Trocar imagem
-                      </span>
+                      {isPreparingGiftImage ? (
+                        <>
+                          <Loader2 className="size-5 text-muted-rose animate-spin" />
+                          <span className="text-sm font-medium text-espresso">
+                            Enviando imagem...
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <ImagePlus className="size-5 text-muted-rose/75" />
+                          <span>Clique para enviar uma imagem</span>
+                          <span className="text-[11px] text-warm-gray/55">
+                            ou cole um link de referência acima
+                          </span>
+                        </>
+                      )}
                     </label>
-                  </div>
-                ) : (
-                  <label className={cn(UPLOAD_DROPZONE_CLASS, 'h-28 gap-1.5')}>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="sr-only"
-                      onChange={(e) => void handleSelectGiftImage(e.target.files?.[0])}
-                      disabled={isGiftImageProcessing}
-                    />
-                    <ImagePlus className="size-5 text-muted-rose/75" />
-                    <span>
-                      {isExtractingGiftImage
-                        ? 'Extraindo imagem...'
-                        : isPreparingGiftImage
-                          ? 'Preparando imagem...'
-                          : 'Enviar imagem'}
-                    </span>
-                  </label>
+                  )}
+                </div>
+                {giftReferenceImageError && (
+                  <p className="text-xs text-destructive pl-0.5">
+                    {giftReferenceImageError}
+                  </p>
                 )}
                 <div className="flex flex-wrap gap-2">
-                  {giftImageUrl && (
+                  {giftImageId && !isExtractingGiftImage && (
                     <Button
                       type="button"
                       variant="ghost"
@@ -1201,13 +1317,6 @@ function EventCreatePageShell() {
                     </Button>
                   )}
                 </div>
-                {isGiftImageProcessing && (
-                  <p className="text-xs text-warm-gray/60">
-                    {isExtractingGiftImage
-                      ? 'Extraindo imagem do link...'
-                      : 'Preparando imagem...'}
-                  </p>
-                )}
               </div>
             </div>
             <Button
