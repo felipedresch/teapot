@@ -13,6 +13,7 @@ import { OrnamentDivider } from '../components/OrnamentDivider'
 import { PublicEventsCarousel } from '../components/PublicEventsCarousel'
 import { capitalizeFirst, getDisplayHostNames } from '../lib/presentation'
 import { SITE_NAME, absoluteUrl } from '../lib/seo'
+import { cn } from '../lib/utils'
 
 export const Route = createFileRoute('/')({
   head: () => ({
@@ -127,10 +128,10 @@ function HomePage() {
   return (
     <div className="overflow-hidden">
       {/* ═══ HERO ═══ */}
-      <section className="relative min-h-[66vh] md:min-h-[78vh] flex flex-col items-center justify-center px-6 pt-6 md:pt-12 pb-12 md:pb-20">
+      <section className="relative min-h-[64vh] md:min-h-[72vh] flex flex-col items-center justify-center px-6 pt-6 md:pt-10 pb-10 md:pb-14">
         {/* Decorative background shapes */}
         <div
-          className="pointer-events-none absolute inset-0 overflow-hidden"
+          className="pointer-events-none absolute inset-0"
           aria-hidden="true"
         >
           <div className="absolute -top-32 -left-20 w-[26rem] h-[26rem] bg-sage/10 rounded-full blur-[120px]" />
@@ -228,11 +229,11 @@ function HomePage() {
         </motion.div>
       </section>
 
-      {/* ═══ SHOWCASE — example invitation with fake data ═══ */}
-      <InvitationShowcase />
-
       {/* ═══ PUBLIC EVENTS CAROUSEL ═══ */}
       <PublicEventsCarousel />
+
+      {/* ═══ SHOWCASE — example invitation with fake data ═══ */}
+      <InvitationShowcase />
 
       {/* ═══ CONTENT ═══ */}
       <section className="px-6 pb-28 md:pb-36">
@@ -430,19 +431,25 @@ function HomePage() {
         </div>
       </section>
       {shouldShowMyEventsSection && (
-        <section className="px-6 pb-24">
-          <div className="max-w-6xl mx-auto space-y-8">
+        <section className="px-6 pb-28 md:pb-32">
+          <div className="max-w-6xl mx-auto space-y-12">
             <div className="text-center">
               <p className="font-accent text-2xl text-muted-rose">sua área</p>
               <h2 className="font-display italic text-3xl md:text-4xl text-espresso mt-1">
                 Meus eventos
               </h2>
+              <div className="flex justify-center mt-4">
+                <OrnamentDivider className="w-20 text-muted-rose/30" />
+              </div>
             </div>
 
             {hosting.length > 0 && (
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-espresso/80">Eventos que voce organiza</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-5">
+                <div className="flex items-baseline gap-3">
+                  <span className="font-accent text-xl text-muted-rose/85">você organiza</span>
+                  <span className="h-px flex-1 bg-gradient-to-r from-muted-rose/25 to-transparent" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {hosting.map((event) => (
                     <MyEventCard
                       key={`host-${event.eventId}`}
@@ -451,6 +458,7 @@ function HomePage() {
                       eventType={event.eventType}
                       customEventType={event.customEventType}
                       hosts={event.hosts}
+                      coverImageUrl={event.coverImageUrl}
                       role="host"
                     />
                   ))}
@@ -459,19 +467,18 @@ function HomePage() {
             )}
 
             {attending.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-baseline justify-between gap-3">
-                  <p className="text-sm font-medium text-espresso/80">
-                    Eventos que voce participa como convidado
-                  </p>
+              <div className="space-y-5">
+                <div className="flex items-baseline gap-3">
+                  <span className="font-accent text-xl text-muted-rose/85">você foi convidado</span>
+                  <span className="h-px flex-1 bg-gradient-to-r from-muted-rose/25 to-transparent" />
                   <Link
                     to="/my-gifts"
-                    className="text-xs text-muted-rose hover:underline"
+                    className="shrink-0 text-xs text-muted-rose hover:text-espresso transition-colors underline underline-offset-4 decoration-muted-rose/40 hover:decoration-muted-rose"
                   >
-                    Ver meus presentes →
+                    ver meus presentes →
                   </Link>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {attending.map((event) => (
                     <MyEventCard
                       key={`guest-${event.eventId}`}
@@ -480,6 +487,7 @@ function HomePage() {
                       eventType={event.eventType}
                       customEventType={event.customEventType}
                       hosts={event.hosts}
+                      coverImageUrl={event.coverImageUrl}
                       role="guest"
                       reservationCount={
                         reservationCountByEventId.get(String(event.eventId)) ?? 0
@@ -502,6 +510,7 @@ function MyEventCard({
   eventType,
   customEventType,
   hosts,
+  coverImageUrl,
   role,
   reservationCount,
 }: {
@@ -510,6 +519,7 @@ function MyEventCard({
   eventType: string
   customEventType?: string
   hosts: Array<string>
+  coverImageUrl?: string
   role: 'host' | 'guest'
   reservationCount?: number
 }) {
@@ -520,57 +530,143 @@ function MyEventCard({
     PAIR_EVENT_TYPES.has(eventType) && displayHosts.length === 2
   const roleLabel = role === 'host' ? 'Você é anfitrião' : 'Você é convidado'
 
+  const isHost = role === 'host'
+
   return (
     <Link
       to="/events/$slug"
       params={{ slug }}
-      className="group flex items-start justify-between gap-3 rounded-xl border border-border/40 bg-warm-white/80 px-4 py-4 transition-all duration-200 hover:shadow-dreamy hover:border-muted-rose/30 hover:-translate-y-px"
+      className="group relative block"
     >
-      <div className="min-w-0 flex-1 space-y-1.5">
-        <div className="flex items-start justify-between gap-2">
-          <p className="text-sm font-medium text-espresso">
-            {capitalizeFirst(name || 'Evento sem nome')}
-          </p>
-          <span
-            className={
-              role === 'host'
-                ? 'shrink-0 rounded-full bg-sage/15 px-2 py-0.5 text-[10px] font-medium text-sage'
-                : 'shrink-0 rounded-full bg-muted-rose/15 px-2 py-0.5 text-[10px] font-medium text-muted-rose'
-            }
-          >
-            {roleLabel}
-          </span>
+      <article
+        className={cn(
+          'relative overflow-hidden rounded-[1.5rem] border bg-warm-white px-6 pt-6 pb-5 md:px-7 md:pt-7 md:pb-6 shadow-dreamy transition-all duration-500 ease-out',
+          'group-hover:-translate-y-0.5 group-hover:shadow-dreamy-md',
+          isHost
+            ? 'border-sage/25 group-hover:border-sage/45'
+            : 'border-blush/55 group-hover:border-muted-rose/45',
+        )}
+      >
+        {/* corner ornaments */}
+        <div className="pointer-events-none absolute top-3 left-3 w-7 h-7 border-l-[1px] border-t-[1px] border-muted-rose/20 rounded-tl-lg" />
+        <div className="pointer-events-none absolute bottom-3 right-3 w-7 h-7 border-r-[1px] border-b-[1px] border-muted-rose/20 rounded-br-lg" />
+
+        {/* soft blob */}
+        <div
+          className={cn(
+            'pointer-events-none absolute -top-16 -right-12 w-44 h-44 rounded-full blur-3xl opacity-60',
+            isHost ? 'bg-sage/20' : 'bg-blush/45',
+          )}
+          aria-hidden="true"
+        />
+
+        {/* role stamp */}
+        <span
+          className={cn(
+            'absolute top-4 right-4 z-10 inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-accent text-[11px] tracking-wide -rotate-[4deg] origin-center transition-transform duration-500 group-hover:-rotate-[2deg]',
+            isHost
+              ? 'border-sage/35 bg-sage/12 text-sage'
+              : 'border-muted-rose/35 bg-muted-rose/10 text-muted-rose',
+          )}
+        >
+          {isHost ? 'anfitrião' : 'convidado'}
+        </span>
+
+        <div className="relative flex items-start gap-4 sm:gap-5">
+          {/* polaroid thumbnail */}
+          <div className="relative shrink-0 w-[84px] sm:w-[96px] -rotate-[3deg] origin-center transition-transform duration-500 ease-out group-hover:-rotate-[1.5deg] group-hover:-translate-y-0.5">
+            <div
+              className="washi-tape"
+              style={{ top: '-0.4rem', left: '14%', transform: 'rotate(-12deg) scale(0.55)', width: '2.4rem' }}
+              aria-hidden="true"
+            />
+            <div className="photo-print relative p-1.5 pb-4">
+              <div className="relative overflow-hidden aspect-[4/5]">
+                {coverImageUrl ? (
+                  <>
+                    <img
+                      src={coverImageUrl}
+                      alt=""
+                      loading="lazy"
+                      className="w-full h-full object-cover"
+                      style={{ filter: 'saturate(0.92) contrast(1.03) brightness(1.01)' }}
+                    />
+                    <div className="photo-print-grain absolute inset-0" aria-hidden="true" />
+                    <div className="photo-vignette absolute inset-0" aria-hidden="true" />
+                  </>
+                ) : (
+                  <div
+                    className={cn(
+                      'w-full h-full flex items-center justify-center',
+                      isHost
+                        ? 'bg-gradient-to-br from-sage/25 via-warm-white to-blush/30'
+                        : 'bg-gradient-to-br from-blush/35 via-warm-white to-muted-rose/15',
+                    )}
+                  >
+                    <Sparkles className="size-5 text-muted-rose/55" />
+                    <div className="photo-print-grain absolute inset-0" aria-hidden="true" />
+                  </div>
+                )}
+              </div>
+              <p className="font-accent text-[10px] text-espresso/55 text-center mt-1.5 tracking-wide leading-tight line-clamp-1">
+                {capitalizeFirst(name || 'Evento')}
+              </p>
+            </div>
+          </div>
+
+          <div className="min-w-0 flex-1 pr-20 sm:pr-24">
+            <p className="font-accent text-[11px] uppercase tracking-[0.22em] text-muted-rose/75">
+              {eventTypeLabel}
+            </p>
+            <h3 className="font-display italic text-xl md:text-[1.55rem] text-espresso leading-[1.1] mt-1.5 line-clamp-2">
+              {capitalizeFirst(name || 'Evento sem nome')}
+            </h3>
+            <p className="text-sm text-warm-gray/80 mt-2 line-clamp-1">
+              {isPairEvent ? (
+                <>
+                  <span>{displayHosts[0]}</span>
+                  <span className="mx-1.5 font-accent italic text-muted-rose/75">
+                    e
+                  </span>
+                  <span>{displayHosts[1]}</span>
+                </>
+              ) : (
+                <span>{hostsName || 'Anfitriões não informados'}</span>
+              )}
+            </p>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs">
-          <span className="text-muted-rose/80">{eventTypeLabel}</span>
-          <span className="text-muted-rose/35">•</span>
-          {isPairEvent ? (
-            <span className="text-warm-gray/70">
-              {displayHosts[0]}
-              <span className="mx-1 font-accent text-muted-rose/70">e</span>
-              {displayHosts[1]}
+
+        <div className="relative mt-5 flex items-center justify-between gap-3 border-t border-dashed border-muted-rose/20 pt-4">
+          {role === 'guest' ? (
+            <span className="inline-flex items-center gap-1.5 text-xs text-warm-gray/80">
+              <Gift className="size-3.5 text-muted-rose/75" />
+              {reservationCount && reservationCount > 0 ? (
+                <span>
+                  <span className="font-medium text-espresso/85">
+                    {reservationCount}
+                  </span>{' '}
+                  presente{reservationCount === 1 ? '' : 's'} reservado
+                  {reservationCount === 1 ? '' : 's'}
+                </span>
+              ) : (
+                <span className="italic text-warm-gray/55">
+                  nenhum presente reservado ainda
+                </span>
+              )}
             </span>
           ) : (
-            <span className="text-warm-gray/70">{hostsName || 'Anfitrioes nao informados'}</span>
+            <span className="inline-flex items-center gap-1.5 font-accent text-xs text-muted-rose/80">
+              <Sparkles className="size-3 text-muted-rose/65" />
+              cuidar dos detalhes
+            </span>
           )}
+          <span className="inline-flex items-center gap-1 text-xs text-warm-gray/55 transition-colors duration-300 group-hover:text-muted-rose">
+            abrir
+            <ArrowRight className="size-3.5 transition-transform duration-500 ease-out group-hover:translate-x-0.5" />
+          </span>
         </div>
-        {role === 'guest' && (
-          <div className="flex items-center gap-1.5 text-[11px] text-warm-gray/75">
-            <Gift className="size-3 text-muted-rose/70" />
-            {reservationCount && reservationCount > 0 ? (
-              <span>
-                Você reservou {reservationCount} presente
-                {reservationCount === 1 ? '' : 's'}
-              </span>
-            ) : (
-              <span className="text-warm-gray/55">
-                Você ainda não reservou nenhum presente
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-      <ArrowRight className="size-3.5 text-warm-gray/30 group-hover:text-muted-rose transition-colors shrink-0 mt-0.5" />
+      </article>
     </Link>
   )
 }

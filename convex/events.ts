@@ -42,6 +42,7 @@ type EventSummary = {
   visibility: EventVisibility
   partnerOneName: string
   partnerTwoName: string
+  coverImageUrl?: string
 }
 
 export const listEventTypes = query({
@@ -170,6 +171,7 @@ export const listEventsForCurrentUser = query({
       ),
       partnerOneName: v.string(),
       partnerTwoName: v.string(),
+      coverImageUrl: v.optional(v.string()),
     }),
   ),
   handler: async (ctx) => {
@@ -207,6 +209,7 @@ export const listMyEventsGrouped = query({
         ),
         partnerOneName: v.string(),
         partnerTwoName: v.string(),
+        coverImageUrl: v.optional(v.string()),
       }),
     ),
     attending: v.array(
@@ -226,6 +229,7 @@ export const listMyEventsGrouped = query({
         ),
         partnerOneName: v.string(),
         partnerTwoName: v.string(),
+        coverImageUrl: v.optional(v.string()),
       }),
     ),
   }),
@@ -931,6 +935,10 @@ async function mapMembershipsToEventSummaries(
     const unlocked = isEventUnlocked(event, hostHasLifetime)
     const effectiveVisibility = getEffectiveVisibility(event, unlocked)
 
+    const coverImageUrl = event.coverImageId
+      ? ((await ctx.storage.getUrl(event.coverImageId)) ?? undefined)
+      : undefined
+
     results.push({
       eventId: event._id,
       role: membership.role,
@@ -947,6 +955,7 @@ async function mapMembershipsToEventSummaries(
       visibility: effectiveVisibility,
       partnerOneName: event.partnerOneName,
       partnerTwoName: event.partnerTwoName,
+      coverImageUrl,
     })
   }
 
