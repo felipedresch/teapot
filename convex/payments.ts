@@ -1272,7 +1272,18 @@ function getApiBaseUrl() {
 
 function getPaymentDescription(eventName: string, tier: PaymentTier) {
   const tierLabel = tier === 'lifetime' ? 'acesso vitalício' : 'lista única'
-  return `MyWish - ${tierLabel} - ${eventName}`.slice(0, 140)
+  return stripEmojis(`MyWish - ${tierLabel} - ${eventName}`)
+    .replace(/\s+/g, ' ')
+    .replace(/\s+-\s*$/, '')
+    .trim()
+    .slice(0, 140)
+}
+
+function stripEmojis(value: string) {
+  return value.replace(
+    /[\p{Emoji_Presentation}\p{Extended_Pictographic}\u200d\ufe0e\ufe0f]/gu,
+    '',
+  )
 }
 
 function getPrices(category: PaywallCategory) {
