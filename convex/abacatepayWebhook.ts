@@ -11,14 +11,14 @@ type AbacateWebhookPayload = {
   devMode?: boolean
   data?: {
     transparent?: {
-      id?: string
-      externalId?: string
-      amount?: number
-      paidAmount?: number
-      platformFee?: number
-      status?: string
+      id?: string | null
+      externalId?: string | null
+      amount?: number | null
+      paidAmount?: number | null
+      platformFee?: number | null
+      status?: string | null
       methods?: Array<string>
-      receiptUrl?: string
+      receiptUrl?: string | null
     }
   }
 }
@@ -98,8 +98,16 @@ async function processPaymentEvent(
   payload: AbacateWebhookPayload,
 ) {
   const transparent = payload.data?.transparent
-  const providerCheckoutId = transparent?.id
-  const externalId = transparent?.externalId
+  // The provider sends some optional fields explicitly as `null`. Convex
+  // validators treat `null` differently from an omitted optional field, so
+  // normalize the untrusted webhook payload before calling internal functions.
+  const providerCheckoutId = optionalString(transparent?.id)
+  const externalId = optionalString(transparent?.externalId)
+  const paidAmount =
+    optionalNumber(transparent?.paidAmount) ??
+    optionalNumber(transparent?.amount)
+  const platformFee = optionalNumber(transparent?.platformFee)
+  const receiptUrl = optionalString(transparent?.receiptUrl)
 
   if (!providerCheckoutId && !externalId) {
     return
@@ -115,9 +123,9 @@ async function processPaymentEvent(
       {
         providerCheckoutId,
         externalId,
-        paidAmount: transparent?.paidAmount ?? transparent?.amount,
-        platformFee: transparent?.platformFee,
-        receiptUrl: transparent?.receiptUrl,
+        paidAmount,
+        platformFee,
+        receiptUrl,
       },
     )
 
@@ -190,6 +198,16 @@ async function processPaymentEvent(
       status: 'disputed',
     })
   }
+}
+
+function optionalString(value: unknown) {
+  if (typeof value !== 'string') return undefined
+  const normalized = value.trim()
+  return normalized || undefined
+}
+
+function optionalNumber(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
 }
 
 async function verifyAbacateSignature(rawBody: string, signature: string) {
