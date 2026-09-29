@@ -24,7 +24,11 @@ export default defineHandler((event) => {
   ) {
     return new Response(null, {
       status: 308,
-      headers: { location: url.pathname.replace(/\/+$/, '') + url.search },
+      headers: {
+        location:
+          (url.pathname.replace(/\/+$/, '').replace(/^\/+/, '/') || '/') +
+          url.search,
+      },
     })
   }
 })

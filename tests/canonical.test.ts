@@ -16,3 +16,10 @@ it('removes a trailing slash without changing the query', async () => {
   expect(response.status).toBe(308)
   expect(response.headers.get('location')).toBe('/blog?p=1')
 })
+it('keeps paths with repeated leading slashes on the same host', async () => {
+  const response = await handler.fetch(
+    new Request('https://mywish.com.br//example.com/?p=1'),
+  )
+  expect(response.status).toBe(308)
+  expect(response.headers.get('location')).toBe('/example.com?p=1')
+})
