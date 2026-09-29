@@ -2,6 +2,7 @@
   "name": "teapot",
   "private": true,
   "type": "module",
+  "packageManager": "npm@10.9.2",
   "scripts": {
     "dev": "vite dev --port 3000",
     "build": "vite build",
