@@ -1,3 +1,5 @@
+import { toJsonLd } from './seo'
+
 type SlopMachineListResponseItem = {
   slug: string
   title: string
@@ -59,7 +61,11 @@ function getRawBaseUrl() {
 }
 
 function getProjectSlug() {
-  return process.env.SLOP_MACHINE_PROJECT_SLUG || import.meta.env.VITE_SLOP_MACHINE_PROJECT_SLUG || DEFAULT_PROJECT_SLUG
+  return (
+    process.env.SLOP_MACHINE_PROJECT_SLUG ||
+    import.meta.env.VITE_SLOP_MACHINE_PROJECT_SLUG ||
+    DEFAULT_PROJECT_SLUG
+  )
 }
 
 export function getSlopProjectSlug() {
@@ -67,7 +73,9 @@ export function getSlopProjectSlug() {
 }
 
 function getCacheTtlMs() {
-  const raw = process.env.SLOP_MACHINE_CACHE_TTL_MS || import.meta.env.VITE_SLOP_MACHINE_CACHE_TTL_MS
+  const raw =
+    process.env.SLOP_MACHINE_CACHE_TTL_MS ||
+    import.meta.env.VITE_SLOP_MACHINE_CACHE_TTL_MS
   const parsed = raw ? Number(raw) : NaN
 
   if (Number.isFinite(parsed) && parsed > 0) {
@@ -102,6 +110,12 @@ function setCached<T>(key: string, value: T) {
   })
 }
 
+export class ContentFetchError extends Error {
+  constructor(public status: number) {
+    super(`Content service request failed: ${status}`)
+  }
+}
+
 async function fetchJson<T>(path: string): Promise<T> {
   const key = getCacheKey(path)
   const cached = getCached<T>(key)
@@ -114,10 +128,11 @@ async function fetchJson<T>(path: string): Promise<T> {
     headers: {
       Accept: 'application/json',
     },
+    signal: AbortSignal.timeout(8000),
   })
 
   if (!response.ok) {
-    throw new Error(`Slop Machine request failed: ${response.status}`)
+    throw new ContentFetchError(response.status)
   }
 
   const data = (await response.json()) as T
@@ -147,7 +162,10 @@ function sanitizeInternalLinks(markdown: string) {
 }
 
 export function stripFrontmatter(markdown: string) {
-  const normalized = normalizeMarkdownLineEndings(markdown).replace(/^\uFEFF/, '')
+  const normalized = normalizeMarkdownLineEndings(markdown).replace(
+    /^\uFEFF/,
+    '',
+  )
   return normalized.replace(/^---\n[\s\S]*?\n---(?:\n|$)/u, '')
 }
 
@@ -183,7 +201,7 @@ export function getSafeFaqSchema(faqSchema?: string) {
 
   try {
     const parsed = JSON.parse(faqSchema)
-    return JSON.stringify(parsed)
+    return toJsonLd(parsed)
   } catch {
     return null
   }
@@ -209,7 +227,9 @@ export async function fetchSlopMachineArticle(contentSlug: string) {
     `/api/content/${projectSlug}/${contentSlug}`,
   )
 
-  const normalizedMarkdown = sanitizeInternalLinks(stripFrontmatter(article.markdown))
+  const normalizedMarkdown = sanitizeInternalLinks(
+    stripFrontmatter(article.markdown),
+  )
   const { markdownWithoutFaq, faqJsonLd } = extractFaqSchema(normalizedMarkdown)
 
   return {

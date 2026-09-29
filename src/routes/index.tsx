@@ -13,27 +13,28 @@ import { OrnamentDivider } from '../components/OrnamentDivider'
 import { PublicEventsCarousel } from '../components/PublicEventsCarousel'
 import { capitalizeFirst, getDisplayHostNames } from '../lib/presentation'
 import { SITE_NAME, absoluteUrl } from '../lib/seo'
+import { OccasionLinks } from '../components/OccasionLinks'
 import { cn } from '../lib/utils'
 
 export const Route = createFileRoute('/')({
   head: () => ({
     meta: [
       {
-        title: `${SITE_NAME} | Lista de presentes online`,
+        title: `Lista de presentes online para cada ocasião | ${SITE_NAME}`,
       },
       {
         name: 'description',
         content:
-          'Crie e compartilhe lista de presentes online para aniversário, casamento, chá de bebê e outras celebrações.',
+          'Monte sua lista de presentes com itens de qualquer loja. Compartilhe com convidados e acompanhe reservas. Liberação por Pix a partir de R$ 9,90.',
       },
       {
         property: 'og:title',
-        content: `${SITE_NAME} | Lista de presentes online`,
+        content: `Lista de presentes online para cada ocasião | ${SITE_NAME}`,
       },
       {
         property: 'og:description',
         content:
-          'Crie e compartilhe lista de presentes online para aniversário, casamento, chá de bebê e outras celebrações.',
+          'Monte sua lista de presentes com itens de qualquer loja. Compartilhe com convidados e acompanhe reservas. Liberação por Pix a partir de R$ 9,90.',
       },
       {
         property: 'og:type',
@@ -45,12 +46,12 @@ export const Route = createFileRoute('/')({
       },
       {
         name: 'twitter:title',
-        content: `${SITE_NAME} | Lista de presentes online`,
+        content: `Lista de presentes online para cada ocasião | ${SITE_NAME}`,
       },
       {
         name: 'twitter:description',
         content:
-          'Crie e compartilhe lista de presentes online para aniversário, casamento, chá de bebê e outras celebrações.',
+          'Monte sua lista de presentes com itens de qualquer loja. Compartilhe com convidados e acompanhe reservas. Liberação por Pix a partir de R$ 9,90.',
       },
     ],
   }),
@@ -157,16 +158,16 @@ function HomePage() {
           >
             <span className="text-expresso">my</span>
             <span className="text-primary">wish</span>
+            <span className="block font-sans not-italic text-lg md:text-xl tracking-normal leading-relaxed mt-8">Lista de presentes online para celebrar com quem importa</span>
           </motion.h1>
 
           <motion.p
-            className="mt-12 md:mt-14 text-warm-gray text-base md:text-lg max-w-sm md:max-w-md mx-auto leading-relaxed"
+            className="mt-5 text-warm-gray text-base md:text-lg max-w-sm md:max-w-md mx-auto leading-relaxed"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease, delay: 0.25 }}
           >
-            O cantinho mais aconchegante para criar listas de presentes e
-            celebrar com quem importa.
+            Reúna presentes de qualquer loja em um link. Seus convidados escolhem e reservam; você acompanha tudo por aqui.
           </motion.p>
 
           <motion.div
@@ -500,6 +501,7 @@ function HomePage() {
           </div>
         </section>
       )}
+      <OccasionLinks />
     </div>
   )
 }
@@ -528,7 +530,6 @@ function MyEventCard({
   const eventTypeLabel = customEventType || EVENT_TYPE_LABELS[eventType] || 'Evento'
   const isPairEvent =
     PAIR_EVENT_TYPES.has(eventType) && displayHosts.length === 2
-  const roleLabel = role === 'host' ? 'Você é anfitrião' : 'Você é convidado'
 
   const isHost = role === 'host'
 

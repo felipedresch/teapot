@@ -97,19 +97,6 @@ type PaymentResponse = {
   providerCheckoutId?: string
 }
 
-type PaymentAnalyticsPayload = {
-  matched: boolean
-  paymentId?: Id<'payments'>
-  eventId?: Id<'events'>
-  userId?: Id<'users'>
-  tier?: PaymentTier
-  category?: PaywallCategory
-  amount?: number
-  createdAt?: number
-  paidAt?: number
-  status?: PaymentStatus
-}
-
 type PaymentCreationContext = {
   eventName: string
   isHost: boolean
@@ -1270,20 +1257,19 @@ function getApiBaseUrl() {
   return process.env.ABACATEPAY_API_BASE_URL?.trim() || ABACATEPAY_API_BASE_URL
 }
 
+// AbacatePay documents a 500-character limit but does not publish a complete
+// character allowlist. Keep a conservative ASCII subset (and our 140-char cap)
+// so arbitrary event names cannot block payment. Preserve the display name in
+// the event itself; identifiers in metadata link the checkout to that event.
 function getPaymentDescription(eventName: string, tier: PaymentTier) {
-  const tierLabel = tier === 'lifetime' ? 'acesso vitalício' : 'lista única'
-  return stripEmojis(`MyWish - ${tierLabel} - ${eventName}`)
+  const tierLabel = tier === 'lifetime' ? 'acesso vitalicio' : 'lista unica'
+  const safeName = eventName
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9 ]/g, ' ')
     .replace(/\s+/g, ' ')
-    .replace(/\s+-\s*$/, '')
     .trim()
-    .slice(0, 140)
-}
-
-function stripEmojis(value: string) {
-  return value.replace(
-    /[\p{Emoji_Presentation}\p{Extended_Pictographic}\u200d\ufe0e\ufe0f]/gu,
-    '',
-  )
+  return `MyWish ${tierLabel} ${safeName}`.slice(0, 140).trim()
 }
 
 function getPrices(category: PaywallCategory) {

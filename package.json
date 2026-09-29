@@ -10,7 +10,8 @@
     "lint": "eslint",
     "format": "prettier --check .",
     "check": "prettier --write . && eslint --fix",
-    "start": "node .output/server/index.mjs"
+    "start": "node .output/server/index.mjs",
+    "seo:check": "node scripts/check-seo.mjs"
   },
   "dependencies": {
     "@auth/core": "^0.37.0",

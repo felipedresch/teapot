@@ -1,0 +1,23 @@
+name: Checks
+on:
+  push:
+    branches: [master, dev]
+  pull_request:
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npx tsc --noEmit
+      - run: npm run build
+        env:
+          VITE_CONVEX_URL: https://polished-octopus-281.convex.cloud
+          VITE_SITE_URL: https://mywish.com.br

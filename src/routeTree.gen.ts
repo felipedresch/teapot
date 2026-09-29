@@ -9,13 +9,19 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SitemapIndexDotxmlRouteImport } from './routes/sitemap-index[.]xml'
+import { Route as PrecosRouteImport } from './routes/precos'
 import { Route as MyGiftsRouteImport } from './routes/my-gifts'
+import { Route as ListaDePresentesRouteImport } from './routes/lista-de-presentes'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as BlogRouteImport } from './routes/blog'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ListaDePresentesIndexRouteImport } from './routes/lista-de-presentes.index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as SitemapXmlRouteImport } from './routes/sitemap.xml'
+import { Route as ListaDePresentesOccasionRouteImport } from './routes/lista-de-presentes.$occasion'
 import { Route as EventsCreateRouteImport } from './routes/events.create'
 import { Route as EventsSlugRouteImport } from './routes/events.$slug'
 import { Route as DemoPosthogRouteImport } from './routes/demo/posthog'
@@ -24,9 +30,29 @@ import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as EventsSlugConviteParceiroRouteImport } from './routes/events.$slug_.convite-parceiro'
 import { Route as ApiSlopRevalidateRouteImport } from './routes/api.slop.revalidate'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapIndexDotxmlRoute = SitemapIndexDotxmlRouteImport.update({
+  id: '/sitemap-index.xml',
+  path: '/sitemap-index.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrecosRoute = PrecosRouteImport.update({
+  id: '/precos',
+  path: '/precos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MyGiftsRoute = MyGiftsRouteImport.update({
   id: '/my-gifts',
   path: '/my-gifts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ListaDePresentesRoute = ListaDePresentesRouteImport.update({
+  id: '/lista-de-presentes',
+  path: '/lista-de-presentes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HowItWorksRoute = HowItWorksRouteImport.update({
@@ -49,6 +75,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ListaDePresentesIndexRoute = ListaDePresentesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ListaDePresentesRoute,
+} as any)
 const BlogIndexRoute = BlogIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -59,6 +90,12 @@ const SitemapXmlRoute = SitemapXmlRouteImport.update({
   path: '/sitemap/xml',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ListaDePresentesOccasionRoute =
+  ListaDePresentesOccasionRouteImport.update({
+    id: '/$occasion',
+    path: '/$occasion',
+    getParentRoute: () => ListaDePresentesRoute,
+  } as any)
 const EventsCreateRoute = EventsCreateRouteImport.update({
   id: '/events/create',
   path: '/events/create',
@@ -101,14 +138,20 @@ export interface FileRoutesByFullPath {
   '/blog': typeof BlogRouteWithChildren
   '/faq': typeof FaqRoute
   '/how-it-works': typeof HowItWorksRoute
+  '/lista-de-presentes': typeof ListaDePresentesRouteWithChildren
   '/my-gifts': typeof MyGiftsRoute
+  '/precos': typeof PrecosRoute
+  '/sitemap-index.xml': typeof SitemapIndexDotxmlRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/demo/convex': typeof DemoConvexRoute
   '/demo/posthog': typeof DemoPosthogRoute
   '/events/$slug': typeof EventsSlugRoute
   '/events/create': typeof EventsCreateRoute
+  '/lista-de-presentes/$occasion': typeof ListaDePresentesOccasionRoute
   '/sitemap/xml': typeof SitemapXmlRoute
   '/blog/': typeof BlogIndexRoute
+  '/lista-de-presentes/': typeof ListaDePresentesIndexRoute
   '/api/slop/revalidate': typeof ApiSlopRevalidateRoute
   '/events/$slug/convite-parceiro': typeof EventsSlugConviteParceiroRoute
 }
@@ -117,13 +160,18 @@ export interface FileRoutesByTo {
   '/faq': typeof FaqRoute
   '/how-it-works': typeof HowItWorksRoute
   '/my-gifts': typeof MyGiftsRoute
+  '/precos': typeof PrecosRoute
+  '/sitemap-index.xml': typeof SitemapIndexDotxmlRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/demo/convex': typeof DemoConvexRoute
   '/demo/posthog': typeof DemoPosthogRoute
   '/events/$slug': typeof EventsSlugRoute
   '/events/create': typeof EventsCreateRoute
+  '/lista-de-presentes/$occasion': typeof ListaDePresentesOccasionRoute
   '/sitemap/xml': typeof SitemapXmlRoute
   '/blog': typeof BlogIndexRoute
+  '/lista-de-presentes': typeof ListaDePresentesIndexRoute
   '/api/slop/revalidate': typeof ApiSlopRevalidateRoute
   '/events/$slug/convite-parceiro': typeof EventsSlugConviteParceiroRoute
 }
@@ -133,14 +181,20 @@ export interface FileRoutesById {
   '/blog': typeof BlogRouteWithChildren
   '/faq': typeof FaqRoute
   '/how-it-works': typeof HowItWorksRoute
+  '/lista-de-presentes': typeof ListaDePresentesRouteWithChildren
   '/my-gifts': typeof MyGiftsRoute
+  '/precos': typeof PrecosRoute
+  '/sitemap-index.xml': typeof SitemapIndexDotxmlRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/demo/convex': typeof DemoConvexRoute
   '/demo/posthog': typeof DemoPosthogRoute
   '/events/$slug': typeof EventsSlugRoute
   '/events/create': typeof EventsCreateRoute
+  '/lista-de-presentes/$occasion': typeof ListaDePresentesOccasionRoute
   '/sitemap/xml': typeof SitemapXmlRoute
   '/blog/': typeof BlogIndexRoute
+  '/lista-de-presentes/': typeof ListaDePresentesIndexRoute
   '/api/slop/revalidate': typeof ApiSlopRevalidateRoute
   '/events/$slug_/convite-parceiro': typeof EventsSlugConviteParceiroRoute
 }
@@ -151,14 +205,20 @@ export interface FileRouteTypes {
     | '/blog'
     | '/faq'
     | '/how-it-works'
+    | '/lista-de-presentes'
     | '/my-gifts'
+    | '/precos'
+    | '/sitemap-index.xml'
+    | '/sitemap.xml'
     | '/blog/$slug'
     | '/demo/convex'
     | '/demo/posthog'
     | '/events/$slug'
     | '/events/create'
+    | '/lista-de-presentes/$occasion'
     | '/sitemap/xml'
     | '/blog/'
+    | '/lista-de-presentes/'
     | '/api/slop/revalidate'
     | '/events/$slug/convite-parceiro'
   fileRoutesByTo: FileRoutesByTo
@@ -167,13 +227,18 @@ export interface FileRouteTypes {
     | '/faq'
     | '/how-it-works'
     | '/my-gifts'
+    | '/precos'
+    | '/sitemap-index.xml'
+    | '/sitemap.xml'
     | '/blog/$slug'
     | '/demo/convex'
     | '/demo/posthog'
     | '/events/$slug'
     | '/events/create'
+    | '/lista-de-presentes/$occasion'
     | '/sitemap/xml'
     | '/blog'
+    | '/lista-de-presentes'
     | '/api/slop/revalidate'
     | '/events/$slug/convite-parceiro'
   id:
@@ -182,14 +247,20 @@ export interface FileRouteTypes {
     | '/blog'
     | '/faq'
     | '/how-it-works'
+    | '/lista-de-presentes'
     | '/my-gifts'
+    | '/precos'
+    | '/sitemap-index.xml'
+    | '/sitemap.xml'
     | '/blog/$slug'
     | '/demo/convex'
     | '/demo/posthog'
     | '/events/$slug'
     | '/events/create'
+    | '/lista-de-presentes/$occasion'
     | '/sitemap/xml'
     | '/blog/'
+    | '/lista-de-presentes/'
     | '/api/slop/revalidate'
     | '/events/$slug_/convite-parceiro'
   fileRoutesById: FileRoutesById
@@ -199,7 +270,11 @@ export interface RootRouteChildren {
   BlogRoute: typeof BlogRouteWithChildren
   FaqRoute: typeof FaqRoute
   HowItWorksRoute: typeof HowItWorksRoute
+  ListaDePresentesRoute: typeof ListaDePresentesRouteWithChildren
   MyGiftsRoute: typeof MyGiftsRoute
+  PrecosRoute: typeof PrecosRoute
+  SitemapIndexDotxmlRoute: typeof SitemapIndexDotxmlRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   DemoConvexRoute: typeof DemoConvexRoute
   DemoPosthogRoute: typeof DemoPosthogRoute
   EventsSlugRoute: typeof EventsSlugRoute
@@ -211,11 +286,39 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap-index.xml': {
+      id: '/sitemap-index.xml'
+      path: '/sitemap-index.xml'
+      fullPath: '/sitemap-index.xml'
+      preLoaderRoute: typeof SitemapIndexDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/precos': {
+      id: '/precos'
+      path: '/precos'
+      fullPath: '/precos'
+      preLoaderRoute: typeof PrecosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/my-gifts': {
       id: '/my-gifts'
       path: '/my-gifts'
       fullPath: '/my-gifts'
       preLoaderRoute: typeof MyGiftsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lista-de-presentes': {
+      id: '/lista-de-presentes'
+      path: '/lista-de-presentes'
+      fullPath: '/lista-de-presentes'
+      preLoaderRoute: typeof ListaDePresentesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/how-it-works': {
@@ -246,6 +349,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lista-de-presentes/': {
+      id: '/lista-de-presentes/'
+      path: '/'
+      fullPath: '/lista-de-presentes/'
+      preLoaderRoute: typeof ListaDePresentesIndexRouteImport
+      parentRoute: typeof ListaDePresentesRoute
+    }
     '/blog/': {
       id: '/blog/'
       path: '/'
@@ -259,6 +369,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/sitemap/xml'
       preLoaderRoute: typeof SitemapXmlRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/lista-de-presentes/$occasion': {
+      id: '/lista-de-presentes/$occasion'
+      path: '/$occasion'
+      fullPath: '/lista-de-presentes/$occasion'
+      preLoaderRoute: typeof ListaDePresentesOccasionRouteImport
+      parentRoute: typeof ListaDePresentesRoute
     }
     '/events/create': {
       id: '/events/create'
@@ -324,12 +441,29 @@ const BlogRouteChildren: BlogRouteChildren = {
 
 const BlogRouteWithChildren = BlogRoute._addFileChildren(BlogRouteChildren)
 
+interface ListaDePresentesRouteChildren {
+  ListaDePresentesOccasionRoute: typeof ListaDePresentesOccasionRoute
+  ListaDePresentesIndexRoute: typeof ListaDePresentesIndexRoute
+}
+
+const ListaDePresentesRouteChildren: ListaDePresentesRouteChildren = {
+  ListaDePresentesOccasionRoute: ListaDePresentesOccasionRoute,
+  ListaDePresentesIndexRoute: ListaDePresentesIndexRoute,
+}
+
+const ListaDePresentesRouteWithChildren =
+  ListaDePresentesRoute._addFileChildren(ListaDePresentesRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BlogRoute: BlogRouteWithChildren,
   FaqRoute: FaqRoute,
   HowItWorksRoute: HowItWorksRoute,
+  ListaDePresentesRoute: ListaDePresentesRouteWithChildren,
   MyGiftsRoute: MyGiftsRoute,
+  PrecosRoute: PrecosRoute,
+  SitemapIndexDotxmlRoute: SitemapIndexDotxmlRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   DemoConvexRoute: DemoConvexRoute,
   DemoPosthogRoute: DemoPosthogRoute,
   EventsSlugRoute: EventsSlugRoute,

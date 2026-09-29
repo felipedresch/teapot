@@ -11,7 +11,7 @@ import { SITE_NAME } from '../lib/seo'
 
 export const Route = createFileRoute('/my-gifts')({
   head: () => ({
-    meta: [{ title: `Meus presentes | ${SITE_NAME}` }],
+    meta: [{ name: 'robots', content: 'noindex, follow' }, { title: `Meus presentes | ${SITE_NAME}` }],
   }),
   component: MyGiftsPage,
 })

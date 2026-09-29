@@ -14,8 +14,7 @@ import {
   SheetTrigger,
 } from './ui/sheet'
 
-const NAV_LINK_BASE =
-  'text-sm transition-colors duration-200 relative py-1'
+const NAV_LINK_BASE = 'text-sm transition-colors duration-200 relative py-1'
 const NAV_LINK_INACTIVE = `${NAV_LINK_BASE} text-warm-gray hover:text-espresso`
 const NAV_LINK_ACTIVE = `${NAV_LINK_BASE} text-espresso font-medium`
 
@@ -27,6 +26,7 @@ const MOBILE_LINK_ACTIVE = `${MOBILE_LINK_BASE} text-espresso font-medium bg-blu
 // Route paths stay in English; labels stay in Portuguese for users.
 const desktopNavItems = [
   { label: 'Início', href: '/' as const },
+  { label: 'Listas', href: '/lista-de-presentes' as const },
   { label: 'Blog', href: '/blog' as const },
   { label: 'FAQ', href: '/faq' as const },
   { label: 'Como funciona', href: '/how-it-works' as const },
@@ -60,7 +60,8 @@ export default function Header() {
 
     const currentUrl = new URL(window.location.href)
     const hasOAuthParams =
-      currentUrl.searchParams.has('code') || currentUrl.searchParams.has('state')
+      currentUrl.searchParams.has('code') ||
+      currentUrl.searchParams.has('state')
     if (!hasOAuthParams) {
       return
     }
@@ -83,7 +84,7 @@ export default function Header() {
         </Link>
 
         {/* ── Desktop Navigation ── */}
-        <nav className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-8">
+        <nav className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-5">
           {desktopNavItems.map((item) => (
             <Link
               key={item.href}
@@ -111,7 +112,10 @@ export default function Header() {
                 <Link
                   to="/my-gifts"
                   className="text-sm text-warm-gray hover:text-espresso transition-colors inline-flex items-center gap-1"
-                  activeProps={{ className: 'text-espresso font-medium text-sm inline-flex items-center gap-1' }}
+                  activeProps={{
+                    className:
+                      'text-espresso font-medium text-sm inline-flex items-center gap-1',
+                  }}
                 >
                   <Gift className="size-3.5" />
                   Reservados
@@ -170,7 +174,10 @@ export default function Header() {
               </Button>
             </SheetTrigger>
 
-            <SheetContent side="right" className="w-[72vw] max-w-[18rem] sm:max-w-[18rem]">
+            <SheetContent
+              side="right"
+              className="w-[72vw] max-w-[18rem] sm:max-w-[18rem]"
+            >
               <SheetHeader>
                 <SheetTitle className="font-display italic text-lg">
                   <BrandWordmark casing="lower" />

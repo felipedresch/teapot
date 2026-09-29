@@ -122,18 +122,25 @@ export const Route = createRootRoute({
 function RootDocument({ children }: { children: React.ReactNode }) {
   const routerState = useRouterState()
   const canonicalUrl = absoluteUrl(routerState.location.pathname)
+  const shouldNoindex =
+    routerState.matches.some((match) => match.status === 'notFound') ||
+    routerState.location.pathname.startsWith('/demo/') ||
+    routerState.location.pathname.includes('/convite-parceiro')
 
   return (
     <html lang="pt-BR">
       <head>
         <HeadContent />
+        {shouldNoindex && <meta name="robots" content="noindex, follow" />}
         <link rel="canonical" href={canonicalUrl} />
         <link rel="alternate" hrefLang="pt-BR" href={canonicalUrl} />
         <link rel="alternate" hrefLang="x-default" href={canonicalUrl} />
         <meta property="og:url" content={canonicalUrl} />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: toJsonLd(getOrganizationJsonLd()) }}
+          dangerouslySetInnerHTML={{
+            __html: toJsonLd(getOrganizationJsonLd()),
+          }}
         />
         <script
           type="application/ld+json"
@@ -144,17 +151,19 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <ConvexProvider>
           <PostHogProvider>
             <Layout>{children}</Layout>
-            <TanStackDevtools
-              config={{
-                position: 'bottom-right',
-              }}
-              plugins={[
-                {
-                  name: 'Tanstack Router',
-                  render: <TanStackRouterDevtoolsPanel />,
-                },
-              ]}
-            />
+            {import.meta.env.DEV && (
+              <TanStackDevtools
+                config={{
+                  position: 'bottom-right',
+                }}
+                plugins={[
+                  {
+                    name: 'Tanstack Router',
+                    render: <TanStackRouterDevtoolsPanel />,
+                  },
+                ]}
+              />
+            )}
           </PostHogProvider>
         </ConvexProvider>
         <Scripts />
@@ -166,8 +175,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 function RootNotFound() {
   return (
     <div className="max-w-5xl mx-auto px-6 py-14 text-center space-y-3">
-      <h1 className="font-display italic text-3xl text-espresso">Pagina nao encontrada</h1>
-      <p className="text-sm text-warm-gray">Esse link nao existe ou nao esta mais disponivel.</p>
+      <h1 className="font-display italic text-3xl text-espresso">
+        Pagina nao encontrada
+      </h1>
+      <p className="text-sm text-warm-gray">
+        Esse link nao existe ou nao esta mais disponivel.
+      </p>
       <Link to="/" className="text-sm text-muted-rose hover:underline">
         Voltar para a pagina inicial
       </Link>

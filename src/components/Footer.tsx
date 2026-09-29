@@ -1,4 +1,4 @@
-import { useRouterState } from '@tanstack/react-router'
+import { Link, useRouterState } from '@tanstack/react-router'
 import { useEventBySlug } from '../hooks/useEvents'
 import { getDisplayHostNames } from '../lib/presentation'
 
@@ -14,11 +14,34 @@ export default function Footer() {
   const { event } = useEventBySlug(slug)
 
   const isEventPage = Boolean(event)
-  const hostNames = getDisplayHostNames(event?.hosts ?? []).join(' • ') || 'anfitriões'
+  const hostNames =
+    getDisplayHostNames(event?.hosts ?? []).join(' • ') || 'anfitriões'
 
   return (
     <footer className="py-12 px-6 text-center">
       <div className="max-w-5xl mx-auto">
+        {!isEventPage && (
+          <nav
+            aria-label="Explore o MyWish"
+            className="flex flex-wrap justify-center gap-x-6 gap-y-3 mb-8 text-sm text-warm-gray"
+          >
+            <Link to="/lista-de-presentes" className="hover:text-primary">
+              Listas por ocasião
+            </Link>
+            <Link to="/precos" className="hover:text-primary">
+              Preços
+            </Link>
+            <Link to="/how-it-works" className="hover:text-primary">
+              Como funciona
+            </Link>
+            <Link to="/faq" className="hover:text-primary">
+              Dúvidas frequentes
+            </Link>
+            <Link to="/blog" className="hover:text-primary">
+              Guias e dicas
+            </Link>
+          </nav>
+        )}
         {/* Decorative divider */}
         <div className="flex items-center justify-center gap-3 mb-6">
           <div className="w-8 h-px bg-muted-rose/30" />

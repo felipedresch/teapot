@@ -3,22 +3,26 @@ import { createServerFn } from '@tanstack/react-start'
 import { useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { SITE_NAME, absoluteUrl, toJsonLd } from '../lib/seo'
-import { fetchSlopMachineArticle, getSafeFaqSchema } from '../lib/slopMachine'
+import { SITE_NAME, absoluteUrl, toJsonLd, breadcrumbJsonLd } from '../lib/seo'
+import { fetchSlopMachineArticle, ContentFetchError } from '../lib/slopMachine'
 
 const getBlogArticle = createServerFn({ method: 'GET' })
   .inputValidator((input: { slug: string }) => input)
   .handler(async ({ data }) => {
-    return fetchSlopMachineArticle(data.slug)
+    try {
+      return await fetchSlopMachineArticle(data.slug)
+    } catch (error) {
+      if (error instanceof ContentFetchError && error.status === 404)
+        return null
+      throw error
+    }
   })
 
 export const Route = createFileRoute('/blog/$slug')({
   loader: async ({ params }) => {
-    try {
-      return await getBlogArticle({ data: { slug: params.slug } })
-    } catch {
-      throw notFound()
-    }
+    const article = await getBlogArticle({ data: { slug: params.slug } })
+    if (!article) throw notFound()
+    return article
   },
   head: ({ loaderData, params }) => {
     const title = loaderData?.title || `Blog | ${SITE_NAME}`
@@ -32,6 +36,14 @@ export const Route = createFileRoute('/blog/$slug')({
       meta: [
         {
           title: `${title} | ${SITE_NAME}`,
+        },
+        { name: 'twitter:title', content: `${title} | ${SITE_NAME}` },
+        { name: 'twitter:description', content: description },
+        {
+          name: 'robots',
+          content: loaderData
+            ? 'index, follow, max-image-preview:large'
+            : 'noindex, follow',
         },
         {
           name: 'description',
@@ -69,7 +81,6 @@ export const Route = createFileRoute('/blog/$slug')({
 
 function BlogPostPage() {
   const article = Route.useLoaderData()
-  const faqSchema = getSafeFaqSchema(article.faqSchema)
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' })
@@ -101,9 +112,21 @@ function BlogPostPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: toJsonLd(articleJsonLd) }}
       />
-      {faqSchema ? (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqSchema }} />
-      ) : null}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: toJsonLd(
+            breadcrumbJsonLd([
+              { name: 'Início', path: '/' },
+              { name: 'Blog', path: '/blog' },
+              { name: article.title, path: `/blog/${article.slug}` },
+            ]),
+          ),
+        }}
+      />
+      <nav aria-label="Você está aqui" className="text-sm text-warm-gray">
+        <Link to="/">Início</Link> / <Link to="/blog">Blog</Link>
+      </nav>
 
       <header className="space-y-3">
         <p className="font-accent text-2xl text-muted-rose">blog</p>
@@ -112,7 +135,8 @@ function BlogPostPage() {
         </h1>
         <p className="text-warm-gray leading-relaxed">{article.description}</p>
         <p className="text-sm text-warm-gray/80">
-          Atualizado em {new Date(article.updatedAt).toLocaleDateString('pt-BR')}
+          Atualizado em{' '}
+          {new Date(article.updatedAt).toLocaleDateString('pt-BR')}
         </p>
       </header>
 
@@ -136,6 +160,26 @@ function BlogPostPage() {
           {article.markdown}
         </ReactMarkdown>
       </div>
+      <aside className="rounded-2xl bg-blush/20 p-6 space-y-3">
+        <h2 className="font-display text-2xl text-espresso">
+          Coloque sua lista em prática
+        </h2>
+        <p className="text-warm-gray">
+          Monte sua lista gratuitamente e libere o compartilhamento por
+          pagamento único, a partir de R$ 9,90.
+        </p>
+        <div className="flex flex-wrap gap-5">
+          <Link to="/events/create" className="text-primary underline">
+            Criar lista
+          </Link>
+          <Link to="/lista-de-presentes" className="text-primary underline">
+            Guias por ocasião
+          </Link>
+          <Link to="/precos" className="text-primary underline">
+            Ver preços
+          </Link>
+        </div>
+      </aside>
     </article>
   )
 }
