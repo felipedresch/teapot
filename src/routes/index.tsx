@@ -140,7 +140,7 @@ function HomePage() {
           <div className="absolute -bottom-24 left-[35%] w-[18rem] h-[18rem] bg-soft-terracotta/8 rounded-full blur-[80px]" />
         </div>
 
-        <div className="relative text-center">
+        <div className="relative w-full text-center">
           <motion.p
             className="font-accent text-2xl md:text-3xl text-primary"
             initial={{ opacity: 0, y: 16 }}
