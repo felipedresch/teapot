@@ -18,6 +18,20 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "preview_urls": true,
+  "routes": [
+    // Zona mywish.com.br. Pelo id, e não pelo nome: a chave do Workers Builds
+    // edita rotas, mas não lê zonas, e o wrangler usaria essa leitura para
+    // achar o id pelo nome. O www também vem para cá: src/lib/canonical.ts
+    // redireciona as páginas para a raiz, como fazia na Railway.
+    {
+      "pattern": "mywish.com.br/*",
+      "zone_id": "5d3e283ad6ceec50e40d2e1d78d1f8b5",
+    },
+    {
+      "pattern": "www.mywish.com.br/*",
+      "zone_id": "5d3e283ad6ceec50e40d2e1d78d1f8b5",
+    },
+  ],
   "observability": {
     "enabled": true,
   },
@@ -31,6 +45,12 @@
       "name": "mywish-staging",
       "workers_dev": true,
       "preview_urls": true,
+      "routes": [
+        {
+          "pattern": "staging.mywish.com.br/*",
+          "zone_id": "5d3e283ad6ceec50e40d2e1d78d1f8b5",
+        },
+      ],
       "observability": {
         "enabled": true,
       },

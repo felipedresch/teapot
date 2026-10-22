@@ -13,7 +13,7 @@ servidor Node). Variáveis de cada lugar: [ENV_VARS.md](ENV_VARS.md).
 | --- | --- | --- |
 | Worker | `mywish-staging` (`env.staging` do `wrangler.jsonc`) | `mywish` (topo do `wrangler.jsonc`) |
 | Branch que sobe | `staging` | `master` |
-| Domínio | `staging.mywish.com.br` (na virada do DNS) | `mywish.com.br` e `www` (na virada do DNS) |
+| Domínio | `staging.mywish.com.br` (rota no `wrangler.jsonc`) | `mywish.com.br` e `www.mywish.com.br` (rotas no `wrangler.jsonc`) |
 | workers.dev | `https://mywish-staging.galeria-felipe-dev.workers.dev` | `https://mywish.galeria-felipe-dev.workers.dev` |
 | Previews das branches | sim: `https://<branch>-mywish-staging.galeria-felipe-dev.workers.dev` | não |
 | Convex | `different-tiger-679` (o dev, como na Railway); previews no projeto `teapot` | `polished-octopus-281` |
@@ -147,54 +147,53 @@ como no Harmony.
   leva só os comandos para as branches que já existem; as variáveis delas não
   mudam, e o painel não tem onde editá-las. Branch nova pega a base inteira.
 
-## Virada do domínio
+## Domínio e DNS
 
-Enquanto a zona `mywish.com.br` não está na Cloudflare, o domínio segue na
-Railway. O DNS está na Hostinger (nameservers `ns1`/`ns2.dns-parking.com`), e
-um Worker só pega um domínio cuja zona esteja na mesma conta da Cloudflare.
-Sem registro de e-mail na zona (nem MX, SPF, DKIM ou DMARC). Ordem para não
-derrubar nada:
+A zona `mywish.com.br` está nesta conta da Cloudflare (id
+`5d3e283ad6ceec50e40d2e1d78d1f8b5`, plano Free, Bot Preference Sync desligado
+para o `robots.txt` continuar o do site). O registro do domínio continua na
+Hostinger (provedor HSTDOMAINS no registro.br), com os nameservers
+`chase.ns.cloudflare.com` e `imani.ns.cloudflare.com`. Não há registro de
+e-mail na zona (nem MX, SPF, DKIM ou DMARC).
 
-1. **Zona na Cloudflare.** Add a site `mywish.com.br`, plano Free, com Bot
-   Preference Sync desligado (para o `robots.txt` continuar o do site). Os
-   registros, todos **DNS only** (nuvem cinza), copiando a Hostinger:
-   - `CNAME @ → 3pj97pbx.up.railway.app` (era `ALIAS` na Hostinger);
-   - `CNAME www → 2ohgfp36.up.railway.app`;
-   - `CNAME staging → gv22t5fs.up.railway.app`;
-   - `TXT @` com o `google-site-verification`;
-   - `TXT` `_railway-verify`, `_railway-verify.www` e
-     `_railway-verify.staging`, até o passo 4.
-   Apague o que a importação automática trouxer a mais.
-2. **Nameservers.** Na Hostinger (Domínios > mywish.com.br > DNS /
-   Nameservers > Alterar nameservers), os dois que a Cloudflare mostrar para a
-   zona. Os dois lados apontam para a Railway, então a troca não derruba nada
-   enquanto propaga. Espere a zona ficar Active e o certificado universal
-   ficar Active (SSL/TLS > Edge Certificates); ligue ali o "Always Use HTTPS",
-   como a Railway fazia.
-3. **Rotas.** No `wrangler.jsonc`, com o `zone_id` da zona (pelo id, e não pelo
-   nome: a chave do Workers Builds edita rotas, mas não lê zonas):
-   `mywish.com.br/*` e `www.mywish.com.br/*` no topo, `staging.mywish.com.br/*`
-   em `env.staging`. Merge na `staging` e na `master`. Com os registros ainda
-   cinza, a rota não pega nada.
-4. **Virada.** Troque `@`, `www` e `staging` por `AAAA 100::` com proxy (nuvem
-   laranja); o formulário de edição deixa trocar o tipo do registro. O `AAAA`
-   não aponta para lugar nenhum: quem responde é o Worker. Apague os três
-   `_railway-verify`. Confira:
-   - `curl -sI https://mywish.com.br` sem cabeçalho `x-railway-*`;
-   - `npm run seo:check` (rotas 200, canonicals, 404 e o `www` com 308);
-   - `/assets/*` com `cache-control: public, max-age=31536000, immutable`;
-   - o `SITE_URL` do Convex de produção continua `https://mywish.com.br`.
-5. **Railway.** O deploy automático dela foi desligado nos dois ambientes
-   quando a esteira entrou na `master`; os serviços continuam no ar com o
-   último deploy, para voltar se precisar. Apagar o projeto é com o dono.
+| Registro | Valor | Proxy |
+| --- | --- | --- |
+| `AAAA @` | `100::` | sim |
+| `AAAA www` | `100::` | sim |
+| `AAAA staging` | `100::` | sim |
+| `TXT @` | `google-site-verification=...` (Search Console) | não |
+
+O `AAAA 100::` não aponta para lugar nenhum: quem responde é o Worker, pela
+rota. A rota só pega o que passa pela Cloudflare, então os três registros
+precisam do proxy (nuvem laranja). As rotas estão no `wrangler.jsonc`, pelo
+`zone_id`: a chave do Workers Builds edita rotas, mas não lê zonas, e o
+wrangler usaria essa leitura para achar o id pelo nome. O `www` vai para o
+Worker `mywish`, e o `src/lib/canonical.ts` redireciona as páginas para a raiz
+com 308; arquivo estático no `www` sai direto, como na Railway. "Always Use
+HTTPS" está ligado (SSL/TLS > Edge Certificates), como a Railway fazia.
+
+**Como a virada foi feita (22/10/2026), sem queda:** a zona entrou na
+Cloudflare com a cópia exata dos registros da Hostinger, todos DNS only e
+apontando para a Railway; os nameservers mudaram na Hostinger; com a zona e o
+certificado universal ativos, as rotas entraram no `wrangler.jsonc`, e os três
+registros viraram `AAAA 100::` com proxy. Os `TXT _railway-verify` saíram nessa
+hora. Enquanto os nameservers propagavam, os dois lados respondiam com a
+Railway.
+
+**Railway:** o deploy automático foi desligado nos dois ambientes quando a
+esteira entrou na `master`. O projeto `mywish` continua lá, com o último
+deploy, até o dono apagar.
 
 ## Como desfazer
 
-1. Antes da virada: nada a fazer; o domínio está na Railway.
-2. Depois: no DNS da Cloudflare, volte `@`, `www` e `staging` para os CNAMEs
-   da Railway acima, **DNS only**, e recoloque os `_railway-verify`. A Railway
-   ainda responde com o último deploy dela (que não tem o que entrou na
-   `master` depois da migração). O Convex não precisa voltar.
+1. No DNS da Cloudflare, volte `@`, `www` e `staging` para os CNAMEs da
+   Railway, **DNS only**: `@ → 3pj97pbx.up.railway.app`,
+   `www → 2ohgfp36.up.railway.app` e `staging → gv22t5fs.up.railway.app`. A
+   Railway ainda responde com o último deploy dela, que não tem o que entrou
+   na `master` depois da migração. O Convex não precisa voltar.
+2. Se a Railway pedir para verificar o domínio de novo, os `TXT` são
+   `_railway-verify`, `_railway-verify.www` e `_railway-verify.staging`, com os
+   valores que o painel dela mostrar.
 3. Para religar o deploy da Railway, a `master` precisa voltar a ter o Nitro
    (o commit anterior à migração), porque o build de hoje não gera mais o
    servidor Node.
@@ -207,4 +206,4 @@ de build (cada build leva uns 2 minutos). Requisição a arquivo estático é
 grátis e não conta no limite. O Worker tem uns 590 KB comprimidos (o teto é
 10 MB) e parte em uns 11 ms. Workers Logs inclui 20 milhões de eventos por mês.
 Previews: até 500 por Worker; passando disso, a Cloudflare apaga os mais
-antigos. A zona `mywish.com.br`, quando entrar, é no plano Free.
+antigos. A zona `mywish.com.br` é do plano Free.

@@ -4,7 +4,7 @@
 
 `https://mywish.com.br` é a origem canônica. `src/lib/seo.ts` centraliza URLs e metadados; não usa variáveis de build para gerar URLs públicas, evitando canonicals de staging, localhost ou www.
 
-`src/lib/canonical.ts`, chamado pela entrada do Worker da Cloudflare (`src/server.ts`), redireciona `www` com HTTP 308 e preserva caminho e query string. O certificado precisa estar válido antes que o navegador possa receber esse redirecionamento. Na Cloudflare, `www.mywish.com.br` precisa de registro com proxy e da rota no Worker `mywish` ([CLOUDFLARE.md](CLOUDFLARE.md#virada-do-domínio)). Os endereços `workers.dev` saem com `X-Robots-Tag: noindex`.
+`src/lib/canonical.ts`, chamado pela entrada do Worker da Cloudflare (`src/server.ts`), redireciona `www` com HTTP 308 e preserva caminho e query string. O certificado precisa estar válido antes que o navegador possa receber esse redirecionamento. Na Cloudflare, `www.mywish.com.br` precisa de registro com proxy e da rota no Worker `mywish` ([CLOUDFLARE.md](CLOUDFLARE.md#domínio-e-dns)). Os endereços `workers.dev` saem com `X-Robots-Tag: noindex`.
 
 ## Sitemap e conteúdo
 
