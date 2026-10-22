@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useAuthActions } from '@convex-dev/auth/react'
+import { signInToApp } from '../lib/signIn'
 import { useMutation, useQuery } from 'convex/react'
 import { Heart, Loader2 } from 'lucide-react'
 import { api } from '../../convex/_generated/api'
@@ -78,7 +79,7 @@ function PartnerInviteAcceptPage() {
   }, [acceptInvite, navigate, slug, token])
 
   const handleSignIn = useCallback(async () => {
-    await signIn('google', { redirectTo: returnPath })
+    await signInToApp(signIn, returnPath)
   }, [signIn, returnPath])
 
   useEffect(() => {

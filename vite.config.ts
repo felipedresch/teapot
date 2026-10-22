@@ -5,7 +5,7 @@ import viteReact from '@vitejs/plugin-react'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
 import { fileURLToPath, URL } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
-import { nitro } from 'nitro/vite'
+import { cloudflare } from '@cloudflare/vite-plugin'
 
 const config = defineConfig({
   resolve: {
@@ -15,7 +15,9 @@ const config = defineConfig({
   },
   plugins: [
     devtools(),
-    nitro({ serverDir: './server', rollupConfig: { external: [/^@sentry\//] } }),
+    // O SSR roda num Worker da Cloudflare (wrangler.jsonc, docs/CLOUDFLARE.md).
+    // CLOUDFLARE_ENV=staging no build escolhe o Worker da staging.
+    cloudflare({ viteEnvironment: { name: 'ssr' } }),
     // this is the plugin that enables path aliases
     viteTsConfigPaths({
       projects: ['./tsconfig.json'],

@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useAuthActions } from '@convex-dev/auth/react'
+import { signInToApp } from '../lib/signIn'
 import { useAction, useMutation, useQuery } from 'convex/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown, Gift, ImagePlus, Loader2, Plus, Sparkles, Trash2, X } from 'lucide-react'
@@ -635,7 +636,7 @@ function EventCreatePageShell() {
   const handlePublishClick = useCallback(async () => {
     if (!isAuthenticated) {
       setPendingPublish(true)
-      await signIn('google', { redirectTo: '/events/create' })
+      await signInToApp(signIn, '/events/create')
       return
     }
 

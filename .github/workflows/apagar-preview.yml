@@ -1,0 +1,46 @@
+# Quando o PR fecha (com ou sem merge), apaga o preview dele: o Convex de preview
+# da branch e, se o segredo CLOUDFLARE_API_TOKEN existir, o Preview do Worker
+# mywish-staging.
+name: Apagar preview
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+
+jobs:
+  apagar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/convex-preview
+            scripts/cloudflare
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Apagar o Convex de preview da branch
+        env:
+          CONVEX_PREVIEW_DEPLOY_KEY: ${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}
+          BRANCH: ${{ github.head_ref }}
+        run: sh scripts/convex-preview/apagar.sh "$BRANCH"
+
+      # Sem o token, o Preview fica até a Cloudflare apagar os mais antigos
+      # sozinha (passando de 500 por Worker); o Convex dele já foi apagado acima.
+      - name: Apagar o Preview da Cloudflare
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        env:
+          CLOUDFLARE_ACCOUNT_ID: 4310b383610db9c6b12d0cd7849ceb12
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          NOME=$(node scripts/cloudflare/preview.mjs nome "$BRANCH")
+          npx -y wrangler@4.151.3 preview delete --name "$NOME" --worker-name mywish-staging --skip-confirmation \
+            || echo "Preview $NOME já não existia."

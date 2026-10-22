@@ -1,8 +1,9 @@
-import { defineHandler } from 'nitro/h3'
-
-export default defineHandler((event) => {
-  const url = new URL(event.req.url)
-  const host = (event.req.headers.get('host') || url.host)
+// Redirecionamentos canônicos, antes do SSR: www para a raiz, os endereços
+// antigos do sitemap e a barra no fim do caminho. Roda no Worker da Cloudflare
+// (src/server.ts). Arquivo estático de dist/client sai direto, sem passar aqui.
+export function canonicalRedirect(request: Request): Response | undefined {
+  const url = new URL(request.url)
+  const host = (request.headers.get('host') || url.host)
     .split(':')[0]
     .toLowerCase()
   if (host === 'www.mywish.com.br') {
@@ -31,4 +32,5 @@ export default defineHandler((event) => {
       },
     })
   }
-})
+  return undefined
+}

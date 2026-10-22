@@ -1,6 +1,7 @@
 import { Link, useLocation } from '@tanstack/react-router'
 import { Menu, LogOut, Gift } from 'lucide-react'
 import { useAuthActions } from '@convex-dev/auth/react'
+import { signInToApp } from '../lib/signIn'
 import { useCallback, useEffect, useState } from 'react'
 import { UserAvatar } from './UserAvatar'
 import { useCurrentUser } from '../hooks/useCurrentUser'
@@ -40,7 +41,7 @@ export default function Header() {
 
   const handleSignIn = useCallback(async () => {
     const returnPath = `${location.pathname}${location.searchStr}${location.hash}`
-    await signIn('google', { redirectTo: returnPath })
+    await signInToApp(signIn, returnPath)
   }, [location.hash, location.pathname, location.searchStr, signIn])
 
   const handleMobileSignIn = useCallback(async () => {
