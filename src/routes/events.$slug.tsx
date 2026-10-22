@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useAuthActions } from '@convex-dev/auth/react'
+import { signInToApp } from '../lib/signIn'
 import { useAction, useMutation, useQuery } from 'convex/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -706,7 +707,7 @@ function EventGiftsPageShell() {
   }, [reservationDialog, reservationMessage, reserveNow])
 
   const handleSignInToReserve = useCallback(async () => {
-    await signIn('google', { redirectTo: `/events/${slug}` })
+    await signInToApp(signIn, `/events/${slug}`)
   }, [signIn, slug])
 
   useEffect(() => {

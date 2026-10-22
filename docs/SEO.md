@@ -4,7 +4,7 @@
 
 `https://mywish.com.br` é a origem canônica. `src/lib/seo.ts` centraliza URLs e metadados; não usa variáveis de build para gerar URLs públicas, evitando canonicals de staging, localhost ou www.
 
-O middleware Nitro em `server/middleware/canonical.ts` redireciona `www` com HTTP 308 e preserva caminho e query string. O certificado precisa estar válido antes que o navegador possa receber esse redirecionamento. Na Railway, os dois domínios devem estar no serviço `teapot`, ambiente `production`, porta 8080. O CNAME de `www` deve apontar para o destino fornecido por `railway domain status www.mywish.com.br`.
+`src/lib/canonical.ts`, chamado pela entrada do Worker da Cloudflare (`src/server.ts`), redireciona `www` com HTTP 308 e preserva caminho e query string. O certificado precisa estar válido antes que o navegador possa receber esse redirecionamento. Na Cloudflare, `www.mywish.com.br` precisa de registro com proxy e da rota no Worker `mywish` ([CLOUDFLARE.md](CLOUDFLARE.md#virada-do-domínio)). Os endereços `workers.dev` saem com `X-Robots-Tag: noindex`.
 
 ## Sitemap e conteúdo
 

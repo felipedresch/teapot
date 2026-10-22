@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from 'convex/react'
 import { Gift, Heart } from 'lucide-react'
 import { useAuthActions } from '@convex-dev/auth/react'
+import { signInToApp } from '../lib/signIn'
 import { api } from '../../convex/_generated/api'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { Button } from '../components/ui/button'
@@ -41,7 +42,7 @@ function MyGiftsPage() {
           Entre com sua conta para ver os presentes que você reservou.
         </p>
         <Button
-          onClick={() => void signIn('google', { redirectTo: '/my-gifts' })}
+          onClick={() => void signInToApp(signIn, '/my-gifts')}
         >
           Entrar com Google
         </Button>

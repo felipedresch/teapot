@@ -1,0 +1,53 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // O site (TanStack Start) roda num Worker da Cloudflare: o SSR sai de
+  // src/server.ts e os arquivos de dist/client são servidos direto como Static
+  // Assets. O @cloudflare/vite-plugin monta o Worker no `npm run build`, e o
+  // `npx wrangler deploy` sobe o que ele montou. O backend é o Convex, que sobe
+  // à mão com `npx convex deploy`. Como está montado e como desfazer:
+  // docs/CLOUDFLARE.md.
+  //
+  // O topo é a produção (Worker "mywish", branch master); "env.staging" é a
+  // staging (Worker "mywish-staging", branch staging), que também guarda os
+  // previews das branches. O build escolhe o Worker pela variável
+  // CLOUDFLARE_ENV (vazia na produção, "staging" na staging e nos previews).
+  "name": "mywish",
+  "main": "src/server.ts",
+  "compatibility_date": "2026-10-01",
+  // process.env com as variáveis e os segredos do Worker (src/lib/slopMachine.ts).
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": true,
+  "observability": {
+    "enabled": true,
+  },
+  "vars": {
+    // O blog vem do Slop Machine. O segredo SLOP_MACHINE_WEBHOOK_SECRET
+    // fica no painel (wrangler secret put).
+    "SLOP_MACHINE_BASE_URL": "https://cautious-crocodile-345.convex.site",
+  },
+  "env": {
+    "staging": {
+      "name": "mywish-staging",
+      "workers_dev": true,
+      "preview_urls": true,
+      "observability": {
+        "enabled": true,
+      },
+      "vars": {
+        "SLOP_MACHINE_BASE_URL": "https://insightful-fox-52.convex.site",
+      },
+      // Preview de cada branch que não é master, staging nem dev
+      // (`npx wrangler preview` no Workers Builds, scripts/cloudflare/).
+      // Variáveis não vêm do ambiente de cima: vão de novo aqui.
+      "previews": {
+        "observability": {
+          "enabled": true,
+        },
+        "vars": {
+          "SLOP_MACHINE_BASE_URL": "https://insightful-fox-52.convex.site",
+        },
+      },
+    },
+  },
+}
