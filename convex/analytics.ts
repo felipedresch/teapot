@@ -8,6 +8,10 @@ export const capturePostHogEvent = internalAction({
     eventName: v.string(),
     distinctId: v.string(),
     properties: v.any(),
+    // false: o evento entra no funil do distinct_id sem criar pessoa no
+    // PostHog ($process_person_profile). Vai como argumento à parte porque o
+    // Convex não aceita nome de campo começando com "$".
+    processPersonProfile: v.optional(v.boolean()),
   },
   returns: v.null(),
   handler: async (_ctx, args) => {
@@ -31,6 +35,9 @@ export const capturePostHogEvent = internalAction({
         properties: {
           source: 'convex',
           ...args.properties,
+          ...(args.processPersonProfile === false
+            ? { $process_person_profile: false }
+            : {}),
         },
       }),
     }).catch(() => null)

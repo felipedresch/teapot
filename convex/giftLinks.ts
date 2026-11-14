@@ -68,10 +68,10 @@ export const registerGiftLinkClick = mutation({
         rewritten: args.rewritten,
         reason: args.reason,
         linkSource: args.source,
-        // Como no navegador (person_profiles: 'identified_only'): o evento
-        // entra no funil do distinct_id sem criar pessoa no PostHog.
-        $process_person_profile: false,
       },
+      // Como no navegador (person_profiles: 'identified_only'): o evento entra
+      // no funil do distinct_id sem criar pessoa no PostHog.
+      processPersonProfile: false,
     })
 
     return null

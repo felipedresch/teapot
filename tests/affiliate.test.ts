@@ -393,3 +393,23 @@ describe('Convex', () => {
     )
   })
 })
+
+describe('clique no Convex', () => {
+  it('os argumentos do evento do PostHog não têm campo com "$"', async () => {
+    // O Convex recusa nome de campo começando com "$" (convexToJson), e a
+    // mutation inteira falhava: o clique não era registrado.
+    const { readFileSync } = await import('node:fs')
+    const source = readFileSync('convex/giftLinks.ts', 'utf8')
+    expect(source).not.toMatch(/^\s*\$[a-z_]+\s*:/m)
+    const { convexToJson } = await import('convex/values')
+    expect(() =>
+      convexToJson({
+        properties: { linkSource: 'guest' },
+        processPersonProfile: false,
+      }),
+    ).not.toThrow()
+    expect(() => convexToJson({ $process_person_profile: false })).toThrow(
+      /reserved/,
+    )
+  })
+})
