@@ -80,7 +80,7 @@ export const Route = createFileRoute('/dados/presentes-mais-pedidos')({
 
 function Percent({ value }: { value: number | null }) {
   return value === null ? (
-    <span className="text-warm-gray/70">amostra pequena</span>
+    <span className="text-warm-gray/70">—</span>
   ) : (
     <>{value}%</>
   )
@@ -245,8 +245,7 @@ function GiftDataPage() {
           <p className="text-warm-gray leading-relaxed">
             Base: {panela.lists} listas de chá de panela (também chamado de chá
             de cozinha) com pelo menos cinco presentes. A lista típica tem{' '}
-            {panela.medianGifts} itens. Onde a amostra de listas compartilhadas
-            ainda é pequena, a taxa de reserva não é mostrada.
+            {panela.medianGifts} itens.
           </p>
           <ItemsTable
             caption="Presentes mais pedidos em listas de chá de panela"
@@ -301,10 +300,8 @@ function GiftDataPage() {
           </h2>
           <p className="text-warm-gray leading-relaxed">
             Listas de aniversário são mais pessoais e quase não repetem itens,
-            então mostramos a divisão por categoria. Base: {data.birthday.lists}{' '}
-            listas e {data.birthday.gifts} presentes; a lista típica tem{' '}
-            {data.birthday.medianGifts} itens. Amostra pequena: use como
-            referência.
+            então mostramos a divisão por categoria. A lista típica tem{' '}
+            {data.birthday.medianGifts} itens.
           </p>
           <ul className="space-y-2 text-warm-gray">
             {data.birthday.categories.map((category) => (

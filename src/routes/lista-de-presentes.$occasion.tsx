@@ -210,7 +210,7 @@ function OccasionPage() {
 }
 
 // Aniversário tem poucos itens repetidos entre listas, então o bloco mostra a
-// divisão por categoria, com a amostra explícita.
+// divisão por categoria.
 function BirthdayInsights() {
   const data = giftInsights.birthday
   return (
@@ -228,10 +228,9 @@ function BirthdayInsights() {
         O que as pessoas pedem nas listas de aniversário
       </h2>
       <p className="text-warm-gray leading-relaxed">
-        Analisamos {data.lists} listas de aniversário criadas no MyWish, com{' '}
-        {data.gifts} presentes. A lista típica tem {data.medianGifts} itens e{' '}
-        {data.linkShare}% dos presentes têm link de loja. É uma amostra pequena:
-        use como referência, não como regra.
+        Nas listas de aniversário criadas no MyWish, a lista típica tem{' '}
+        {data.medianGifts} itens e {data.linkShare}% dos presentes têm link de
+        loja. Veja como os pedidos se dividem:
       </p>
       <ul className="space-y-3">
         {data.categories.map((category) => (
