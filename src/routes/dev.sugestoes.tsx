@@ -9,8 +9,9 @@ const Playground = import.meta.env.DEV
   ? lazy(() => import('../dev/SuggestionsPlayground'))
   : null
 
+// Com SSR: o beforeLoad roda no servidor, e a produção responde 404 de verdade
+// (com ssr: false ela devolvia 200 e uma página vazia).
 export const Route = createFileRoute('/dev/sugestoes')({
-  ssr: false,
   beforeLoad: () => {
     if (!import.meta.env.DEV) throw notFound()
   },
