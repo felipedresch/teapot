@@ -123,7 +123,7 @@ Na prática:
 
 Presente repetido acontece quando duas pessoas compram a mesma coisa sem saber uma da outra. A solução é a reserva: o convidado marca o que vai dar antes de comprar, e os outros veem que aquele item já foi escolhido.
 
-No [MyWish](/lista-de-presentes/casa-nova), funciona assim: o convidado abre o link da lista, entra com a conta Google e reserva o presente. Ele pode deixar uma mensagem para você e, se mudar de ideia, combina a troca com você. A compra é feita na loja que ele preferir, fora do MyWish. Você vê quem reservou o quê e marca os presentes que recebeu. Os detalhes estão em [como funciona a reserva de presentes](/blog/como-funciona-a-reserva-de-presentes-em-listas-online).
+No [MyWish](/lista-de-presentes/casa-nova), funciona assim: o convidado abre o link da lista, entra com a conta Google e reserva o presente. Ele pode deixar uma mensagem para você e desfazer a reserva se mudar de ideia. A compra é feita na loja que ele preferir, fora do MyWish. Você vê quem reservou o quê e marca os presentes que recebeu. Os detalhes estão em [como funciona a reserva de presentes](/blog/como-funciona-a-reserva-de-presentes-em-listas-online).
 
 Algumas regras completam a reserva:
 

@@ -68,6 +68,7 @@ export function useGiftMutations() {
   const updateGiftMutation = useMutation(api.gifts.updateGift)
   const deleteGiftMutation = useMutation(api.gifts.deleteGift)
   const setGiftStatusMutation = useMutation(api.gifts.setGiftStatus)
+  const cancelMyReservationMutation = useMutation(api.gifts.cancelMyReservation)
 
   const createGift = useCallback(
     async (args: {
@@ -91,6 +92,13 @@ export function useGiftMutations() {
       await reserveGiftMutation(args)
     },
     [reserveGiftMutation],
+  )
+
+  const cancelMyReservation = useCallback(
+    async (args: { giftId: Id<'gifts'> }) => {
+      await cancelMyReservationMutation(args)
+    },
+    [cancelMyReservationMutation],
   )
 
   const updateGift = useCallback(
@@ -129,6 +137,7 @@ export function useGiftMutations() {
   return {
     createGift,
     reserveGift,
+    cancelMyReservation,
     updateGift,
     deleteGift,
     setGiftStatus,
