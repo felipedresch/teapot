@@ -51,7 +51,7 @@ Fale só do que existe:
 - Montar e editar a lista é grátis. Para compartilhar, pagamento único via Pix: R$ 9,90 por lista (aniversário, chá de bebê, chá de panela, casa nova, formatura e outras) ou R$ 29,90 (casamento, noivado e bodas). Acesso vitalício da conta: R$ 29,90 ou R$ 59,90. Sem mensalidade e sem porcentagem sobre os presentes.
 - Ocasiões no cadastro: casamento, chá de panela, aniversário, chá de bebê, chá de casa nova, formatura e outro.
 - Cada presente tem nome, descrição, imagem, categoria e link de referência de qualquer loja. Ao colar o link, o MyWish tenta preencher a imagem do produto.
-- O convidado abre a lista pelo link, entra com a conta Google e reserva o presente. Os outros veem que o item foi escolhido. Ele pode deixar uma mensagem para o anfitrião. O convidado não consegue desfazer a reserva sozinho: se mudar de ideia, combina com o anfitrião. O anfitrião não tem um botão para liberar uma reserva.
+- O convidado abre a lista pelo link, entra com a conta Google e reserva o presente. Os outros veem que o item foi escolhido. Ele pode deixar uma mensagem para o anfitrião e pode desfazer a própria reserva (na lista ou em "Meus presentes"); o presente volta a ficar disponível. O anfitrião pode liberar qualquer presente reservado.
 - A compra acontece na loja que o convidado escolher, fora do MyWish. O MyWish não vende, não entrega e não transforma presentes em dinheiro.
 - O anfitrião vê as reservas e marca os presentes recebidos. Pode convidar outra pessoa para ajudar a organizar (co-anfitrião).
 - Depois de liberada, a lista pode ser pública (aparece na vitrine do site) ou não listada (só quem tem o link). O endereço da lista é gerado a partir do nome do evento; não há domínio nem link personalizado à parte.

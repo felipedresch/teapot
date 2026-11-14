@@ -96,6 +96,13 @@ export const track = {
   giftReserved(props: { eventId: string; eventType?: string }) {
     safeCapture('gift_reserved', props)
   },
+  reservationReleased(props: {
+    eventId: string
+    eventType?: string
+    by: 'guest' | 'host'
+  }) {
+    safeCapture('reservation_released', props)
+  },
   blogCtaClicked(props: {
     slug: string
     occasion: string

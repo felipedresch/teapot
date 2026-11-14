@@ -1034,6 +1034,32 @@ export const listMyReservations = query({
   },
 })
 
+// O convidado desfaz a própria reserva: o presente volta a ficar disponível
+// para os outros. Presente já recebido não volta por aqui (só o anfitrião,
+// em setGiftStatus).
+export const cancelMyReservation = mutation({
+  args: { giftId: v.id('gifts') },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) {
+      throw new Error('Precisa estar autenticado para desfazer a reserva')
+    }
+    const gift = await ctx.db.get(args.giftId)
+    if (!gift) throw new Error('Presente não encontrado')
+    if (gift.status !== 'reserved' || gift.reservedBy !== userId) {
+      throw new Error('Só quem reservou pode desfazer esta reserva')
+    }
+    await ctx.db.patch('gifts', args.giftId, {
+      status: 'available',
+      reservedBy: undefined,
+      reservedAt: undefined,
+      reservationMessage: undefined,
+    })
+    return null
+  },
+})
+
 export const setGiftStatus = mutation({
   args: {
     giftId: v.id('gifts'),

@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useQuery } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
+import { useState } from 'react'
 import { Gift, Heart } from 'lucide-react'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { signInToApp } from '../lib/signIn'
 import { api } from '../../convex/_generated/api'
+import type { Id } from '../../convex/_generated/dataModel'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
@@ -12,7 +14,10 @@ import { SITE_NAME } from '../lib/seo'
 
 export const Route = createFileRoute('/my-gifts')({
   head: () => ({
-    meta: [{ name: 'robots', content: 'noindex, follow' }, { title: `Meus presentes | ${SITE_NAME}` }],
+    meta: [
+      { name: 'robots', content: 'noindex, follow' },
+      { title: `Meus presentes | ${SITE_NAME}` },
+    ],
   }),
   component: MyGiftsPage,
 })
@@ -30,6 +35,28 @@ function MyGiftsPage() {
     api.gifts.listMyReservations,
     isAuthenticated ? {} : 'skip',
   )
+  const cancelMyReservation = useMutation(api.gifts.cancelMyReservation)
+  // Dois cliques para desfazer: o primeiro pede confirmação no próprio card.
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
+  const [cancelingId, setCancelingId] = useState<string | null>(null)
+  const [cancelError, setCancelError] = useState<string | null>(null)
+
+  const handleCancel = async (giftId: Id<'gifts'>) => {
+    setCancelingId(giftId)
+    setCancelError(null)
+    try {
+      await cancelMyReservation({ giftId })
+      setConfirmingId(null)
+    } catch (error) {
+      setCancelError(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível desfazer a reserva.',
+      )
+    } finally {
+      setCancelingId(null)
+    }
+  }
 
   if (!isAuthLoading && !isAuthenticated) {
     return (
@@ -41,9 +68,7 @@ function MyGiftsPage() {
         <p className="text-warm-gray">
           Entre com sua conta para ver os presentes que você reservou.
         </p>
-        <Button
-          onClick={() => void signInToApp(signIn, '/my-gifts')}
-        >
+        <Button onClick={() => void signInToApp(signIn, '/my-gifts')}>
           Entrar com Google
         </Button>
       </div>
@@ -82,59 +107,101 @@ function MyGiftsPage() {
           </Button>
         </div>
       ) : (
-        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {reservations.map((reservation) => (
-            <li key={reservation._id}>
-              <Link
-                to="/events/$slug"
-                params={{ slug: reservation.eventSlug }}
-                className="group flex gap-3 rounded-2xl border border-border/50 bg-warm-white/80 p-3 transition-all duration-200 hover:shadow-dreamy hover:border-muted-rose/30"
-              >
-                <div className="size-20 rounded-xl overflow-hidden bg-blush/15 shrink-0 flex items-center justify-center">
-                  {reservation.imageUrl ? (
-                    <img
-                      src={reservation.imageUrl}
-                      alt=""
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <Gift className="size-7 text-muted-rose/40" />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-display italic text-sm text-espresso truncate">
-                      {reservation.name}
-                    </p>
-                    <Badge
-                      variant={reservation.status}
-                      className={cn('shrink-0 text-[10px]')}
-                    >
-                      {STATUS_LABEL[reservation.status]}
-                    </Badge>
+        <>
+          {cancelError && (
+            <p role="alert" className="text-sm text-destructive mb-3">
+              {cancelError}
+            </p>
+          )}
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {reservations.map((reservation) => (
+              <li key={reservation._id}>
+                <Link
+                  to="/events/$slug"
+                  params={{ slug: reservation.eventSlug }}
+                  className="group flex gap-3 rounded-2xl border border-border/50 bg-warm-white/80 p-3 transition-all duration-200 hover:shadow-dreamy hover:border-muted-rose/30"
+                >
+                  <div className="size-20 rounded-xl overflow-hidden bg-blush/15 shrink-0 flex items-center justify-center">
+                    {reservation.imageUrl ? (
+                      <img
+                        src={reservation.imageUrl}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <Gift className="size-7 text-muted-rose/40" />
+                    )}
                   </div>
-                  <p className="text-xs text-warm-gray/75 truncate">
-                    {reservation.eventName}
-                  </p>
-                  {reservation.reservedAt && (
-                    <p className="text-[10px] text-warm-gray/55">
-                      {new Date(reservation.reservedAt).toLocaleDateString(
-                        'pt-BR',
-                        { day: '2-digit', month: 'short', year: 'numeric' },
-                      )}
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-display italic text-sm text-espresso truncate">
+                        {reservation.name}
+                      </p>
+                      <Badge
+                        variant={reservation.status}
+                        className={cn('shrink-0 text-[10px]')}
+                      >
+                        {STATUS_LABEL[reservation.status]}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-warm-gray/75 truncate">
+                      {reservation.eventName}
                     </p>
-                  )}
-                  {reservation.reservationMessage && (
-                    <p className="text-xs text-warm-gray italic line-clamp-2 mt-1">
-                      “{reservation.reservationMessage}”
-                    </p>
-                  )}
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
+                    {reservation.reservedAt && (
+                      <p className="text-[10px] text-warm-gray/55">
+                        {new Date(reservation.reservedAt).toLocaleDateString(
+                          'pt-BR',
+                          { day: '2-digit', month: 'short', year: 'numeric' },
+                        )}
+                      </p>
+                    )}
+                    {reservation.reservationMessage && (
+                      <p className="text-xs text-warm-gray italic line-clamp-2 mt-1">
+                        “{reservation.reservationMessage}”
+                      </p>
+                    )}
+                  </div>
+                </Link>
+                {reservation.status === 'reserved' && (
+                  <div className="flex items-center justify-end gap-3 px-1 pt-2 text-xs">
+                    {confirmingId === reservation._id ? (
+                      <>
+                        <span className="text-warm-gray">
+                          O presente volta a ficar disponível.
+                        </span>
+                        <button
+                          type="button"
+                          className="text-warm-gray underline underline-offset-2"
+                          onClick={() => setConfirmingId(null)}
+                          disabled={cancelingId === reservation._id}
+                        >
+                          Voltar
+                        </button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          isLoading={cancelingId === reservation._id}
+                          onClick={() => void handleCancel(reservation._id)}
+                        >
+                          Desfazer
+                        </Button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        className="text-warm-gray underline underline-offset-2 hover:text-espresso"
+                        onClick={() => setConfirmingId(reservation._id)}
+                      >
+                        Desfazer reserva
+                      </button>
+                    )}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </div>
   )

@@ -18,7 +18,7 @@ No MyWish, o caminho do convidado tem cinco passos:
 4. **Reserva e, se quiser, deixa uma mensagem.** Ao confirmar, o convidado pode escrever um recado para o anfitrião, como um parabéns ou um aviso de que vai entregar o presente na festa.
 5. **Compra onde preferir.** O link de referência é uma sugestão. O convidado pode comprar naquela loja, em outra ou numa loja física, desde que seja o presente combinado.
 
-A reserva fica registrada na lista. Se os planos mudarem, o melhor é o convidado avisar o anfitrião, que combina com ele o que fazer.
+Se os planos mudarem, o convidado pode desfazer a reserva, na própria lista ou em "Meus presentes", e o item volta a ficar disponível para os outros. Se ele já tiver comprado, vale avisar o anfitrião.
 
 ## O que os outros convidados veem?
 
@@ -29,6 +29,8 @@ Veem que o item já foi escolhido. O nome de quem reservou não aparece para os 
 O anfitrião vê quais presentes foram reservados, quem reservou cada um, quando, e as mensagens que os convidados deixaram. Se houver um co-anfitrião (alguém convidado para ajudar a organizar, como o noivo, a mãe ou uma amiga), ele também acompanha a lista.
 
 Depois de receber o presente, o anfitrião marca o item como recebido. Isso ajuda a saber o que já chegou, o que ainda está para chegar e a quem agradecer.
+
+Se uma reserva ficou parada, por exemplo porque o convidado desistiu e esqueceu de desfazer, o anfitrião pode liberar o presente. Ele volta a ficar disponível e a reserva some, junto com a mensagem. Vale combinar com quem reservou antes.
 
 ## A reserva é a compra do presente?
 
@@ -78,9 +80,9 @@ Não. A reserva é gratuita e não é uma compra. O convidado só marca o que va
 
 Não. Quando um convidado reserva um item, ele aparece como escolhido para os outros, que não conseguem reservá-lo de novo. Se quiser duas unidades de algo, cadastre como dois itens separados.
 
-### E se o convidado mudar de ideia depois de reservar?
+### O convidado pode desfazer a reserva?
 
-A reserva fica registrada na lista, então o caminho é o convidado avisar o anfitrião. Assim os dois combinam se ele vai trocar de presente ou manter o combinado.
+Pode. Na lista, ao lado de "Reservado por você", ou na página "Meus presentes", ele desfaz a reserva e o item volta a ficar disponível para os outros. O anfitrião também pode liberar um presente reservado, por exemplo quando alguém reservou e desistiu sem avisar.
 
 ### O anfitrião sabe quem reservou cada presente?
 

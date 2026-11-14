@@ -63,7 +63,7 @@ O que não vale é deixar de ir por causa do presente. A presença é o que o ca
 
 ## Quando dar o presente de casamento?
 
-O mais comum é dar entre o convite e a data do casamento. Algumas pessoas compram até alguns dias depois, e tudo bem: o importante é não esquecer. Se a lista é online, reserve o item assim que decidir, para que outro convidado não escolha o mesmo. Uma reserva esquecida também atrapalha, então, se desistir, avise os noivos.
+O mais comum é dar entre o convite e a data do casamento. Algumas pessoas compram até alguns dias depois, e tudo bem: o importante é não esquecer. Se a lista é online, reserve o item assim que decidir, para que outro convidado não escolha o mesmo. Uma reserva esquecida também atrapalha, então, se desistir, desfaça a reserva.
 
 ## Onde entregar o presente de casamento?
 

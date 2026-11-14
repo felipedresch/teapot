@@ -233,7 +233,14 @@ function EventGiftsPageShell() {
     api.gifts.listGiftReservationsForHost,
     event && membership?.role === 'host' ? { eventId: event._id } : 'skip',
   )
-  const { createGift, reserveGift, updateGift, deleteGift, setGiftStatus } =
+  const {
+    createGift,
+    reserveGift,
+    cancelMyReservation,
+    updateGift,
+    deleteGift,
+    setGiftStatus,
+  } =
     useGiftMutations()
   const updateEvent = useMutation(api.events.updateEvent)
   const deleteEvent = useMutation(api.events.deleteEvent)
@@ -292,6 +299,14 @@ function EventGiftsPageShell() {
     giftName: string
   } | null>(null)
   const [isDeletingGift, setIsDeletingGift] = useState(false)
+  // Desfazer reserva: o convidado desfaz a própria; o anfitrião libera
+  // qualquer presente reservado.
+  const [releaseConfirm, setReleaseConfirm] = useState<{
+    giftId: Id<'gifts'>
+    giftName: string
+    by: 'guest' | 'host'
+  } | null>(null)
+  const [isReleasingGift, setIsReleasingGift] = useState(false)
   const [shareLinkTab, setShareLinkTab] = useState<'guest' | 'partner'>('guest')
   const [copiedInviteToken, setCopiedInviteToken] = useState<string | null>(
     null,
@@ -1170,6 +1185,44 @@ function EventGiftsPageShell() {
     },
     [isHostView],
   )
+
+  const handleConfirmRelease = useCallback(async () => {
+    if (!releaseConfirm) return
+    setIsReleasingGift(true)
+    setError(null)
+    try {
+      if (releaseConfirm.by === 'guest') {
+        await cancelMyReservation({ giftId: releaseConfirm.giftId })
+        setLocallyReservedGiftIds((current) => {
+          const next = new Set(current)
+          next.delete(releaseConfirm.giftId)
+          return next
+        })
+      } else {
+        await setGiftStatus({
+          giftId: releaseConfirm.giftId,
+          status: 'available',
+        })
+      }
+      if (event) {
+        track.reservationReleased({
+          eventId: String(event._id),
+          eventType: event.eventType,
+          by: releaseConfirm.by,
+        })
+      }
+      setReleaseConfirm(null)
+    } catch (releaseError) {
+      setError(
+        releaseError instanceof Error
+          ? releaseError.message
+          : 'Não foi possível desfazer a reserva.',
+      )
+      setReleaseConfirm(null)
+    } finally {
+      setIsReleasingGift(false)
+    }
+  }, [cancelMyReservation, event, releaseConfirm, setGiftStatus])
 
   const handleConfirmDeleteGift = useCallback(async () => {
     if (!deleteGiftConfirm) return
@@ -2701,6 +2754,20 @@ function EventGiftsPageShell() {
                                   <>
                                     <span className="text-muted-rose/95">Reservado por </span>
                                     <span className="text-espresso">você</span>
+                                    <span className="text-warm-gray/60"> · </span>
+                                    <button
+                                      type="button"
+                                      className="font-normal text-warm-gray underline underline-offset-2 hover:text-espresso"
+                                      onClick={() =>
+                                        setReleaseConfirm({
+                                          giftId: gift._id,
+                                          giftName: gift.name,
+                                          by: 'guest',
+                                        })
+                                      }
+                                    >
+                                      desfazer
+                                    </button>
                                   </>
                                 )
                               }
@@ -2730,6 +2797,22 @@ function EventGiftsPageShell() {
                             >
                               <Heart className="size-3.5" />
                               Marcar como recebido
+                            </Button>
+                          )}
+                          {gift.status === 'reserved' && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                setReleaseConfirm({
+                                  giftId: gift._id,
+                                  giftName: gift.name,
+                                  by: 'host',
+                                })
+                              }
+                            >
+                              Liberar presente
                             </Button>
                           )}
                           {gift.status === 'received' && (
@@ -2842,6 +2925,57 @@ function EventGiftsPageShell() {
               onClick={() => void handleConfirmReservation()}
             >
               Confirmar reserva
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══ RELEASE RESERVATION CONFIRM DIALOG ═══ */}
+      <Dialog
+        open={releaseConfirm !== null}
+        onOpenChange={(open) =>
+          !open && !isReleasingGift && setReleaseConfirm(null)
+        }
+      >
+        <DialogContent showCloseButton={false} className="max-w-xs text-center">
+          <DialogTitle className="sr-only">
+            {releaseConfirm?.by === 'host'
+              ? 'Liberar presente'
+              : 'Desfazer reserva'}
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            Confirmação para tirar a reserva do presente selecionado.
+          </DialogDescription>
+          <h3 className="font-display italic text-xl text-espresso">
+            {releaseConfirm?.by === 'host'
+              ? 'Liberar este presente?'
+              : 'Desfazer sua reserva?'}
+          </h3>
+          <p className="text-sm text-warm-gray leading-relaxed">
+            <span className="font-medium text-espresso">
+              {releaseConfirm?.giftName}
+            </span>{' '}
+            {releaseConfirm?.by === 'host'
+              ? 'volta a ficar disponível e a reserva do convidado é apagada, junto com a mensagem dele. Combine antes com quem reservou.'
+              : 'volta a ficar disponível para outros convidados. Se já comprou, avise quem organiza a lista.'}
+          </p>
+          <div className="flex gap-3 justify-center pt-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setReleaseConfirm(null)}
+              disabled={isReleasingGift}
+            >
+              Voltar
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => void handleConfirmRelease()}
+              isLoading={isReleasingGift}
+            >
+              {releaseConfirm?.by === 'host' ? 'Liberar' : 'Desfazer'}
             </Button>
           </div>
         </DialogContent>

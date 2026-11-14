@@ -31,7 +31,7 @@ const FAQ_ITEMS = [
   {
     question: 'Como funciona a reserva de presentes?',
     answer:
-      'O convidado entra com Google e reserva o item que pretende presentear. A lista mostra que ele já foi escolhido, ajudando a evitar duplicidades. A reserva não efetua a compra. Se mudar de ideia, o convidado deve avisar o anfitrião: a reserva fica registrada na lista.',
+      'O convidado entra com Google e reserva o item que pretende presentear. A lista mostra que ele já foi escolhido, ajudando a evitar duplicidades. A reserva não efetua a compra. Se mudar de ideia, o convidado pode desfazer a reserva, e o presente volta a ficar disponível. O anfitrião também pode liberar um presente reservado.',
   },
   {
     question: 'É possível receber o valor dos presentes em dinheiro?',
