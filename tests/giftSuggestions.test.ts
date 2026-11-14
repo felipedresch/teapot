@@ -253,3 +253,11 @@ describe('ver opções na Shopee', () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 })
+
+describe('cron', () => {
+  it('convex/crons.ts carrega (o Convex recusa identificador com acento)', async () => {
+    // O push do Convex de preview falhou com "Invalid cron identifier": a
+    // validação roda quando o módulo carrega, então importar já pega.
+    await expect(import('../convex/crons')).resolves.toBeDefined()
+  })
+})
