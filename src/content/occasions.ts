@@ -151,7 +151,7 @@ export const occasions: Occasion[] = [
   {
     slug: 'cha-de-panela',
     name: 'Chá de panela',
-    title: 'Lista de presentes para chá de panela',
+    title: 'Lista de chá de panela: o que pedir e os itens mais pedidos',
     description:
       'Veja o que pedir no chá de panela e monte uma lista online com utensílios úteis, opções acessíveis e reservas para ajudar a evitar presentes repetidos.',
     intro:
@@ -183,6 +183,11 @@ export const occasions: Occasion[] = [
     ],
     faq: [
       {
+        question: 'Quantos itens colocar na lista de chá de panela?',
+        answer:
+          'Nas listas de chá de panela do MyWish, a lista típica tem cerca de 40 presentes. Inclua mais itens do que o número de convidados e varie as faixas de preço para todos encontrarem uma opção.',
+      },
+      {
         question: 'Chá de cozinha e chá de panela usam a mesma lista?',
         answer:
           'Sim. Você pode dar ao evento o nome que preferir e selecionar os utensílios adequados à celebração.',
@@ -197,9 +202,9 @@ export const occasions: Occasion[] = [
   {
     slug: 'casa-nova',
     name: 'Casa nova',
-    title: 'Lista de presentes para chá de casa nova',
+    title: 'Lista de chá de casa nova: o que pedir e os itens mais pedidos',
     description:
-      'Monte uma lista de casa nova com itens úteis para cozinha, quarto e organização. Compartilhe um link e acompanhe as escolhas dos seus convidados.',
+      'O que pedir no chá de casa nova, cômodo por cômodo, com os presentes que mais aparecem em listas reais. Monte sua lista com links de qualquer loja e compartilhe com os convidados.',
     intro:
       'Mudar de casa revela pequenas coisas que fazem falta: uma lixeira, um jogo de toalhas, uma ferramenta. A lista de chá de casa nova reúne essas necessidades e facilita a escolha de quem quer participar dessa fase.',
     price: '9,90',
@@ -228,6 +233,11 @@ export const occasions: Occasion[] = [
       },
     ],
     faq: [
+      {
+        question: 'Quantos itens colocar na lista de chá de casa nova?',
+        answer:
+          'Nas listas de chá de casa nova do MyWish, a lista típica tem cerca de 30 presentes. Inclua mais itens do que o número de convidados, misture itens simples com peças maiores e descreva medidas e cores.',
+      },
       {
         question: 'Posso fazer uma lista para morar sozinho?',
         answer:

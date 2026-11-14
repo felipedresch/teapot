@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { absoluteUrl, toJsonLd } from '../src/lib/seo'
 import { buildSitemap } from '../src/lib/sitemap'
+import { pageDates } from '../src/content/pageDates'
 
 describe('public SEO URLs', () => {
   it('uses the production canonical host and removes query strings and trailing slashes', () => {
@@ -31,6 +32,24 @@ describe('public SEO URLs', () => {
     expect(xml).not.toContain('https://www.mywish.com.br')
     expect(xml).not.toContain('private')
     expect(xml).not.toContain('Invalid Date')
-    expect(xml.match(/<lastmod>/g)).toHaveLength(1)
+    // Artigo com data inválida entra sem lastmod.
+    expect(xml).toMatch(
+      /<loc>https:\/\/mywish.com.br\/blog\/sem-data<\/loc><\/url>/,
+    )
+  })
+  it('gives static pages the lastmod of their real content revision and no others', () => {
+    const xml = buildSitemap([])
+    for (const [path, date] of Object.entries(pageDates)) {
+      expect(xml).toContain(
+        `<loc>${absoluteUrl(path)}</loc><lastmod>${date}</lastmod>`,
+      )
+    }
+    expect(xml).toMatch(/\/blog<\/loc><\/url>/)
+    expect(xml).toMatch(/\/events\/create<\/loc><\/url>/)
+  })
+  it('lists the data and comparison pages', () => {
+    const xml = buildSitemap([])
+    expect(xml).toContain('/dados/presentes-mais-pedidos</loc>')
+    expect(xml).toContain('/como-escolher-site-de-lista-de-presentes</loc>')
   })
 })

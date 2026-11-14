@@ -11,7 +11,9 @@
     "lint": "eslint",
     "format": "prettier --check .",
     "check": "prettier --write . && eslint --fix",
-    "seo:check": "node scripts/check-seo.mjs"
+    "seo:check": "node scripts/check-seo.mjs",
+    "dados:gerar": "node scripts/dados-presentes.mjs",
+    "indexnow": "node scripts/indexnow.mjs"
   },
   "dependencies": {
     "@auth/core": "^0.37.0",

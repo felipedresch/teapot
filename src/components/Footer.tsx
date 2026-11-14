@@ -40,6 +40,18 @@ export default function Footer() {
             <Link to="/blog" className="hover:text-primary">
               Guias e dicas
             </Link>
+            <Link
+              to="/dados/presentes-mais-pedidos"
+              className="hover:text-primary"
+            >
+              Presentes mais pedidos
+            </Link>
+            <Link
+              to="/como-escolher-site-de-lista-de-presentes"
+              className="hover:text-primary"
+            >
+              Como escolher sua lista
+            </Link>
           </nav>
         )}
         {/* Decorative divider */}

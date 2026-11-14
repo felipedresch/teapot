@@ -14,6 +14,16 @@ const FAQ_ITEMS = [
       'O pagamento é único, via Pix: R$ 9,90 para aniversários, chá de bebê, chá de panela, casa nova e outras ocasiões comuns; R$ 29,90 para casamento, noivado e bodas. Há também acesso vitalício para a conta, por R$ 29,90 ou R$ 59,90 conforme a categoria do evento em que ele é contratado. Não há mensalidade.',
   },
   {
+    question: 'O MyWish fica com alguma porcentagem dos presentes?',
+    answer:
+      'Não. O MyWish cobra só o valor fixo para liberar a lista. O convidado paga o presente direto na loja, e nada é descontado. Listas que transformam presentes em dinheiro costumam cobrar uma porcentagem de cada presente; veja o comparativo em mywish.com.br/como-escolher-site-de-lista-de-presentes.',
+  },
+  {
+    question: 'Quais presentes as pessoas mais pedem?',
+    answer:
+      'No chá de casa nova e no chá de panela, os itens mais frequentes nas listas do MyWish são de cozinha e mesa: potes, formas, jogos de pratos, copos e talheres. O levantamento completo, com percentuais, está em mywish.com.br/dados/presentes-mais-pedidos.',
+  },
+  {
     question: 'Posso incluir presentes de qualquer loja?',
     answer:
       'Sim. Cada presente pode ter um link de referência de uma loja diferente. O convidado compra diretamente onde preferir; o MyWish não vende nem entrega os produtos.',

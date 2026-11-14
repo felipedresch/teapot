@@ -1,3 +1,28 @@
+# Buscadores e assistentes de IA podem ler e citar as páginas públicas.
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /api/
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /api/
+
+User-agent: GPTBot
+Allow: /
+Disallow: /api/
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /api/
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /api/
+
+User-agent: Bingbot
+Allow: /
+Disallow: /api/
+
 User-agent: *
 Allow: /
 Disallow: /api/

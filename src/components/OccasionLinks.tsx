@@ -34,6 +34,23 @@ export function OccasionLinks() {
           </Link>
         ))}
       </div>
+      <p className="text-sm text-warm-gray">
+        Ainda decidindo?{' '}
+        <Link
+          to="/como-escolher-site-de-lista-de-presentes"
+          className="text-primary underline underline-offset-4"
+        >
+          Compare os tipos de lista de presentes
+        </Link>{' '}
+        ou veja os{' '}
+        <Link
+          to="/dados/presentes-mais-pedidos"
+          className="text-primary underline underline-offset-4"
+        >
+          presentes mais pedidos
+        </Link>
+        .
+      </p>
     </section>
   )
 }

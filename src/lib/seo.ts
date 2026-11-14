@@ -59,3 +59,42 @@ export function breadcrumbJsonLd(items: Array<{ name: string; path: string }>) {
     })),
   }
 }
+
+export function faqJsonLd(items: Array<{ question: string; answer: string }>) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items.map((item) => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: { '@type': 'Answer', text: item.answer },
+    })),
+  }
+}
+
+// Páginas de conteúdo próprio (guias, comparativo, dados). O autor é a própria
+// organização: não inventar pessoas.
+export function articleJsonLd(input: {
+  path: string
+  headline: string
+  description: string
+  datePublished: string
+  dateModified: string
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: input.headline,
+    description: input.description,
+    inLanguage: 'pt-BR',
+    mainEntityOfPage: absoluteUrl(input.path),
+    datePublished: input.datePublished,
+    dateModified: input.dateModified,
+    author: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
+    publisher: {
+      '@type': 'Organization',
+      name: SITE_NAME,
+      logo: { '@type': 'ImageObject', url: absoluteUrl('/logo512.png') },
+    },
+  }
+}

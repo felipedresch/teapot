@@ -1,5 +1,6 @@
 import { absoluteUrl } from './seo'
 import { occasions } from '../content/occasions'
+import { pageDates } from '../content/pageDates'
 export type SitemapArticle = {
   slug: string
   updatedAt?: string
@@ -22,9 +23,12 @@ export function buildSitemap(articles: SitemapArticle[]) {
     '/precos',
     '/lista-de-presentes',
     '/blog',
+    '/como-escolher-site-de-lista-de-presentes',
+    '/dados/presentes-mais-pedidos',
     ...occasions.map((o) => `/lista-de-presentes/${o.slug}`),
   ])
-    urls.set(absoluteUrl(path), undefined)
+    // lastmod só para páginas com data real de revisão (src/content/pageDates.ts).
+    urls.set(absoluteUrl(path), pageDates[path] as string | undefined)
   for (const article of articles) {
     if (!article.slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(article.slug))
       continue
