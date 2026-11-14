@@ -1,5 +1,8 @@
+import { BLOG_REDIRECTS } from './blog'
+
 // Redirecionamentos canônicos, antes do SSR: www para a raiz, os endereços
-// antigos do sitemap e a barra no fim do caminho. Roda no Worker da Cloudflare
+// antigos do sitemap, artigos do blog que foram juntados a outros e a barra
+// no fim do caminho. Roda no Worker da Cloudflare
 // (src/server.ts). Arquivo estático de dist/client sai direto, sem passar aqui.
 export function canonicalRedirect(request: Request): Response | undefined {
   const url = new URL(request.url)
@@ -16,6 +19,15 @@ export function canonicalRedirect(request: Request): Response | undefined {
     return new Response(null, {
       status: 308,
       headers: { location: '/sitemap.xml' },
+    })
+  }
+  const blogTarget = url.pathname.startsWith('/blog/')
+    ? BLOG_REDIRECTS[url.pathname.slice('/blog/'.length).replace(/\/+$/, '')]
+    : undefined
+  if (blogTarget) {
+    return new Response(null, {
+      status: 301,
+      headers: { location: blogTarget },
     })
   }
   if (

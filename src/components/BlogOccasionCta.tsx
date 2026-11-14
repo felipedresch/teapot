@@ -1,45 +1,16 @@
 import { Link } from '@tanstack/react-router'
 import { track } from '../integrations/posthog/events'
 
-// Chamada para criar lista dentro dos artigos do blog. Os artigos vêm do Slop
-// Machine, então a ocasião é deduzida do slug, título e palavras-chave. O post
-// de ideias de aniversário, por exemplo, é citado pelo Copilot centenas de
-// vezes por mês: quem chega por ali procura ideia de presente, e parte dessas
-// pessoas vai fazer aniversário também.
+// Chamada para criar lista dentro dos artigos do blog, conforme o campo
+// `occasion` do artigo (docs/BLOG.md). O post de ideias de aniversário, por
+// exemplo, é citado pelo Copilot centenas de vezes por mês: quem chega por ali
+// procura ideia de presente, e parte dessas pessoas vai fazer aniversário também.
 export type BlogOccasion =
   | 'aniversario'
   | 'casamento'
   | 'cha-de-panela'
   | 'casa-nova'
   | 'cha-de-bebe'
-
-const RULES: Array<[BlogOccasion, RegExp]> = [
-  ['cha-de-bebe', /cha de bebe|cha-de-bebe|enxoval|fralda|bebe/],
-  ['cha-de-panela', /cha de panela|cha-de-panela|cha de cozinha|cha bar/],
-  ['casa-nova', /casa nova|casa-nova|mudanca|apartamento/],
-  ['casamento', /casamento|noivado|noivos|bodas|lua de mel/],
-  ['aniversario', /aniversario|aniversariante/],
-]
-
-function normalize(text: string) {
-  return text.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
-}
-
-export function detectBlogOccasion(article: {
-  slug: string
-  title: string
-  keywords?: string | Array<string>
-}): BlogOccasion | null {
-  const keywords = Array.isArray(article.keywords)
-    ? article.keywords.join(' ')
-    : (article.keywords ?? '')
-  // Slug e título pesam mais que palavras-chave genéricas.
-  for (const source of [`${article.slug} ${article.title}`, keywords]) {
-    const text = normalize(source)
-    for (const [occasion, re] of RULES) if (re.test(text)) return occasion
-  }
-  return null
-}
 
 const COPY: Record<
   BlogOccasion | 'geral',

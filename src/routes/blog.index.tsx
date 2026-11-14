@@ -1,17 +1,11 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { createServerFn } from '@tanstack/react-start'
 import { useEffect } from 'react'
 import { pageMeta } from '../lib/seo'
-import { fetchSlopMachineList } from '../lib/slopMachine'
-
-const getBlogList = createServerFn({ method: 'GET' }).handler(async () => {
-  return fetchSlopMachineList()
-})
+import { getBlogPosts } from '../lib/blog'
+import { formatLongDatePtBr } from '../content/pageDates'
 
 export const Route = createFileRoute('/blog/')({
-  loader: async () => {
-    return getBlogList()
-  },
+  loader: () => getBlogPosts(),
   head: () => ({
     meta: pageMeta(
       'Guias e ideias para listas de presentes',
@@ -53,7 +47,7 @@ function BlogListPage() {
               className="rounded-2xl border border-border/50 bg-warm-white p-6 shadow-dreamy"
             >
               <p className="text-xs uppercase tracking-wide text-muted-rose">
-                {new Date(item.updatedAt).toLocaleDateString('pt-BR')}
+                {formatLongDatePtBr(item.updatedAt)} · {item.readingMinutes} min
               </p>
               <h2 className="text-2xl mt-2 text-espresso">{item.title}</h2>
               <p className="text-warm-gray mt-3 leading-relaxed">
