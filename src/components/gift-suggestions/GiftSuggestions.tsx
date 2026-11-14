@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { Check, Gift, Plus, Sparkles, Star } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { AffiliateDisclosureNote } from '../GiftReferenceLink'
 import type { AffiliateDisclosure } from '../../lib/affiliate/disclosure'
@@ -23,6 +23,35 @@ const SLOT_LABELS: Record<SuggestionSlot, string> = {
 }
 
 const ease = [0.22, 1, 0.36, 1] as const
+
+// No desktop os chips quebram linha: até aqui aparecem direto, o resto num
+// "+N ideias". No celular eles rolam de lado e aparecem todos.
+const DESKTOP_VISIBLE_IDEAS = 6
+
+// Cards em carrossel horizontal no celular (cabe 2 e a ponta do terceiro, como
+// nas lojas) e em 3 colunas a partir do sm. O bloco é uma sugestão rápida: não
+// pode tomar a tela inteira.
+const CARD_TRACK_CLASS =
+  'flex snap-x snap-mandatory scroll-px-4 gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0'
+const CARD_SLOT_CLASS = 'w-[8.5rem] shrink-0 snap-start sm:w-auto'
+
+function CardRow({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <div className={cn('relative -mx-4 sm:mx-0', className)}>
+      <div className={CARD_TRACK_CLASS}>{children}</div>
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-warm-white to-transparent sm:hidden"
+      />
+    </div>
+  )
+}
 
 const priceFormatter = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -65,6 +94,7 @@ export function GiftSuggestions({
   const [selectedId, setSelectedId] = useState<string | null>(
     defaultIdeaId ?? null,
   )
+  const [showAllIdeas, setShowAllIdeas] = useState(false)
   const viewed = useRef(new Set<string>())
   const selected = ideas?.find((idea) => idea.ideaId === selectedId) ?? null
 
@@ -77,6 +107,11 @@ export function GiftSuggestions({
   if (ideas && ideas.length === 0) return null
 
   const share = selected ? listShares?.[selected.label] : undefined
+  const foldedCount = showAllIdeas
+    ? 0
+    : (ideas ?? [])
+        .slice(DESKTOP_VISIBLE_IDEAS)
+        .filter((idea) => idea.ideaId !== selectedId).length
 
   return (
     <section
@@ -114,8 +149,10 @@ export function GiftSuggestions({
           className="flex gap-2 overflow-x-auto px-4 pb-1 sm:flex-wrap sm:overflow-visible sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {ideas
-            ? ideas.map((idea) => {
+            ? ideas.map((idea, index) => {
                 const isActive = idea.ideaId === selectedId
+                const isFolded =
+                  !showAllIdeas && !isActive && index >= DESKTOP_VISIBLE_IDEAS
                 return (
                   <button
                     key={idea.ideaId}
@@ -129,6 +166,7 @@ export function GiftSuggestions({
                     }
                     className={cn(
                       'shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] transition-all duration-200',
+                      isFolded && 'sm:hidden',
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                       isActive
                         ? 'border-muted-rose/70 bg-blush/50 font-medium text-espresso shadow-[0_2px_10px_rgba(196,154,148,0.22)]'
@@ -147,6 +185,15 @@ export function GiftSuggestions({
                   className="h-8 shrink-0 rounded-full bg-blush/30 animate-pulse"
                 />
               ))}
+          {foldedCount > 0 ? (
+            <button
+              type="button"
+              onClick={() => setShowAllIdeas(true)}
+              className="hidden shrink-0 rounded-full border border-dashed border-muted-rose/40 px-3.5 py-1.5 text-[13px] text-warm-gray transition-colors hover:border-muted-rose/70 hover:text-espresso focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:inline-flex"
+            >
+              +{foldedCount} ideias
+            </button>
+          ) : null}
         </div>
         <span
           aria-hidden
@@ -160,12 +207,15 @@ export function GiftSuggestions({
             key="loading"
             role="status"
             aria-label="Carregando sugestões"
-            className="mt-5 grid gap-3 sm:grid-cols-3"
             exit={{ opacity: 0 }}
           >
-            {[0, 1, 2].map((index) => (
-              <SuggestionCardSkeleton key={index} />
-            ))}
+            <CardRow className="mt-4">
+              {[0, 1, 2].map((index) => (
+                <div key={index} className={CARD_SLOT_CLASS}>
+                  <SuggestionCardSkeleton />
+                </div>
+              ))}
+            </CardRow>
           </motion.div>
         ) : selected ? (
           <motion.div
@@ -173,21 +223,19 @@ export function GiftSuggestions({
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0, transition: { duration: 0.3, ease } }}
             exit={{ opacity: 0, y: -4, transition: { duration: 0.15 } }}
-            className="mt-5"
+            className="mt-4"
           >
             {share ? (
-              <p className="mb-3 text-[12px] text-warm-gray/80">
-                <span className="font-medium text-espresso/80">
-                  {selected.label}
-                </span>{' '}
-                aparece em {share}% das listas de {occasionLabel}.
+              <p className="mb-2.5 text-[11.5px] text-warm-gray/80">
+                Está em {share}% das listas de {occasionLabel}.
               </p>
             ) : null}
             {selected.products.length > 0 ? (
-              <div className="grid gap-3 sm:grid-cols-3">
+              <CardRow>
                 {selected.products.map((product, index) => (
                   <motion.div
                     key={product.itemId}
+                    className={CARD_SLOT_CLASS}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{
                       opacity: 1,
@@ -202,7 +250,7 @@ export function GiftSuggestions({
                     />
                   </motion.div>
                 ))}
-              </div>
+              </CardRow>
             ) : (
               <div className="rounded-xl border border-dashed border-muted-rose/30 bg-blush/10 px-4 py-6 text-center">
                 <p className="font-display italic text-espresso/85">
@@ -285,87 +333,81 @@ function SuggestionCard({
   return (
     <article
       className={cn(
-        'group relative flex h-full gap-3 rounded-2xl border bg-warm-white p-2.5 transition-all duration-200',
-        'sm:flex-col sm:gap-0 sm:p-3',
+        'group relative flex h-full flex-col rounded-2xl border bg-warm-white p-2 transition-all duration-200 sm:p-2.5',
         isAdded
           ? 'border-sage/60 shadow-[0_0_0_3px_rgba(168,197,168,0.18)]'
           : 'border-border/80 hover:border-muted-rose/35 hover:shadow-dreamy',
       )}
     >
-      <div className="relative size-24 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-border/60 sm:aspect-square sm:size-auto sm:w-full">
+      <div className="relative aspect-square w-full shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-border/60 sm:aspect-auto sm:h-36">
         <SuggestionImage src={product.imageUrl} alt={product.name} />
       </div>
-      <div className="flex min-w-0 flex-1 flex-col sm:mt-3">
-        <p className="font-accent text-[17px] leading-none text-muted-rose">
-          {SLOT_LABELS[product.slot]}
-        </p>
-        <h5
-          title={product.name}
-          className="mt-1 line-clamp-2 text-[13px] leading-snug text-espresso/90"
-        >
-          {product.name}
-        </h5>
-        <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          <span className="text-[15px] font-semibold tabular-nums text-espresso">
-            {priceFormatter.format(product.price)}
-          </span>
-          {product.rating ? (
-            <span className="inline-flex items-center gap-0.5 text-[11px] text-warm-gray/85">
-              <Star
-                aria-hidden
-                className="size-3 fill-soft-terracotta/80 text-soft-terracotta/80"
-              />
-              {product.rating.toLocaleString('pt-BR', {
-                minimumFractionDigits: 1,
-                maximumFractionDigits: 1,
-              })}
-              {product.sales ? (
-                <span className="text-warm-gray/65">
-                  {' '}
-                  · {formatSales(product.sales)}
-                </span>
-              ) : null}
+      <p className="mt-2 font-accent text-[15px] leading-none text-muted-rose sm:text-[17px]">
+        {SLOT_LABELS[product.slot]}
+      </p>
+      <h5
+        title={product.name}
+        className="mt-1 line-clamp-2 min-h-[2.5em] text-[12px] leading-[1.25] text-espresso/90 sm:text-[13px]"
+      >
+        {product.name}
+      </h5>
+      <p className="mt-1 text-[14px] font-semibold tabular-nums text-espresso sm:text-[15px]">
+        {priceFormatter.format(product.price)}
+      </p>
+      {product.rating ? (
+        <p className="mt-0.5 inline-flex items-center gap-0.5 text-[10.5px] text-warm-gray/85 sm:text-[11px]">
+          <Star
+            aria-hidden
+            className="size-3 fill-soft-terracotta/80 text-soft-terracotta/80"
+          />
+          {product.rating.toLocaleString('pt-BR', {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+          })}
+          {product.sales ? (
+            <span className="truncate text-warm-gray/65">
+              {' '}
+              · {formatSales(product.sales)}
             </span>
           ) : null}
-        </div>
-        <button
-          type="button"
-          onClick={onAdd}
-          className={cn(
-            'mt-auto inline-flex h-8 items-center justify-center gap-1.5 self-start rounded-lg border px-3 text-[12.5px] font-medium transition-all duration-200 sm:mt-3 sm:h-9 sm:w-full sm:self-auto',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            isAdded
-              ? 'border-sage/60 bg-sage/20 text-espresso'
-              : 'border-espresso/15 bg-warm-white text-espresso hover:border-espresso/35 hover:bg-blush/20',
-          )}
-        >
-          {isAdded ? (
-            <>
-              <Check className="size-3.5" strokeWidth={2} />
-              No formulário
-            </>
-          ) : (
-            <>
-              <Plus className="size-3.5" strokeWidth={2} />
-              Adicionar
-            </>
-          )}
-        </button>
-      </div>
+        </p>
+      ) : null}
+      <div aria-hidden className="min-h-2 flex-1" />
+      <button
+        type="button"
+        onClick={onAdd}
+        className={cn(
+          'inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border text-[12px] font-medium transition-all duration-200 sm:text-[12.5px]',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          isAdded
+            ? 'border-sage/60 bg-sage/20 text-espresso'
+            : 'border-espresso/15 bg-warm-white text-espresso hover:border-espresso/35 hover:bg-blush/20',
+        )}
+      >
+        {isAdded ? (
+          <>
+            <Check className="size-3.5" strokeWidth={2} />
+            No formulário
+          </>
+        ) : (
+          <>
+            <Plus className="size-3.5" strokeWidth={2} />
+            Adicionar
+          </>
+        )}
+      </button>
     </article>
   )
 }
 
 function SuggestionCardSkeleton() {
   return (
-    <div className="flex gap-3 rounded-2xl border border-border/60 bg-warm-white p-2.5 sm:flex-col sm:gap-0 sm:p-3">
-      <div className="size-24 shrink-0 rounded-xl bg-blush/25 animate-pulse sm:aspect-square sm:size-auto sm:w-full" />
-      <div className="flex flex-1 flex-col gap-2 sm:mt-3">
-        <span className="h-3.5 w-20 rounded bg-blush/30 animate-pulse" />
-        <span className="h-3 w-full rounded bg-blush/20 animate-pulse" />
-        <span className="h-3 w-2/3 rounded bg-blush/20 animate-pulse" />
-        <span className="mt-auto h-8 w-24 rounded-lg bg-blush/20 animate-pulse sm:w-full" />
-      </div>
+    <div className="flex h-full flex-col rounded-2xl border border-border/60 bg-warm-white p-2 sm:p-2.5">
+      <div className="aspect-square w-full rounded-xl bg-blush/25 animate-pulse sm:aspect-auto sm:h-36" />
+      <span className="mt-2.5 h-3.5 w-20 rounded bg-blush/30 animate-pulse" />
+      <span className="mt-2 h-3 w-full rounded bg-blush/20 animate-pulse" />
+      <span className="mt-1.5 h-3 w-2/3 rounded bg-blush/20 animate-pulse" />
+      <span className="mt-3 h-8 w-full rounded-lg bg-blush/20 animate-pulse" />
     </div>
   )
 }
