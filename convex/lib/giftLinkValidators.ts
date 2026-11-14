@@ -25,3 +25,23 @@ export const giftLinkSourceValidator = v.union(
   v.literal('host'),
   v.literal('unknown'),
 )
+
+// Sugestões de produto (convex/productSuggestions.ts).
+export const suggestionOccasionValidator = v.union(
+  v.literal('casaNova'),
+  v.literal('panela'),
+  v.literal('aniversario'),
+)
+
+export const suggestionSlotValidator = v.union(
+  v.literal('budget'),
+  v.literal('popular'),
+  v.literal('gift'),
+)
+
+// Para onde o clique em /r/<giftId> leva: o link do presente ou a busca do
+// botão "Ver opções na Shopee".
+export const giftLinkKindValidator = v.union(
+  v.literal('reference'),
+  v.literal('shopee_options'),
+)

@@ -5,6 +5,7 @@ import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 import { internal } from './_generated/api'
 import {
+  giftLinkKindValidator,
   giftLinkReasonValidator,
   giftLinkSourceValidator,
   giftLinkStoreValidator,
@@ -32,6 +33,27 @@ export const getGiftLinkTarget = query({
   },
 })
 
+// Nome do presente para o botão "Ver opções na Shopee" (presente sem link).
+export const getGiftForShopeeOptions = query({
+  args: { giftId: v.string() },
+  returns: v.union(
+    v.null(),
+    v.object({
+      giftId: v.id('gifts'),
+      eventId: v.id('events'),
+      name: v.string(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const giftId = ctx.db.normalizeId('gifts', args.giftId)
+    if (!giftId) return null
+    const gift = await ctx.db.get(giftId)
+    const name = gift?.name.trim()
+    if (!gift || !name) return null
+    return { giftId: gift._id, eventId: gift.eventId, name }
+  },
+})
+
 export const registerGiftLinkClick = mutation({
   args: {
     giftId: v.id('gifts'),
@@ -41,11 +63,15 @@ export const registerGiftLinkClick = mutation({
     source: giftLinkSourceValidator,
     // distinct_id do PostHog do navegador, quando o link o trouxe.
     distinctId: v.optional(v.string()),
+    // Sem valor: link do presente.
+    kind: v.optional(giftLinkKindValidator),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const kind = args.kind ?? 'reference'
     const gift = await ctx.db.get(args.giftId)
-    if (!gift?.referenceUrl) return null
+    if (!gift) return null
+    if (kind === 'reference' && !gift.referenceUrl) return null
 
     await ctx.db.insert('giftLinkClicks', {
       giftId: gift._id,
@@ -54,6 +80,7 @@ export const registerGiftLinkClick = mutation({
       rewritten: args.rewritten,
       reason: args.reason,
       source: args.source,
+      kind,
       createdAt: Date.now(),
     })
 
@@ -68,6 +95,7 @@ export const registerGiftLinkClick = mutation({
         rewritten: args.rewritten,
         reason: args.reason,
         linkSource: args.source,
+        linkKind: kind,
       },
       // Como no navegador (person_profiles: 'identified_only'): o evento entra
       // no funil do distinct_id sem criar pessoa no PostHog.

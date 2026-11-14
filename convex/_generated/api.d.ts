@@ -11,6 +11,11 @@
 import type * as abacatepayWebhook from "../abacatepayWebhook.js";
 import type * as analytics from "../analytics.js";
 import type * as auth from "../auth.js";
+import type * as crons from "../crons.js";
+import type * as productSuggestions from "../productSuggestions.js";
+import type * as lib_shopeeAffiliateApi from "../lib/shopeeAffiliateApi.js";
+import type * as lib_suggestionIdeas from "../lib/suggestionIdeas.js";
+import type * as lib_suggestionRanking from "../lib/suggestionRanking.js";
 import type * as config from "../config.js";
 import type * as dev_previewSeed from "../dev/previewSeed.js";
 import type * as eventConfig from "../eventConfig.js";
@@ -35,6 +40,11 @@ declare const fullApi: ApiFromModules<{
   abacatepayWebhook: typeof abacatepayWebhook;
   analytics: typeof analytics;
   auth: typeof auth;
+  crons: typeof crons;
+  productSuggestions: typeof productSuggestions;
+  "lib/shopeeAffiliateApi": typeof lib_shopeeAffiliateApi;
+  "lib/suggestionIdeas": typeof lib_suggestionIdeas;
+  "lib/suggestionRanking": typeof lib_suggestionRanking;
   config: typeof config;
   "dev/previewSeed": typeof dev_previewSeed;
   eventConfig: typeof eventConfig;
