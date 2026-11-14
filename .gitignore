@@ -15,3 +15,5 @@ todos.json
 
 .cursor
 .vscode
+# Variáveis locais do Worker (wrangler / vite preview)
+.dev.vars

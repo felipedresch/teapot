@@ -1,6 +1,11 @@
 import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { authTables } from '@convex-dev/auth/server'
+import {
+  giftLinkReasonValidator,
+  giftLinkSourceValidator,
+  giftLinkStoreValidator,
+} from './lib/giftLinkValidators'
 
 const schema = defineSchema({
   ...authTables,
@@ -122,6 +127,20 @@ const schema = defineSchema({
     .index('by_event_and_status', ['eventId', 'status'])
     .index('by_reserved_by', ['reservedBy'])
     .index('by_image_id', ['imageId']),
+
+  // Cliques no link de referência dos presentes (/r/<giftId>), com a loja e
+  // se o link foi trocado pelo de afiliado (docs/AFFILIATES.md).
+  giftLinkClicks: defineTable({
+    giftId: v.id('gifts'),
+    eventId: v.id('events'),
+    store: v.optional(giftLinkStoreValidator),
+    rewritten: v.boolean(),
+    reason: giftLinkReasonValidator,
+    source: giftLinkSourceValidator,
+    createdAt: v.number(),
+  })
+    .index('by_gift', ['giftId'])
+    .index('by_event', ['eventId']),
 
   temporaryGiftImages: defineTable({
     imageId: v.id('_storage'),

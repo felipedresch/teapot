@@ -22,10 +22,19 @@ públicas saem de `src/lib/seo.ts`.
 
 ## Worker (servidor)
 
-O Worker não precisa de variável nem segredo próprio. O blog, que antes vinha
-do Slop Machine (`SLOP_MACHINE_*`), agora é arquivo do repositório
-([BLOG.md](BLOG.md)). Se ainda houver `SLOP_MACHINE_WEBHOOK_SECRET` nos
-Workers, pode apagar.
+O blog, que antes vinha do Slop Machine (`SLOP_MACHINE_*`), agora é arquivo
+do repositório ([BLOG.md](BLOG.md)). Se ainda houver
+`SLOP_MACHINE_WEBHOOK_SECRET` nos Workers, pode apagar.
+
+As únicas variáveis do Worker são as dos links de afiliado, lidas em
+`process.env` por `src/lib/affiliate/`. Todas opcionais: sem elas, o link do
+presente segue como o anfitrião colou ([AFFILIATES.md](AFFILIATES.md)).
+
+| Variável | Onde | Valor |
+| --- | --- | --- |
+| `AMAZON_ASSOCIATE_TAG`, `MELI_AFFILIATE_TAG`, `MELI_AFFILIATE_TOOL_ID`, `SHOPEE_AFFILIATE_APP_ID` | só a produção, `vars` do `wrangler.jsonc` | IDs de afiliado; sem eles, a loja fica desligada |
+| `SHOPEE_AFFILIATE_SECRET` | segredo da produção (`wrangler secret put`) | senha da Open API da Shopee |
+| `AFFILIATE_LINKS_DISABLED` | opcional | `true` desliga os links de afiliado |
 
 ## Convex
 
