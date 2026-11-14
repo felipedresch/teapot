@@ -314,6 +314,44 @@ export const giftInsights = {
         }
       ]
     }
+  },
+  "birthday": {
+    "lists": 13,
+    "gifts": 236,
+    "medianGifts": 15,
+    "linkShare": 78,
+    "categories": [
+      {
+        "name": "Roupas, calçados e acessórios",
+        "giftShare": 33,
+        "listShare": 85
+      },
+      {
+        "name": "Casa, cozinha e decoração",
+        "giftShare": 15,
+        "listShare": 54
+      },
+      {
+        "name": "Beleza e perfumes",
+        "giftShare": 13,
+        "listShare": 46
+      },
+      {
+        "name": "Brinquedos e infantil",
+        "giftShare": 10,
+        "listShare": 46
+      },
+      {
+        "name": "Livros, papelaria e jogos",
+        "giftShare": 6,
+        "listShare": 54
+      },
+      {
+        "name": "Eletrônicos",
+        "giftShare": 2,
+        "listShare": 23
+      }
+    ]
   }
 } as const satisfies {
   generatedAt: string
@@ -325,4 +363,12 @@ export const giftInsights = {
   linkShare: number
   stores: Array<{ name: string; share: number }>
   occasions: Record<'chaDeCasaNova' | 'chaDePanela', OccasionInsights>
+  birthday: {
+    lists: number
+    gifts: number
+    medianGifts: number
+    linkShare: number
+    /** giftShare: % dos presentes; listShare: % das listas com ao menos um item da categoria */
+    categories: Array<{ name: string; giftShare: number; listShare: number }>
+  }
 }

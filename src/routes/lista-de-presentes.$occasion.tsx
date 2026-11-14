@@ -167,6 +167,7 @@ function OccasionPage() {
             </Link>
           </section>
         )}
+        {page.slug === 'aniversario' && <BirthdayInsights />}
         <section className="space-y-5 border-t border-muted-rose/25 pt-8">
           <h2 className="font-display text-3xl text-espresso">
             Dúvidas sobre a lista
@@ -205,5 +206,66 @@ function OccasionPage() {
       </article>
       <OccasionLinks />
     </>
+  )
+}
+
+// Aniversário tem poucos itens repetidos entre listas, então o bloco mostra a
+// divisão por categoria, com a amostra explícita.
+function BirthdayInsights() {
+  const data = giftInsights.birthday
+  return (
+    <section
+      aria-labelledby="dados-aniversario"
+      className="space-y-5 rounded-3xl border border-muted-rose/25 p-6 md:p-8"
+    >
+      <p className="font-accent text-2xl text-muted-rose">
+        o que as listas reais mostram
+      </p>
+      <h2
+        id="dados-aniversario"
+        className="font-display text-2xl md:text-3xl text-espresso"
+      >
+        O que as pessoas pedem nas listas de aniversário
+      </h2>
+      <p className="text-warm-gray leading-relaxed">
+        Analisamos {data.lists} listas de aniversário criadas no MyWish, com{' '}
+        {data.gifts} presentes. A lista típica tem {data.medianGifts} itens e{' '}
+        {data.linkShare}% dos presentes têm link de loja. É uma amostra pequena:
+        use como referência, não como regra.
+      </p>
+      <ul className="space-y-3">
+        {data.categories.map((category) => (
+          <li key={category.name} className="space-y-1">
+            <div className="flex justify-between gap-4 text-sm">
+              <span className="text-espresso">{category.name}</span>
+              <span className="text-warm-gray whitespace-nowrap">
+                {category.giftShare}% dos presentes
+              </span>
+            </div>
+            <div className="h-2 rounded-full bg-blush/30" role="presentation">
+              <div
+                className="h-2 rounded-full bg-muted-rose"
+                style={{ width: `${Math.max(category.giftShare, 2)}%` }}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+      <p className="text-sm text-warm-gray">
+        O restante são pedidos variados que não se encaixam numa categoria
+        (experiências, itens personalizados e outros).
+      </p>
+      <p className="text-warm-gray leading-relaxed">
+        Procurando ideias por idade? Veja{' '}
+        <Link
+          to="/blog/$slug"
+          params={{ slug: 'presentes-aniversario-50-ideias-idades' }}
+          className="text-primary underline underline-offset-4"
+        >
+          50 ideias de presentes de aniversário para todas as idades
+        </Link>
+        .
+      </p>
+    </section>
   )
 }

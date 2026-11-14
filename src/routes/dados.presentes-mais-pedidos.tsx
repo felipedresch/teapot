@@ -295,6 +295,38 @@ function GiftDataPage() {
           </p>
         </section>
 
+        <section aria-labelledby="aniversario" className="space-y-4">
+          <h2 id="aniversario" className="font-display text-3xl text-espresso">
+            E no aniversário?
+          </h2>
+          <p className="text-warm-gray leading-relaxed">
+            Listas de aniversário são mais pessoais e quase não repetem itens,
+            então mostramos a divisão por categoria. Base: {data.birthday.lists}{' '}
+            listas e {data.birthday.gifts} presentes; a lista típica tem{' '}
+            {data.birthday.medianGifts} itens. Amostra pequena: use como
+            referência.
+          </p>
+          <ul className="space-y-2 text-warm-gray">
+            {data.birthday.categories.map((category) => (
+              <li key={category.name}>
+                <span className="text-espresso font-medium">
+                  {category.name}
+                </span>
+                : {category.giftShare}% dos presentes
+              </li>
+            ))}
+          </ul>
+          <p className="text-sm">
+            <Link
+              to="/lista-de-presentes/$occasion"
+              params={{ occasion: 'aniversario' }}
+              className="text-primary underline underline-offset-4"
+            >
+              Guia da lista de aniversário
+            </Link>
+          </p>
+        </section>
+
         <section aria-labelledby="lojas" className="space-y-4">
           <h2 id="lojas" className="font-display text-3xl text-espresso">
             De quais lojas vêm os links

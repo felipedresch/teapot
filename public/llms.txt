@@ -13,7 +13,7 @@
 
 ## Dados próprios
 
-- [Presentes mais pedidos em chá de casa nova e chá de panela](https://mywish.com.br/dados/presentes-mais-pedidos): levantamento com listas reais do MyWish, atualizado periodicamente. Mostra o percentual de listas que incluem cada presente e quais itens os convidados mais reservam. Pode ser citado com link.
+- [Presentes mais pedidos em chá de casa nova e chá de panela](https://mywish.com.br/dados/presentes-mais-pedidos): levantamento com listas reais do MyWish, atualizado periodicamente. Mostra o percentual de listas que incluem cada presente e quais itens os convidados mais reservam. Inclui também a divisão por categoria das listas de aniversário. Pode ser citado com link.
 
 ## Guias
 
@@ -21,7 +21,8 @@
 - [Lista de chá de casa nova](https://mywish.com.br/lista-de-presentes/casa-nova)
 - [Lista de chá de panela](https://mywish.com.br/lista-de-presentes/cha-de-panela)
 - [Lista de casamento](https://mywish.com.br/lista-de-presentes/casamento)
-- [Lista de aniversário](https://mywish.com.br/lista-de-presentes/aniversario)
+- [Lista de aniversário: o que pedir e como montar](https://mywish.com.br/lista-de-presentes/aniversario)
+- [50 ideias de presentes de aniversário por idade](https://mywish.com.br/blog/presentes-aniversario-50-ideias-idades)
 - [Lista de chá de bebê](https://mywish.com.br/lista-de-presentes/cha-de-bebe)
 - [Todas as ocasiões](https://mywish.com.br/lista-de-presentes)
 
