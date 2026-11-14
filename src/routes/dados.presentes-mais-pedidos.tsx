@@ -80,7 +80,7 @@ export const Route = createFileRoute('/dados/presentes-mais-pedidos')({
 
 function Percent({ value }: { value: number | null }) {
   return value === null ? (
-    <span className="text-warm-gray/70">amostra pequena</span>
+    <span className="text-warm-gray/70">—</span>
   ) : (
     <>{value}%</>
   )
@@ -245,8 +245,7 @@ function GiftDataPage() {
           <p className="text-warm-gray leading-relaxed">
             Base: {panela.lists} listas de chá de panela (também chamado de chá
             de cozinha) com pelo menos cinco presentes. A lista típica tem{' '}
-            {panela.medianGifts} itens. Onde a amostra de listas compartilhadas
-            ainda é pequena, a taxa de reserva não é mostrada.
+            {panela.medianGifts} itens.
           </p>
           <ItemsTable
             caption="Presentes mais pedidos em listas de chá de panela"
@@ -292,6 +291,36 @@ function GiftDataPage() {
             {mostReserved.at(-3)?.reservedShare}%) ficaram mais tempo
             disponíveis. Para itens assim, uma descrição com medida, cor e link
             de referência ajuda o convidado a decidir.
+          </p>
+        </section>
+
+        <section aria-labelledby="aniversario" className="space-y-4">
+          <h2 id="aniversario" className="font-display text-3xl text-espresso">
+            E no aniversário?
+          </h2>
+          <p className="text-warm-gray leading-relaxed">
+            Listas de aniversário são mais pessoais e quase não repetem itens,
+            então mostramos a divisão por categoria. A lista típica tem{' '}
+            {data.birthday.medianGifts} itens.
+          </p>
+          <ul className="space-y-2 text-warm-gray">
+            {data.birthday.categories.map((category) => (
+              <li key={category.name}>
+                <span className="text-espresso font-medium">
+                  {category.name}
+                </span>
+                : {category.giftShare}% dos presentes
+              </li>
+            ))}
+          </ul>
+          <p className="text-sm">
+            <Link
+              to="/lista-de-presentes/$occasion"
+              params={{ occasion: 'aniversario' }}
+              className="text-primary underline underline-offset-4"
+            >
+              Guia da lista de aniversário
+            </Link>
           </p>
         </section>
 

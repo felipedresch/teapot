@@ -5,6 +5,10 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { SITE_NAME, absoluteUrl, toJsonLd, breadcrumbJsonLd } from '../lib/seo'
 import {
+  BlogOccasionCta,
+  detectBlogOccasion,
+} from '../components/BlogOccasionCta'
+import {
   fetchSlopMachineArticle,
   fetchSlopMachineList,
   ContentFetchError,
@@ -96,12 +100,33 @@ export const Route = createFileRoute('/blog/$slug')({
   component: BlogPostPage,
 })
 
+const markdownComponents = {
+  h1: () => null,
+  a: ({
+    node: _node,
+    ...props
+  }: React.ComponentProps<'a'> & { node?: unknown }) => {
+    const href = props.href ?? ''
+    if (href.startsWith('/')) return <Link to={href}>{props.children}</Link>
+    return <a {...props} rel="noopener noreferrer" target="_blank" />
+  },
+}
+
 function BlogPostPage() {
   const { article, relatedPosts } = Route.useLoaderData()
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' })
   }, [article.slug])
+
+  const occasion = detectBlogOccasion(article)
+  // A chamada do meio entra depois da primeira seção (introdução + primeiro
+  // H2), quando o leitor já viu o conteúdo que veio buscar.
+  const sections = article.markdown.split(/\n(?=## )/)
+  const markdownParts =
+    sections.length >= 3
+      ? [sections.slice(0, 2).join('\n'), sections.slice(2).join('\n')]
+      : [article.markdown]
 
   const articleJsonLd = {
     '@context': 'https://schema.org',
@@ -157,26 +182,25 @@ function BlogPostPage() {
         </p>
       </header>
 
-      <div className="blog-markdown">
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          components={{
-            h1: () => null,
-            a: ({ node: _node, ...props }) => {
-              const href = props.href ?? ''
-              const isInternal = href.startsWith('/')
-
-              if (isInternal) {
-                return <Link to={href}>{props.children}</Link>
-              }
-
-              return <a {...props} rel="noopener noreferrer" target="_blank" />
-            },
-          }}
-        >
-          {article.markdown}
-        </ReactMarkdown>
-      </div>
+      {markdownParts.map((part, index) => (
+        <div key={index}>
+          <div className="blog-markdown">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={markdownComponents}
+            >
+              {part}
+            </ReactMarkdown>
+          </div>
+          {index === 0 && markdownParts.length > 1 && (
+            <BlogOccasionCta
+              occasion={occasion}
+              slug={article.slug}
+              position="meio"
+            />
+          )}
+        </div>
+      ))}
       <section className="pt-8 space-y-4">
         <h2 className="text-3xl text-espresso">Artigos relacionados</h2>
         {relatedPosts.length === 0 ? (
@@ -212,26 +236,7 @@ function BlogPostPage() {
         )}
       </section>
 
-      <aside className="rounded-2xl bg-blush/20 p-6 space-y-3">
-        <h2 className="font-display text-2xl text-espresso">
-          Coloque sua lista em prática
-        </h2>
-        <p className="text-warm-gray">
-          Monte sua lista gratuitamente e libere o compartilhamento por
-          pagamento único, a partir de R$ 9,90.
-        </p>
-        <div className="flex flex-wrap gap-5">
-          <Link to="/events/create" className="text-primary underline">
-            Criar lista
-          </Link>
-          <Link to="/lista-de-presentes" className="text-primary underline">
-            Guias por ocasião
-          </Link>
-          <Link to="/precos" className="text-primary underline">
-            Ver preços
-          </Link>
-        </div>
-      </aside>
+      <BlogOccasionCta occasion={occasion} slug={article.slug} position="fim" />
     </article>
   )
 }

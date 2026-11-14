@@ -37,10 +37,7 @@ const ITEMS = [
   ['Tábua de corte', /tabua/],
   ['Jogo de facas', /(jogo|kit|conjunto) de faca|facas/],
   ['Faqueiro e talheres', /faqueiro|talher/],
-  [
-    'Jogo de pratos',
-    /prato(?! de)|aparelho de jantar|jogo de jantar/,
-  ],
+  ['Jogo de pratos', /prato(?! de)|aparelho de jantar|jogo de jantar/],
   ['Jogo de copos', /\bcopos?\b/],
   ['Xícaras e canecas', /xicara|caneca/],
   ['Jogo de taças', /\btacas?\b/],
@@ -78,6 +75,62 @@ const ITEMS = [
   ['Kit banheiro', /kit banheiro|jogo de banheiro|kit de banheiro/],
   ['Cortina', /cortina/],
 ]
+
+// Aniversário tem poucos itens repetidos entre listas: em vez de um ranking de
+// itens, o levantamento mostra a divisão dos presentes por grande categoria.
+const BIRTHDAY_CATEGORIES = [
+  [
+    'Beleza e perfumes',
+    /perfume|body splash|maquiagem|batom|gloss|rimel|cilios|hidratante|serum|skin ?care|creme|sabonete|shampoo|cabelo|secador|escova secadora|chapinha|esmalte|colonia|kit (sallve|granado|boticario|natura)|granado|sheglam|lattafa|egeo|\bpo\b/,
+  ],
+  [
+    'Casa, cozinha e decoração',
+    /panela|copo|prato|xicara|caneca|toalha|lencol|cama|travesseiro|cortina|tapete|almofada|prateleira|nicho|quadro|placa|vaso|planta|luminaria|cesto|banheiro|panelinha|pote|tempero|travessa|forma|talher|faca|liquidificador|air ?fryer|cafeteira|balanca|organizador|decor|porta |puxa saco|gabinete|manta|edredom/,
+  ],
+  [
+    'Roupas, calçados e acessórios',
+    /calca|blusa|camis|vestido|saia|short|conjunto|pijama|moleton|moletom|jaqueta|casaco|body\b|macac|tenis|sandalia|sapat|bota|chinelo|havaianas|salto|rasteir|meia|bolsa|mochila|mala|relogio|brinco|colar|pulseira|anel|oculos|bone|piercing|roupa|lingerie|biquini|maio/,
+  ],
+  [
+    'Brinquedos e infantil',
+    /brinquedo|boneca|barbie|pelucia|lego|blocos?|carrinho|jogo de encaixe|encaixe|patrulha|massinha|kit (desenho|princesa|musical|medico)|infantil|interativ|quebra ?cabeca|rolima|inflavel/,
+  ],
+  [
+    'Livros, papelaria e jogos',
+    /livro|planner|caderno|papelaria|caneta|manga|quadrinho|hq\b|jogo de tabuleiro|board ?game|cartas|funko|colecion|skullpanda|pop mart/,
+  ],
+  [
+    'Eletrônicos',
+    /fone|headphone|caixa de som|smart|celular|tablet|kindle|carregador|adaptador|notebook|teclado|mouse|camera|console|controle|video ?game|projetor/,
+  ],
+]
+
+function birthdaySummary(entries) {
+  const giftsAll = entries.flatMap(([, g]) => g)
+  // Cada presente conta só na primeira categoria que casar (a ordem importa).
+  const categoryOf = (gift) =>
+    BIRTHDAY_CATEGORIES.find(([, r]) => r.test(normalize(gift.name)))?.[0]
+  const categories = BIRTHDAY_CATEGORIES.map(([name]) => {
+    const matches = entries.filter(([, g]) =>
+      g.some((x) => categoryOf(x) === name),
+    )
+    const giftCount = giftsAll.filter((x) => categoryOf(x) === name).length
+    return {
+      name,
+      giftShare: round(giftCount / giftsAll.length),
+      listShare: round(matches.length / entries.length),
+    }
+  }).sort((a, b) => b.giftShare - a.giftShare)
+  return {
+    lists: entries.length,
+    gifts: giftsAll.length,
+    medianGifts: median(entries.map(([, g]) => g.length)),
+    linkShare: round(
+      giftsAll.filter((g) => g.referenceUrl).length / giftsAll.length,
+    ),
+    categories,
+  }
+}
 
 const OCCASIONS = {
   housewarming: 'chaDeCasaNova',
@@ -201,6 +254,10 @@ for (const [type, key] of Object.entries(OCCASIONS))
     lists.filter(([id]) => events.get(id).eventType === type),
   )
 
+const birthday = birthdaySummary(
+  lists.filter(([id]) => events.get(id).eventType === 'birthday'),
+)
+
 const allGifts = lists.flatMap(([, g]) => g)
 const withLink = allGifts.filter((g) => g.referenceUrl)
 const stores = STORES.map(([name, re]) => ({
@@ -223,6 +280,7 @@ const insights = {
   linkShare: round(withLink.length / allGifts.length),
   stores,
   occasions: byOccasion,
+  birthday,
 }
 
 const out = `// Gerado por scripts/dados-presentes.mjs em ${insights.generatedAt}. Não editar à mão.
@@ -253,6 +311,14 @@ export const giftInsights = ${JSON.stringify(insights, null, 2)} as const satisf
   linkShare: number
   stores: Array<{ name: string; share: number }>
   occasions: Record<'chaDeCasaNova' | 'chaDePanela', OccasionInsights>
+  birthday: {
+    lists: number
+    gifts: number
+    medianGifts: number
+    linkShare: number
+    /** giftShare: % dos presentes; listShare: % das listas com ao menos um item da categoria */
+    categories: Array<{ name: string; giftShare: number; listShare: number }>
+  }
 }
 `
 writeFileSync(new URL('../src/content/giftInsights.ts', import.meta.url), out)

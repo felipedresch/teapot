@@ -59,9 +59,9 @@ export const occasions: Occasion[] = [
   {
     slug: 'aniversario',
     name: 'Aniversário',
-    title: 'Lista de presentes de aniversário online',
+    title: 'Lista de presentes de aniversário: o que pedir e como montar',
     description:
-      'Crie uma lista de aniversário com ideias de presentes, tamanhos e links de referência. Compartilhe com amigos e acompanhe as reservas em um só lugar.',
+      'O que colocar na lista de aniversário, com dados de listas reais: roupas, beleza, casa e mais. Monte com links de qualquer loja e mande um link para os amigos reservarem.',
     intro:
       'Responder “o que você quer ganhar?” fica mais fácil quando suas ideias estão organizadas. Uma lista de aniversário online reúne preferências, tamanhos e referências em um link que você pode compartilhar com amigos e família.',
     price: '9,90',
@@ -90,6 +90,16 @@ export const occasions: Occasion[] = [
       },
     ],
     faq: [
+      {
+        question: 'Quantos presentes colocar na lista de aniversário?',
+        answer:
+          'Nas listas de aniversário do MyWish, a lista típica tem cerca de 15 presentes. Uma lista curta e bem descrita orienta melhor do que dezenas de itens sem contexto. Varie as faixas de preço.',
+      },
+      {
+        question: 'O que as pessoas mais pedem no aniversário?',
+        answer:
+          'Nas listas de aniversário do MyWish, roupas, calçados e acessórios são a maior parte dos pedidos, seguidos de itens de casa, beleza e perfumes, brinquedos (nas listas infantis) e livros. Para ideias por idade, veja o artigo com 50 ideias de presentes de aniversário no blog do MyWish.',
+      },
       {
         question: 'Posso usar para aniversário infantil?',
         answer:
