@@ -26,6 +26,7 @@ import { Route as RGiftIdRouteImport } from './routes/r.$giftId'
 import { Route as ListaDePresentesOccasionRouteImport } from './routes/lista-de-presentes.$occasion'
 import { Route as EventsCreateRouteImport } from './routes/events.create'
 import { Route as EventsSlugRouteImport } from './routes/events.$slug'
+import { Route as DevSugestoesRouteImport } from './routes/dev.sugestoes'
 import { Route as DemoPosthogRouteImport } from './routes/demo/posthog'
 import { Route as DemoConvexRouteImport } from './routes/demo/convex'
 import { Route as DadosPresentesMaisPedidosRouteImport } from './routes/dados.presentes-mais-pedidos'
@@ -119,6 +120,11 @@ const EventsSlugRoute = EventsSlugRouteImport.update({
   path: '/events/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DevSugestoesRoute = DevSugestoesRouteImport.update({
+  id: '/dev/sugestoes',
+  path: '/dev/sugestoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoPosthogRoute = DemoPosthogRouteImport.update({
   id: '/demo/posthog',
   path: '/demo/posthog',
@@ -162,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/dados/presentes-mais-pedidos': typeof DadosPresentesMaisPedidosRoute
   '/demo/convex': typeof DemoConvexRoute
   '/demo/posthog': typeof DemoPosthogRoute
+  '/dev/sugestoes': typeof DevSugestoesRoute
   '/events/$slug': typeof EventsSlugRoute
   '/events/create': typeof EventsCreateRoute
   '/lista-de-presentes/$occasion': typeof ListaDePresentesOccasionRoute
@@ -184,6 +191,7 @@ export interface FileRoutesByTo {
   '/dados/presentes-mais-pedidos': typeof DadosPresentesMaisPedidosRoute
   '/demo/convex': typeof DemoConvexRoute
   '/demo/posthog': typeof DemoPosthogRoute
+  '/dev/sugestoes': typeof DevSugestoesRoute
   '/events/$slug': typeof EventsSlugRoute
   '/events/create': typeof EventsCreateRoute
   '/lista-de-presentes/$occasion': typeof ListaDePresentesOccasionRoute
@@ -209,6 +217,7 @@ export interface FileRoutesById {
   '/dados/presentes-mais-pedidos': typeof DadosPresentesMaisPedidosRoute
   '/demo/convex': typeof DemoConvexRoute
   '/demo/posthog': typeof DemoPosthogRoute
+  '/dev/sugestoes': typeof DevSugestoesRoute
   '/events/$slug': typeof EventsSlugRoute
   '/events/create': typeof EventsCreateRoute
   '/lista-de-presentes/$occasion': typeof ListaDePresentesOccasionRoute
@@ -235,6 +244,7 @@ export interface FileRouteTypes {
     | '/dados/presentes-mais-pedidos'
     | '/demo/convex'
     | '/demo/posthog'
+    | '/dev/sugestoes'
     | '/events/$slug'
     | '/events/create'
     | '/lista-de-presentes/$occasion'
@@ -257,6 +267,7 @@ export interface FileRouteTypes {
     | '/dados/presentes-mais-pedidos'
     | '/demo/convex'
     | '/demo/posthog'
+    | '/dev/sugestoes'
     | '/events/$slug'
     | '/events/create'
     | '/lista-de-presentes/$occasion'
@@ -281,6 +292,7 @@ export interface FileRouteTypes {
     | '/dados/presentes-mais-pedidos'
     | '/demo/convex'
     | '/demo/posthog'
+    | '/dev/sugestoes'
     | '/events/$slug'
     | '/events/create'
     | '/lista-de-presentes/$occasion'
@@ -305,6 +317,7 @@ export interface RootRouteChildren {
   DadosPresentesMaisPedidosRoute: typeof DadosPresentesMaisPedidosRoute
   DemoConvexRoute: typeof DemoConvexRoute
   DemoPosthogRoute: typeof DemoPosthogRoute
+  DevSugestoesRoute: typeof DevSugestoesRoute
   EventsSlugRoute: typeof EventsSlugRoute
   EventsCreateRoute: typeof EventsCreateRoute
   RGiftIdRoute: typeof RGiftIdRoute
@@ -433,6 +446,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dev/sugestoes': {
+      id: '/dev/sugestoes'
+      path: '/dev/sugestoes'
+      fullPath: '/dev/sugestoes'
+      preLoaderRoute: typeof DevSugestoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo/posthog': {
       id: '/demo/posthog'
       path: '/demo/posthog'
@@ -511,6 +531,7 @@ const rootRouteChildren: RootRouteChildren = {
   DadosPresentesMaisPedidosRoute: DadosPresentesMaisPedidosRoute,
   DemoConvexRoute: DemoConvexRoute,
   DemoPosthogRoute: DemoPosthogRoute,
+  DevSugestoesRoute: DevSugestoesRoute,
   EventsSlugRoute: EventsSlugRoute,
   EventsCreateRoute: EventsCreateRoute,
   RGiftIdRoute: RGiftIdRoute,

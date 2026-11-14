@@ -4,13 +4,17 @@ export type GiftLinkSource = 'guest' | 'host'
 
 export const GIFT_LINK_SOURCE_PARAM = 'o'
 export const GIFT_LINK_DISTINCT_ID_PARAM = 'd'
+// `v=shopee`: botão "Ver opções na Shopee" (presente sem link).
+export const GIFT_LINK_VIEW_PARAM = 'v'
 
 export function giftLinkHref(
   giftId: string,
   source: GiftLinkSource,
   distinctId?: string | null,
+  view?: 'shopee',
 ) {
   const params = new URLSearchParams({ [GIFT_LINK_SOURCE_PARAM]: source })
+  if (view) params.set(GIFT_LINK_VIEW_PARAM, view)
   if (distinctId) params.set(GIFT_LINK_DISTINCT_ID_PARAM, distinctId)
   return `/r/${encodeURIComponent(giftId)}?${params.toString()}`
 }

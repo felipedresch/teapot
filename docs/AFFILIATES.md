@@ -94,6 +94,88 @@ Antes de ligar qualquer loja vale subir só o rastreio por algumas semanas: o
 `reason` mostra quantos cliques seriam trocados e quantos já vêm com afiliado
 de alguém.
 
+## Sugestões de produto da Shopee
+
+Hoje cerca de 70% dos presentes não têm link. As sugestões atacam isso dos
+dois lados.
+
+### Para o anfitrião: "Ideias para o seu <ocasião>"
+
+No topo de "Adicionar presente" da página da lista
+([`GiftSuggestions`](../src/components/gift-suggestions/GiftSuggestions.tsx)):
+
+- chips com as ideias mais pedidas nas listas do mywish, tiradas de
+  `src/content/giftInsights.ts`: chá de casa nova, chá de panela (também
+  usado em casamento) e as categorias de aniversário. Os outros tipos de
+  evento ficam sem o bloco;
+- ao tocar num chip, até 3 cards: "Mais em conta", "Mais escolhido" e "Para
+  presentear", com foto, nome, preço, nota e vendas;
+- "Adicionar" preenche nome, categoria, link e foto no formulário. O
+  anfitrião ainda pode editar antes de salvar. O link salvo é o normal do
+  produto: a troca pelo de afiliado continua no `/r/`.
+
+Ideias e buscas ficam em
+[`convex/lib/suggestionIdeas.ts`](../convex/lib/suggestionIdeas.ts) (troque
+só o `keyword` para mudar a busca; um teste confere que os rótulos ainda
+existem no giftInsights).
+
+### De onde vêm os produtos
+
+- Um cron diário do Convex (`convex/crons.ts`, 7h UTC) chama
+  `productSuggestions.refreshProductSuggestions`. Para cada busca, ele
+  consulta o `productOfferV2` da Open API
+  ([`convex/lib/shopeeAffiliateApi.ts`](../convex/lib/shopeeAffiliateApi.ts)).
+  A mesma busca em duas ocasiões roda uma vez só.
+- O ranking ([`convex/lib/suggestionRanking.ts`](../convex/lib/suggestionRanking.ts)):
+  - parte da ordem de relevância da API;
+  - descarta nota abaixo de 4,5 e menos de 50 vendas (aceita 10 vendas se
+    sobrarem menos de 3 produtos);
+  - escolhe o que mais vende como "Mais escolhido";
+  - "Mais em conta" é o mais barato abaixo da mediana de preço;
+  - "Para presentear" fica um pouco acima, até 2,2× a mediana.
+
+  A comissão só desempata. Quando a busca não dá três faixas honestas,
+  aparecem dois cards.
+- O resultado fica na tabela `productSuggestions`. A página só lê esse cache e
+  nunca chama a API por visita. Se a API cair, o cache do dia anterior fica.
+- **Sem as credenciais no Convex, o cron não faz nada, a tabela fica vazia e
+  o bloco não aparece.**
+
+### Para o convidado: "Ver opções na Shopee"
+
+Num presente sem link (e ainda não recebido), com a Shopee ligada no Worker,
+aparece um link discreto. Ele vai para `/r/<giftId>?v=shopee`
+([`shopeeOptions.ts`](../src/lib/affiliate/shopeeOptions.ts)), que tenta, em
+ordem:
+
+1. o link curto de afiliado da **busca** da Shopee pelo nome do presente;
+2. se a API recusar link de busca, o produto em cache que combina com o nome;
+3. se nada combinar, a busca sem afiliado (o convidado acha o presente, só não
+   há comissão).
+
+**Não confirmado:** se o `generateShortLink` aceita URL de busca. O `reason`
+do `gift_link_clicked` (com `linkKind: shopee_options`) mostra qual caminho
+valeu nos primeiros cliques.
+
+### Eventos
+
+No PostHog, do navegador:
+
+- `gift_suggestion_viewed`: chip aberto, com `occasion`, `ideaId` e quantos
+  produtos;
+- `gift_suggestion_added`: com `slot` e `price`;
+- `shopee_options_clicked`.
+
+O clique em si chega também como `gift_link_clicked`, pelo servidor.
+
+### Ver sem login nem chaves
+
+`/dev/sugestoes` mostra os componentes reais com as fixtures de
+[`src/dev/shopeeFixtures.ts`](../src/dev/shopeeFixtures.ts), em todos os
+estados: aberto, depois de adicionar, carregando, sem resultados e imagem
+quebrada. As imagens são ilustrações. A rota só existe em desenvolvimento: no
+build de produção dá 404, e as fixtures não vão no bundle.
+
 ## Variáveis
 
 ### Worker (site)
@@ -126,8 +208,11 @@ git) e rode `npm run build && npx vite preview`.
 
 ### Convex
 
-Nenhuma variável nova. O evento do PostHog usa o `POSTHOG_PROJECT_API_KEY`
-que já existe. A tabela `giftLinkClicks` e as funções de `convex/giftLinks.ts`
+| Variável | Valor |
+| --- | --- |
+| `SHOPEE_AFFILIATE_APP_ID`, `SHOPEE_AFFILIATE_SECRET` | as mesmas do Worker. Ligam o cron das sugestões; só na produção (`npx convex env set --prod ...`) |
+
+O evento do PostHog usa o `POSTHOG_PROJECT_API_KEY` que já existe. A tabela `giftLinkClicks` e as funções de `convex/giftLinks.ts`
 precisam estar no Convex **antes** do site: suba com `npx convex deploy`
 primeiro e depois o Worker. Na ordem contrária, os cliques em "Ver
 referência" voltam para a página até o Convex subir.
@@ -172,7 +257,11 @@ põe na URL os mesmos parâmetros que o link do painel traz.
 2. Com a conta aprovada, no painel de afiliado, abra **Open API** e peça o
    acesso. Saem o **App ID** e a **senha (Secret)**.
 3. `SHOPEE_AFFILIATE_APP_ID=<app id>` no `vars` e o segredo com
-   `npx wrangler secret put SHOPEE_AFFILIATE_SECRET --name mywish`.
+   `npx wrangler secret put SHOPEE_AFFILIATE_SECRET --name mywish`. Para as
+   sugestões, as mesmas duas no Convex de produção
+   (`npx convex env set --prod SHOPEE_AFFILIATE_APP_ID ...`). Para não esperar
+   o cron, rode uma vez
+   `npx convex run --prod productSuggestions:refreshProductSuggestions`.
 4. Confira: um clique num presente da Shopee tem que cair num
    `s.shopee.com.br/...`, e no PostHog o `reason` tem que ser `rewritten`. Se
    vier `generator_failed`, a API recusou: confira o App ID, a senha e o

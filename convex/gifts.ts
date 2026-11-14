@@ -528,9 +528,28 @@ export const listGiftCategoriesForEvent = query({
   },
 })
 
+// Fotos das sugestões da Shopee: baixadas direto, sem ler a página.
+const SUGGESTION_IMAGE_HOSTS = ['susercontent.com', 'shopee.com.br']
+
+function isSuggestionImageUrl(raw: string) {
+  try {
+    const url = new URL(raw)
+    return (
+      url.protocol === 'https:' &&
+      SUGGESTION_IMAGE_HOSTS.some(
+        (host) => url.hostname === host || url.hostname.endsWith(`.${host}`),
+      )
+    )
+  } catch {
+    return false
+  }
+}
+
 export const extractGiftImageFromReferenceUrl = action({
   args: {
     referenceUrl: v.string(),
+    // Foto já conhecida (sugestão da Shopee): pula a leitura da página.
+    sourceImageUrl: v.optional(v.string()),
   },
   returns: v.object({
     success: v.boolean(),
@@ -543,12 +562,19 @@ export const extractGiftImageFromReferenceUrl = action({
     try {
       const normalizedReferenceUrl = normalizeReferenceUrl(args.referenceUrl)
 
-      let sourceImageUrl: string | null = null
+      let sourceImageUrl: string | null =
+        args.sourceImageUrl && isSuggestionImageUrl(args.sourceImageUrl)
+          ? args.sourceImageUrl
+          : null
 
-      try {
-        sourceImageUrl = await tryResolveImageFromDirectFetch(normalizedReferenceUrl)
-      } catch {
-        sourceImageUrl = null
+      if (!sourceImageUrl) {
+        try {
+          sourceImageUrl = await tryResolveImageFromDirectFetch(
+            normalizedReferenceUrl,
+          )
+        } catch {
+          sourceImageUrl = null
+        }
       }
 
       if (!sourceImageUrl) {

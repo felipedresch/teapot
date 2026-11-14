@@ -2,9 +2,12 @@ import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { authTables } from '@convex-dev/auth/server'
 import {
+  giftLinkKindValidator,
   giftLinkReasonValidator,
   giftLinkSourceValidator,
   giftLinkStoreValidator,
+  suggestionOccasionValidator,
+  suggestionSlotValidator,
 } from './lib/giftLinkValidators'
 
 const schema = defineSchema({
@@ -137,10 +140,31 @@ const schema = defineSchema({
     rewritten: v.boolean(),
     reason: giftLinkReasonValidator,
     source: giftLinkSourceValidator,
+    // Sem valor: link do presente ('reference').
+    kind: v.optional(giftLinkKindValidator),
     createdAt: v.number(),
   })
     .index('by_gift', ['giftId'])
     .index('by_event', ['eventId']),
+
+  // Cache das sugestões de produto da Shopee, atualizado por cron diário
+  // (convex/productSuggestions.ts). Até 3 produtos por ocasião e ideia.
+  productSuggestions: defineTable({
+    occasion: suggestionOccasionValidator,
+    ideaId: v.string(),
+    slot: suggestionSlotValidator,
+    position: v.number(),
+    itemId: v.string(),
+    name: v.string(),
+    imageUrl: v.string(),
+    price: v.number(),
+    rating: v.optional(v.number()),
+    sales: v.optional(v.number()),
+    commissionRate: v.optional(v.number()),
+    productLink: v.string(),
+    shopName: v.optional(v.string()),
+    fetchedAt: v.number(),
+  }).index('by_occasion_and_idea', ['occasion', 'ideaId']),
 
   temporaryGiftImages: defineTable({
     imageId: v.id('_storage'),

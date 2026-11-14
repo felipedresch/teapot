@@ -14,6 +14,7 @@ import {
   Loader2,
   Plus,
   Share2,
+  ShoppingBag,
   Sparkles,
   Settings2,
   Trash2,
@@ -55,9 +56,32 @@ import {
   type AffiliateDisclosure,
 } from '../lib/affiliate/disclosure'
 
+import { GiftSuggestions } from '../components/gift-suggestions/GiftSuggestions'
+import type {
+  SuggestionIdeaView,
+  SuggestionProduct,
+} from '../components/gift-suggestions/types'
+import {
+  SUGGESTION_OCCASIONS,
+  suggestionOccasionForEventType,
+} from '../../convex/lib/suggestionIdeas'
+import { giftInsights } from '../content/giftInsights'
+
+// % das listas com cada ideia, para a frase embaixo dos chips.
+const SUGGESTION_LIST_SHARES = {
+  casaNova: Object.fromEntries(
+    giftInsights.occasions.chaDeCasaNova.items.map((i) => [i.name, i.listShare]),
+  ),
+  panela: Object.fromEntries(
+    giftInsights.occasions.chaDePanela.items.map((i) => [i.name, i.listShare]),
+  ),
+  aniversario: undefined,
+} as const
+
 const AFFILIATE_DISCLOSURE_OFF: AffiliateDisclosure = {
   enabled: false,
   amazon: false,
+  shopee: false,
 }
 
 export const Route = createFileRoute('/events/$slug')({
@@ -1161,6 +1185,7 @@ function EventGiftsPageShell() {
       })
       setNewGiftReferenceTouched(false)
       setNewGiftReferenceImageError(null)
+      setSuggestionInForm(null)
     } catch (createError) {
       setError(
         createError instanceof Error
@@ -1171,6 +1196,108 @@ function EventGiftsPageShell() {
       setIsCreatingGift(false)
     }
   }, [createGift, event, isHostView, newGiftForm, gifts.length])
+
+  // ── Sugestões da Shopee (src/components/gift-suggestions) ──
+  const suggestionOccasion = suggestionOccasionForEventType(event?.eventType)
+  const productSuggestions = useQuery(
+    api.productSuggestions.listProductSuggestions,
+    isHostView && suggestionOccasion ? { occasion: suggestionOccasion } : 'skip',
+  )
+  const [suggestionInForm, setSuggestionInForm] = useState<string | null>(null)
+  const addedSuggestionIds = useMemo(
+    () => new Set(suggestionInForm ? [suggestionInForm] : []),
+    [suggestionInForm],
+  )
+  const newGiftFormRef = useRef<HTMLDivElement>(null)
+
+  const handleSuggestionViewed = useCallback(
+    (idea: SuggestionIdeaView) => {
+      if (!event || !suggestionOccasion) return
+      track.giftSuggestionViewed({
+        eventId: String(event._id),
+        occasion: suggestionOccasion,
+        ideaId: idea.ideaId,
+        products: idea.products.length,
+      })
+    },
+    [event, suggestionOccasion],
+  )
+
+  // "Adicionar" preenche o formulário (o anfitrião ainda edita e salva). O
+  // link salvo é o normal do produto: a troca pelo de afiliado fica no /r/.
+  const handleAddSuggestion = useCallback(
+    (product: SuggestionProduct, idea: SuggestionIdeaView) => {
+      if (!event || !suggestionOccasion) return
+      setNewGiftReferenceTouched(false)
+      setNewGiftReferenceImageError(null)
+      setNewGiftForm((current) => {
+        if (current.imageId) {
+          void discardTemporaryGiftImage({ imageId: current.imageId })
+        }
+        return {
+          ...current,
+          name: product.name.slice(0, 120),
+          category: idea.category ?? current.category,
+          referenceUrl: product.productLink,
+          imageId: undefined,
+          imageUrl: undefined,
+        }
+      })
+      setSuggestionInForm(product.itemId)
+      track.giftSuggestionAdded({
+        eventId: String(event._id),
+        occasion: suggestionOccasion,
+        ideaId: idea.ideaId,
+        slot: product.slot,
+        price: product.price,
+      })
+
+      const extractionId = newGiftExtractionIdRef.current + 1
+      newGiftExtractionIdRef.current = extractionId
+      setIsExtractingNewGiftImage(true)
+      void extractGiftImageFromReferenceUrl({
+        referenceUrl: product.productLink,
+        sourceImageUrl: product.imageUrl,
+      })
+        .then((result) => {
+          if (newGiftExtractionIdRef.current !== extractionId) return
+          if (!result.success || !result.imageId || !result.imageUrl) {
+            setNewGiftReferenceImageError(
+              result.error ?? 'Não conseguimos trazer a foto desse produto.',
+            )
+            return
+          }
+          setNewGiftForm((current) => ({
+            ...current,
+            imageId: result.imageId,
+            imageUrl: result.imageUrl,
+          }))
+        })
+        .catch(() => {
+          if (newGiftExtractionIdRef.current !== extractionId) return
+          setNewGiftReferenceImageError(
+            'Não conseguimos trazer a foto desse produto.',
+          )
+        })
+        .finally(() => {
+          if (newGiftExtractionIdRef.current !== extractionId) return
+          setIsExtractingNewGiftImage(false)
+        })
+
+      window.setTimeout(() => {
+        newGiftFormRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        })
+      }, 120)
+    },
+    [
+      discardTemporaryGiftImage,
+      event,
+      extractGiftImageFromReferenceUrl,
+      suggestionOccasion,
+    ],
+  )
 
   const handleSaveGift = useCallback(async () => {
     if (!editingGiftId || !isHostView) return
@@ -2077,7 +2204,21 @@ function EventGiftsPageShell() {
                   className="overflow-hidden border-t border-dashed border-sage/35"
                 >
                   <div className="p-6 sm:p-8 md:p-10 space-y-6 bg-gradient-to-b from-sage/8 via-warm-white/60 to-warm-white/40">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {suggestionOccasion ? (
+                      <GiftSuggestions
+                        occasionLabel={SUGGESTION_OCCASIONS[suggestionOccasion].label}
+                        ideas={productSuggestions}
+                        listShares={SUGGESTION_LIST_SHARES[suggestionOccasion]}
+                        disclosure={affiliateDisclosure}
+                        addedItemIds={addedSuggestionIds}
+                        onAdd={handleAddSuggestion}
+                        onIdeaViewed={handleSuggestionViewed}
+                      />
+                    ) : null}
+                    <div
+                      ref={newGiftFormRef}
+                      className="grid grid-cols-1 md:grid-cols-2 gap-4 scroll-mt-28"
+                    >
                       <Input
                         label="Nome do presente"
                         value={newGiftForm.name}
@@ -2729,6 +2870,24 @@ function EventGiftsPageShell() {
                             Ver referência
                             <ArrowRight className="size-3" />
                           </GiftReferenceLink>
+                        ) : affiliateDisclosure.shopee &&
+                          gift.status !== 'received' ? (
+                          <GiftReferenceLink
+                            giftId={gift._id}
+                            source={isHostView ? 'host' : 'guest'}
+                            view="shopee"
+                            onClick={() =>
+                              track.shopeeOptionsClicked({
+                                eventId: String(gift.eventId),
+                                giftId: String(gift._id),
+                                isHost: isHostView,
+                              })
+                            }
+                            className="inline-flex items-center gap-1 text-xs text-warm-gray/80 hover:text-espresso hover:underline underline-offset-2"
+                          >
+                            <ShoppingBag className="size-3" strokeWidth={1.8} />
+                            Ver opções na Shopee
+                          </GiftReferenceLink>
                         ) : (
                           <span className="text-xs font-medium text-espresso/70">
                           </span>
@@ -2876,7 +3035,8 @@ function EventGiftsPageShell() {
               </AnimatePresence>
             </div>
 
-            {filteredGifts.some((gift) => gift.referenceUrl) && (
+            {(filteredGifts.some((gift) => gift.referenceUrl) ||
+              affiliateDisclosure.shopee) && (
               <AffiliateDisclosureNote
                 disclosure={affiliateDisclosure}
                 className="mt-6 text-center text-[11px] leading-relaxed text-warm-gray/60"

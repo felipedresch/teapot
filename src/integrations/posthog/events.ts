@@ -12,6 +12,31 @@ function safeCapture(eventName: string, properties?: AnyProps) {
 }
 
 export const track = {
+  // Sugestões de produto da Shopee (src/components/gift-suggestions).
+  giftSuggestionViewed(props: {
+    eventId: string
+    occasion: string
+    ideaId: string
+    products: number
+  }) {
+    safeCapture('gift_suggestion_viewed', props)
+  },
+  giftSuggestionAdded(props: {
+    eventId: string
+    occasion: string
+    ideaId: string
+    slot: 'budget' | 'popular' | 'gift'
+    price: number
+  }) {
+    safeCapture('gift_suggestion_added', props)
+  },
+  shopeeOptionsClicked(props: {
+    eventId: string
+    giftId: string
+    isHost: boolean
+  }) {
+    safeCapture('shopee_options_clicked', props)
+  },
   eventCreated(props: { eventType?: string; isPublic?: boolean }) {
     safeCapture('event_created', props)
   },

@@ -9,8 +9,9 @@ import {
 import { resolveRedirects, type FetchLike } from '../src/lib/affiliate/resolve'
 import {
   SHOPEE_GRAPHQL_URL,
-  buildShopeeRequest,
+  buildShopeeGraphqlRequest,
 } from '../src/lib/affiliate/shopee'
+import { shortLinkQuery } from '../convex/lib/shopeeAffiliateApi'
 import { isShortener, parseHttpUrl } from '../src/lib/affiliate/stores'
 import { giftLinkHref, isBotUserAgent } from '../src/lib/affiliate/links'
 
@@ -227,10 +228,12 @@ describe('Mercado Livre', () => {
 
 describe('Shopee', () => {
   it('assina o pedido como a API aberta pede', async () => {
-    const request = await buildShopeeRequest(
-      'https://shopee.com.br/produto-i.1.2',
+    const request = await buildShopeeGraphqlRequest(
+      shortLinkQuery('https://shopee.com.br/produto-i.1.2', [
+        'mywish',
+        'guest',
+      ]),
       { appId: '123', secret: 'abc' },
-      ['mywish', 'guest'],
       1700000000,
     )
     expect(JSON.parse(request.body).query).toBe(

@@ -9,12 +9,17 @@ import type { AffiliateDisclosure } from '../lib/affiliate/disclosure'
 export function GiftReferenceLink({
   giftId,
   source,
+  view,
   className,
+  onClick,
   children,
 }: {
   giftId: string
   source: GiftLinkSource
+  // 'shopee': botão "Ver opções na Shopee" de um presente sem link.
+  view?: 'shopee'
   className?: string
+  onClick?: () => void
   children: ReactNode
 }) {
   // O distinct_id só existe no navegador: entra depois da hidratação para o
@@ -30,10 +35,11 @@ export function GiftReferenceLink({
 
   return (
     <a
-      href={giftLinkHref(giftId, source, distinctId)}
+      href={giftLinkHref(giftId, source, distinctId, view)}
       target="_blank"
       rel="nofollow sponsored noopener"
       className={className}
+      onClick={onClick}
     >
       {children}
     </a>

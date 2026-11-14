@@ -48,6 +48,7 @@ Por deployment (`npx convex env list`, `--prod` para a produção).
 | `ABACATEPAY_API_KEY` | produção a chave real; dev a de teste (`abc_dev_`) | a de teste (`abc_dev_`) |
 | `ABACATEPAY_WEBHOOK_SECRET` | sim | não: o webhook não chega em preview |
 | `POSTHOG_PROJECT_API_KEY` | sim | não: preview não manda análise |
+| `SHOPEE_AFFILIATE_APP_ID`, `SHOPEE_AFFILIATE_SECRET` | só a produção, quando a Shopee aprovar: ligam o cron das sugestões ([AFFILIATES.md](AFFILIATES.md)) | não |
 | `MYWISH_DEPLOYMENT_ENV` | não existe (vale produção) | `development`: liga o login por senha e o seed |
 
 As padrão de preview ficam em `GET /v1/projects/1671791/list_default_environment_variables?deploymentType=preview`
