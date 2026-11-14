@@ -21,9 +21,27 @@ Os guias de ocasião ficam em `src/content/occasions.ts`: casamento, aniversári
 
 Os textos devem refletir o produto: montagem gratuita; compartilhamento pago; compra e entrega dos presentes fora do MyWish. Não anunciar conversão de presentes em dinheiro. Os valores devem acompanhar `getPrices` e `getPaywallCategory` em `convex/payments.ts`.
 
+## Citações por IA (ChatGPT, Perplexity, Copilot)
+
+Entre maio e agosto de 2026, o ChatGPT foi a maior fonte de visitantes depois do tráfego direto, e a que mais convertia: dos 149 visitantes vindos de chatgpt.com, 42 criaram lista. Em setembro essa origem praticamente zerou. O Google traz pouco: quase todos os cliques vêm de buscas pelo nome "mywish". A estratégia é ter páginas que respondem perguntas de forma direta, com dados próprios e data de atualização visível.
+
+- `/dados/presentes-mais-pedidos`: levantamento próprio com as listas reais (chá de casa nova e chá de panela). Os números vêm de `src/content/giftInsights.ts`, gerado por `npm run dados:gerar` (lê a produção com `npx convex data --prod`; só publica agregados anônimos, itens em pelo menos 5 listas). Rodar todo mês e publicar: a data da página acompanha a geração.
+- `/como-escolher-site-de-lista-de-presentes`: comparativo por tipo de solução (não por marca, para não publicar preço ou regra de terceiros desatualizado). Diz também quando o MyWish não é a melhor opção.
+- Guias de casa nova e chá de panela mostram os 10 itens mais pedidos e linkam o levantamento.
+- `public/llms.txt` resume os fatos do produto e aponta para os dados.
+- `public/robots.txt` libera explicitamente OAI-SearchBot, ChatGPT-User, GPTBot, PerplexityBot, ClaudeBot e Bingbot.
+
+### Datas
+
+`src/content/pageDates.ts` guarda a data da última revisão real de cada página pública. Ela aparece como "Atualizado em", vai no `dateModified` do JSON-LD e no `lastmod` do sitemap. Só mude a data quando o conteúdo mudar.
+
+### Bing e IndexNow
+
+O ChatGPT busca na web com ajuda do índice do Bing. Depois de cada publicação com conteúdo novo, rodar `npm run indexnow` (todas as URLs do sitemap) ou `npm run indexnow -- /caminho` (só as alteradas). A chave fica em `public/<chave>.txt` e no próprio script. Vale também cadastrar o site no Bing Webmaster Tools (dá para importar do Search Console) e enviar o sitemap por lá.
+
 ## Dados estruturados
 
-O site inclui Organization e WebSite. Artigos incluem Article e navegação BreadcrumbList; guias também incluem BreadcrumbList. A FAQ usa perguntas e respostas que estão visíveis na própria página. Não publicar avaliações, autores, recursos ou ofertas inexistentes. `toJsonLd` escapa `<` para impedir que conteúdo externo encerre um bloco script.
+O site inclui Organization e WebSite. Artigos incluem Article e navegação BreadcrumbList; guias de ocasião incluem BreadcrumbList, FAQPage e Article com `dateModified`. A página de dados inclui Dataset; preços incluem Service com as ofertas reais (acompanhar `getPrices`). A FAQ usa perguntas e respostas que estão visíveis na própria página. Não publicar avaliações, autores, recursos ou ofertas inexistentes. `toJsonLd` escapa `<` para impedir que conteúdo externo encerre um bloco script.
 
 ## Medição
 

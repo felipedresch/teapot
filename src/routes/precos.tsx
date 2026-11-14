@@ -1,5 +1,35 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { pageMeta } from '../lib/seo'
+import { SITE_NAME, SITE_URL, pageMeta, toJsonLd } from '../lib/seo'
+import { formatLongDatePtBr, pageDates } from '../content/pageDates'
+
+// Valores precisam acompanhar getPrices em convex/payments.ts.
+const OFFERS = [
+  [
+    'Lista única: aniversário, chá de bebê, chá de panela, casa nova e outras ocasiões',
+    '9.90',
+  ],
+  ['Acesso vitalício a partir de uma ocasião comum', '29.90'],
+  ['Lista única: casamento, noivado e bodas', '29.90'],
+  ['Acesso vitalício a partir de casamento, noivado ou bodas', '59.90'],
+] as const
+
+const serviceJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Service',
+  name: `${SITE_NAME}: lista de presentes online`,
+  serviceType: 'Lista de presentes online',
+  areaServed: 'BR',
+  provider: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
+  description:
+    'Montagem gratuita da lista de presentes. Pagamento único via Pix para liberar o compartilhamento, sem mensalidade e sem porcentagem sobre os presentes.',
+  offers: OFFERS.map(([name, price]) => ({
+    '@type': 'Offer',
+    name,
+    price,
+    priceCurrency: 'BRL',
+    url: `${SITE_URL}/precos`,
+  })),
+}
 export const Route = createFileRoute('/precos')({
   head: () => ({
     meta: pageMeta(
@@ -12,6 +42,10 @@ export const Route = createFileRoute('/precos')({
 function PricingPage() {
   return (
     <article className="max-w-4xl mx-auto px-6 py-14 space-y-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: toJsonLd(serviceJsonLd) }}
+      />
       <header className="space-y-4">
         <p className="font-accent text-3xl text-muted-rose">
           simples, desde o começo
@@ -22,7 +56,13 @@ function PricingPage() {
         <p className="text-lg text-warm-gray leading-relaxed">
           Montar e editar a lista é gratuito. Quando estiver pronta, você faz um
           pagamento único via Pix para liberar o compartilhamento. Não há
-          mensalidade.
+          mensalidade e o MyWish não fica com nenhuma porcentagem dos presentes.
+        </p>
+        <p className="text-sm text-warm-gray">
+          Preços atualizados em{' '}
+          <time dateTime={pageDates['/precos']}>
+            {formatLongDatePtBr(pageDates['/precos'])}
+          </time>
         </p>
       </header>
       <div className="overflow-x-auto rounded-2xl border border-muted-rose/30">
@@ -93,6 +133,24 @@ function PricingPage() {
           reservar um presente. A compra do produto é feita diretamente na loja
           escolhida. O Pix do MyWish paga a liberação da lista, não os
           presentes, e não converte presentes em dinheiro.
+        </p>
+      </section>
+      <section className="space-y-3">
+        <h2 className="font-display text-2xl text-espresso">
+          Taxa única ou porcentagem sobre os presentes?
+        </h2>
+        <p className="text-warm-gray leading-relaxed">
+          Listas que transformam presentes em dinheiro costumam descontar uma
+          porcentagem de cada presente recebido. No MyWish, o valor é fixo e
+          pago uma vez por quem cria a lista: o convidado compra o presente na
+          loja e nada é descontado.{' '}
+          <Link
+            to="/como-escolher-site-de-lista-de-presentes"
+            className="underline"
+          >
+            Compare os tipos de lista de presentes
+          </Link>
+          .
         </p>
       </section>
       <Link

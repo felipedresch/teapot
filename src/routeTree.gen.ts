@@ -16,6 +16,7 @@ import { Route as MyGiftsRouteImport } from './routes/my-gifts'
 import { Route as ListaDePresentesRouteImport } from './routes/lista-de-presentes'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as FaqRouteImport } from './routes/faq'
+import { Route as ComoEscolherSiteDeListaDePresentesRouteImport } from './routes/como-escolher-site-de-lista-de-presentes'
 import { Route as BlogRouteImport } from './routes/blog'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ListaDePresentesIndexRouteImport } from './routes/lista-de-presentes.index'
@@ -26,6 +27,7 @@ import { Route as EventsCreateRouteImport } from './routes/events.create'
 import { Route as EventsSlugRouteImport } from './routes/events.$slug'
 import { Route as DemoPosthogRouteImport } from './routes/demo/posthog'
 import { Route as DemoConvexRouteImport } from './routes/demo/convex'
+import { Route as DadosPresentesMaisPedidosRouteImport } from './routes/dados.presentes-mais-pedidos'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as EventsSlugConviteParceiroRouteImport } from './routes/events.$slug_.convite-parceiro'
 import { Route as ApiSlopRevalidateRouteImport } from './routes/api.slop.revalidate'
@@ -65,6 +67,12 @@ const FaqRoute = FaqRouteImport.update({
   path: '/faq',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ComoEscolherSiteDeListaDePresentesRoute =
+  ComoEscolherSiteDeListaDePresentesRouteImport.update({
+    id: '/como-escolher-site-de-lista-de-presentes',
+    path: '/como-escolher-site-de-lista-de-presentes',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const BlogRoute = BlogRouteImport.update({
   id: '/blog',
   path: '/blog',
@@ -116,6 +124,12 @@ const DemoConvexRoute = DemoConvexRouteImport.update({
   path: '/demo/convex',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DadosPresentesMaisPedidosRoute =
+  DadosPresentesMaisPedidosRouteImport.update({
+    id: '/dados/presentes-mais-pedidos',
+    path: '/dados/presentes-mais-pedidos',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const BlogSlugRoute = BlogSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
@@ -136,6 +150,7 @@ const ApiSlopRevalidateRoute = ApiSlopRevalidateRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/blog': typeof BlogRouteWithChildren
+  '/como-escolher-site-de-lista-de-presentes': typeof ComoEscolherSiteDeListaDePresentesRoute
   '/faq': typeof FaqRoute
   '/how-it-works': typeof HowItWorksRoute
   '/lista-de-presentes': typeof ListaDePresentesRouteWithChildren
@@ -144,6 +159,7 @@ export interface FileRoutesByFullPath {
   '/sitemap-index.xml': typeof SitemapIndexDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/dados/presentes-mais-pedidos': typeof DadosPresentesMaisPedidosRoute
   '/demo/convex': typeof DemoConvexRoute
   '/demo/posthog': typeof DemoPosthogRoute
   '/events/$slug': typeof EventsSlugRoute
@@ -157,6 +173,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/como-escolher-site-de-lista-de-presentes': typeof ComoEscolherSiteDeListaDePresentesRoute
   '/faq': typeof FaqRoute
   '/how-it-works': typeof HowItWorksRoute
   '/my-gifts': typeof MyGiftsRoute
@@ -164,6 +181,7 @@ export interface FileRoutesByTo {
   '/sitemap-index.xml': typeof SitemapIndexDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/dados/presentes-mais-pedidos': typeof DadosPresentesMaisPedidosRoute
   '/demo/convex': typeof DemoConvexRoute
   '/demo/posthog': typeof DemoPosthogRoute
   '/events/$slug': typeof EventsSlugRoute
@@ -179,6 +197,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/blog': typeof BlogRouteWithChildren
+  '/como-escolher-site-de-lista-de-presentes': typeof ComoEscolherSiteDeListaDePresentesRoute
   '/faq': typeof FaqRoute
   '/how-it-works': typeof HowItWorksRoute
   '/lista-de-presentes': typeof ListaDePresentesRouteWithChildren
@@ -187,6 +206,7 @@ export interface FileRoutesById {
   '/sitemap-index.xml': typeof SitemapIndexDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/dados/presentes-mais-pedidos': typeof DadosPresentesMaisPedidosRoute
   '/demo/convex': typeof DemoConvexRoute
   '/demo/posthog': typeof DemoPosthogRoute
   '/events/$slug': typeof EventsSlugRoute
@@ -203,6 +223,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/blog'
+    | '/como-escolher-site-de-lista-de-presentes'
     | '/faq'
     | '/how-it-works'
     | '/lista-de-presentes'
@@ -211,6 +232,7 @@ export interface FileRouteTypes {
     | '/sitemap-index.xml'
     | '/sitemap.xml'
     | '/blog/$slug'
+    | '/dados/presentes-mais-pedidos'
     | '/demo/convex'
     | '/demo/posthog'
     | '/events/$slug'
@@ -224,6 +246,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/como-escolher-site-de-lista-de-presentes'
     | '/faq'
     | '/how-it-works'
     | '/my-gifts'
@@ -231,6 +254,7 @@ export interface FileRouteTypes {
     | '/sitemap-index.xml'
     | '/sitemap.xml'
     | '/blog/$slug'
+    | '/dados/presentes-mais-pedidos'
     | '/demo/convex'
     | '/demo/posthog'
     | '/events/$slug'
@@ -245,6 +269,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/blog'
+    | '/como-escolher-site-de-lista-de-presentes'
     | '/faq'
     | '/how-it-works'
     | '/lista-de-presentes'
@@ -253,6 +278,7 @@ export interface FileRouteTypes {
     | '/sitemap-index.xml'
     | '/sitemap.xml'
     | '/blog/$slug'
+    | '/dados/presentes-mais-pedidos'
     | '/demo/convex'
     | '/demo/posthog'
     | '/events/$slug'
@@ -268,6 +294,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BlogRoute: typeof BlogRouteWithChildren
+  ComoEscolherSiteDeListaDePresentesRoute: typeof ComoEscolherSiteDeListaDePresentesRoute
   FaqRoute: typeof FaqRoute
   HowItWorksRoute: typeof HowItWorksRoute
   ListaDePresentesRoute: typeof ListaDePresentesRouteWithChildren
@@ -275,6 +302,7 @@ export interface RootRouteChildren {
   PrecosRoute: typeof PrecosRoute
   SitemapIndexDotxmlRoute: typeof SitemapIndexDotxmlRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  DadosPresentesMaisPedidosRoute: typeof DadosPresentesMaisPedidosRoute
   DemoConvexRoute: typeof DemoConvexRoute
   DemoPosthogRoute: typeof DemoPosthogRoute
   EventsSlugRoute: typeof EventsSlugRoute
@@ -333,6 +361,13 @@ declare module '@tanstack/react-router' {
       path: '/faq'
       fullPath: '/faq'
       preLoaderRoute: typeof FaqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/como-escolher-site-de-lista-de-presentes': {
+      id: '/como-escolher-site-de-lista-de-presentes'
+      path: '/como-escolher-site-de-lista-de-presentes'
+      fullPath: '/como-escolher-site-de-lista-de-presentes'
+      preLoaderRoute: typeof ComoEscolherSiteDeListaDePresentesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog': {
@@ -405,6 +440,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoConvexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dados/presentes-mais-pedidos': {
+      id: '/dados/presentes-mais-pedidos'
+      path: '/dados/presentes-mais-pedidos'
+      fullPath: '/dados/presentes-mais-pedidos'
+      preLoaderRoute: typeof DadosPresentesMaisPedidosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/blog/$slug': {
       id: '/blog/$slug'
       path: '/$slug'
@@ -457,6 +499,8 @@ const ListaDePresentesRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BlogRoute: BlogRouteWithChildren,
+  ComoEscolherSiteDeListaDePresentesRoute:
+    ComoEscolherSiteDeListaDePresentesRoute,
   FaqRoute: FaqRoute,
   HowItWorksRoute: HowItWorksRoute,
   ListaDePresentesRoute: ListaDePresentesRouteWithChildren,
@@ -464,6 +508,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrecosRoute: PrecosRoute,
   SitemapIndexDotxmlRoute: SitemapIndexDotxmlRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  DadosPresentesMaisPedidosRoute: DadosPresentesMaisPedidosRoute,
   DemoConvexRoute: DemoConvexRoute,
   DemoPosthogRoute: DemoPosthogRoute,
   EventsSlugRoute: EventsSlugRoute,

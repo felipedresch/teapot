@@ -14,6 +14,7 @@ import { PublicEventsCarousel } from '../components/PublicEventsCarousel'
 import { capitalizeFirst, getDisplayHostNames } from '../lib/presentation'
 import { SITE_NAME, absoluteUrl } from '../lib/seo'
 import { OccasionLinks } from '../components/OccasionLinks'
+import { GiftInsightsTeaser } from '../components/GiftInsightsTeaser'
 import { cn } from '../lib/utils'
 
 export const Route = createFileRoute('/')({
@@ -502,6 +503,7 @@ function HomePage() {
         </section>
       )}
       <OccasionLinks />
+      <GiftInsightsTeaser />
     </div>
   )
 }
