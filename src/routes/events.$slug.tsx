@@ -46,8 +46,29 @@ import { SITE_NAME, absoluteUrl, toJsonLd } from '../lib/seo'
 import { PaywallDialog } from '../components/paywall/Paywall'
 import { usePaywallState } from '../hooks/usePaywall'
 import { track } from '../integrations/posthog/events'
+import {
+  AffiliateDisclosureNote,
+  GiftReferenceLink,
+} from '../components/GiftReferenceLink'
+import {
+  getAffiliateDisclosure,
+  type AffiliateDisclosure,
+} from '../lib/affiliate/disclosure'
+
+const AFFILIATE_DISCLOSURE_OFF: AffiliateDisclosure = {
+  enabled: false,
+  amazon: false,
+}
 
 export const Route = createFileRoute('/events/$slug')({
+  // Só diz se há loja de afiliado ligada (aviso de comissão). Se falhar, a
+  // página abre sem o aviso.
+  loader: async () => ({
+    affiliate: await getAffiliateDisclosure().catch(
+      () => AFFILIATE_DISCLOSURE_OFF,
+    ),
+  }),
+  staleTime: 5 * 60 * 1000,
   head: () => ({
     meta: [
       {
@@ -205,6 +226,7 @@ function isValidReferenceUrl(value: string) {
 
 function EventGiftsPageShell() {
   const { slug } = Route.useParams()
+  const { affiliate: affiliateDisclosure } = Route.useLoaderData()
   const { signIn } = useAuthActions()
   const { isAuthenticated } = useCurrentUser()
   const { event, isLoading: isEventLoading } = useEventBySlug(slug)
@@ -2699,15 +2721,14 @@ function EventGiftsPageShell() {
 
                       <div className="min-h-6 mt-1">
                         {gift.referenceUrl ? (
-                          <a
-                            href={gift.referenceUrl}
-                            target="_blank"
-                            rel="noreferrer"
+                          <GiftReferenceLink
+                            giftId={gift._id}
+                            source={isHostView ? 'host' : 'guest'}
                             className="inline-flex items-center gap-1 text-xs font-semibold text-espresso/85 hover:text-espresso hover:underline underline-offset-2"
                           >
                             Ver referência
                             <ArrowRight className="size-3" />
-                          </a>
+                          </GiftReferenceLink>
                         ) : (
                           <span className="text-xs font-medium text-espresso/70">
                           </span>
@@ -2854,6 +2875,13 @@ function EventGiftsPageShell() {
               })}
               </AnimatePresence>
             </div>
+
+            {filteredGifts.some((gift) => gift.referenceUrl) && (
+              <AffiliateDisclosureNote
+                disclosure={affiliateDisclosure}
+                className="mt-6 text-center text-[11px] leading-relaxed text-warm-gray/60"
+              />
+            )}
 
             {(hasMoreGifts || isLoadingMoreGifts) && (
               <div ref={loadMoreTriggerRef} className="h-1 w-full" />

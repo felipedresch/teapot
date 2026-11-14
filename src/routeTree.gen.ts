@@ -22,6 +22,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ListaDePresentesIndexRouteImport } from './routes/lista-de-presentes.index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as SitemapXmlRouteImport } from './routes/sitemap.xml'
+import { Route as RGiftIdRouteImport } from './routes/r.$giftId'
 import { Route as ListaDePresentesOccasionRouteImport } from './routes/lista-de-presentes.$occasion'
 import { Route as EventsCreateRouteImport } from './routes/events.create'
 import { Route as EventsSlugRouteImport } from './routes/events.$slug'
@@ -97,6 +98,11 @@ const SitemapXmlRoute = SitemapXmlRouteImport.update({
   path: '/sitemap/xml',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RGiftIdRoute = RGiftIdRouteImport.update({
+  id: '/r/$giftId',
+  path: '/r/$giftId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ListaDePresentesOccasionRoute =
   ListaDePresentesOccasionRouteImport.update({
     id: '/$occasion',
@@ -159,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/events/$slug': typeof EventsSlugRoute
   '/events/create': typeof EventsCreateRoute
   '/lista-de-presentes/$occasion': typeof ListaDePresentesOccasionRoute
+  '/r/$giftId': typeof RGiftIdRoute
   '/sitemap/xml': typeof SitemapXmlRoute
   '/blog/': typeof BlogIndexRoute
   '/lista-de-presentes/': typeof ListaDePresentesIndexRoute
@@ -180,6 +187,7 @@ export interface FileRoutesByTo {
   '/events/$slug': typeof EventsSlugRoute
   '/events/create': typeof EventsCreateRoute
   '/lista-de-presentes/$occasion': typeof ListaDePresentesOccasionRoute
+  '/r/$giftId': typeof RGiftIdRoute
   '/sitemap/xml': typeof SitemapXmlRoute
   '/blog': typeof BlogIndexRoute
   '/lista-de-presentes': typeof ListaDePresentesIndexRoute
@@ -204,6 +212,7 @@ export interface FileRoutesById {
   '/events/$slug': typeof EventsSlugRoute
   '/events/create': typeof EventsCreateRoute
   '/lista-de-presentes/$occasion': typeof ListaDePresentesOccasionRoute
+  '/r/$giftId': typeof RGiftIdRoute
   '/sitemap/xml': typeof SitemapXmlRoute
   '/blog/': typeof BlogIndexRoute
   '/lista-de-presentes/': typeof ListaDePresentesIndexRoute
@@ -229,6 +238,7 @@ export interface FileRouteTypes {
     | '/events/$slug'
     | '/events/create'
     | '/lista-de-presentes/$occasion'
+    | '/r/$giftId'
     | '/sitemap/xml'
     | '/blog/'
     | '/lista-de-presentes/'
@@ -250,6 +260,7 @@ export interface FileRouteTypes {
     | '/events/$slug'
     | '/events/create'
     | '/lista-de-presentes/$occasion'
+    | '/r/$giftId'
     | '/sitemap/xml'
     | '/blog'
     | '/lista-de-presentes'
@@ -273,6 +284,7 @@ export interface FileRouteTypes {
     | '/events/$slug'
     | '/events/create'
     | '/lista-de-presentes/$occasion'
+    | '/r/$giftId'
     | '/sitemap/xml'
     | '/blog/'
     | '/lista-de-presentes/'
@@ -295,6 +307,7 @@ export interface RootRouteChildren {
   DemoPosthogRoute: typeof DemoPosthogRoute
   EventsSlugRoute: typeof EventsSlugRoute
   EventsCreateRoute: typeof EventsCreateRoute
+  RGiftIdRoute: typeof RGiftIdRoute
   SitemapXmlRoute: typeof SitemapXmlRoute
   EventsSlugConviteParceiroRoute: typeof EventsSlugConviteParceiroRoute
 }
@@ -390,6 +403,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap/xml'
       fullPath: '/sitemap/xml'
       preLoaderRoute: typeof SitemapXmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/r/$giftId': {
+      id: '/r/$giftId'
+      path: '/r/$giftId'
+      fullPath: '/r/$giftId'
+      preLoaderRoute: typeof RGiftIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lista-de-presentes/$occasion': {
@@ -493,6 +513,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoPosthogRoute: DemoPosthogRoute,
   EventsSlugRoute: EventsSlugRoute,
   EventsCreateRoute: EventsCreateRoute,
+  RGiftIdRoute: RGiftIdRoute,
   SitemapXmlRoute: SitemapXmlRoute,
   EventsSlugConviteParceiroRoute: EventsSlugConviteParceiroRoute,
 }
