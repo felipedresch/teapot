@@ -32,11 +32,8 @@ Conta da Cloudflare: `4310b383610db9c6b12d0cd7849ceb12`, plano Workers Paid.
 - **Cabeçalhos dos arquivos:** [`public/_headers`](../public/_headers): cache
   de um ano em `/assets/*`, que levam hash no nome, e `noindex` nos
   `workers.dev`. Arquivo estático não passa pelo `src/server.ts`.
-- **Blog:** o SSR lê o Slop Machine em `SLOP_MACHINE_BASE_URL` (variável no
-  `wrangler.jsonc`). O segredo `SLOP_MACHINE_WEBHOOK_SECRET` do
-  `/api/slop/revalidate` fica em cada Worker (Settings > Variables and
-  secrets, ou `npx wrangler secret put SLOP_MACHINE_WEBHOOK_SECRET --name <worker>`).
-  O cache do blog é por instância do Worker e vale 5 minutos.
+- **Blog:** os artigos são arquivos do repositório (`src/content/blog`) e
+  entram no build; não há serviço externo nem variável ([BLOG.md](BLOG.md)).
 - **Logs:** Workers Logs ligado (`observability`), em Workers & Pages >
   `<worker>` > Observability.
 

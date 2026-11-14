@@ -22,17 +22,10 @@ públicas saem de `src/lib/seo.ts`.
 
 ## Worker (servidor)
 
-Lidas em `process.env` pelo SSR (`src/lib/slopMachine.ts`).
-
-| Variável | Onde | Valor |
-| --- | --- | --- |
-| `SLOP_MACHINE_BASE_URL` | `wrangler.jsonc` (`vars`) | produção `https://cautious-crocodile-345.convex.site`; staging e previews `https://insightful-fox-52.convex.site` |
-| `SLOP_MACHINE_WEBHOOK_SECRET` | segredo de cada Worker (`wrangler secret put`) | o mesmo que o Slop Machine manda no `/api/slop/revalidate` |
-| `SLOP_MACHINE_PROJECT_SLUG`, `SLOP_MACHINE_CACHE_TTL_MS` | opcionais | padrão `mywish-app` e 5 minutos |
-
-Em desenvolvimento local (`npm run dev`), o SSR roda no workerd e cai no
-`VITE_SLOP_MACHINE_BASE_URL` do `.env.local` quando não há
-`SLOP_MACHINE_BASE_URL`.
+O Worker não precisa de variável nem segredo próprio. O blog, que antes vinha
+do Slop Machine (`SLOP_MACHINE_*`), agora é arquivo do repositório
+([BLOG.md](BLOG.md)). Se ainda houver `SLOP_MACHINE_WEBHOOK_SECRET` nos
+Workers, pode apagar.
 
 ## Convex
 

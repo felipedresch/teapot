@@ -86,7 +86,7 @@ export const occasions: Occasion[] = [
       },
       {
         title: 'Ajude a evitar presentes repetidos',
-        text: 'Peça aos convidados que reservem o item escolhido antes de comprar. A reserva avisa aos demais que alguém pretende dar aquele presente. Se os planos mudarem, a pessoa pode cancelar a reserva. Depois da festa, você pode marcar os itens que recebeu.',
+        text: 'Peça aos convidados que reservem o item escolhido antes de comprar. A reserva avisa aos demais que alguém pretende dar aquele presente. Se os planos de alguém mudarem, a pessoa avisa você. Depois da festa, você pode marcar os itens que recebeu.',
       },
     ],
     faq: [

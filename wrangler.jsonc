@@ -14,7 +14,7 @@
   "name": "mywish",
   "main": "src/server.ts",
   "compatibility_date": "2026-10-01",
-  // process.env com as variáveis e os segredos do Worker (src/lib/slopMachine.ts).
+  // APIs do Node (process.env etc.) no Worker.
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "preview_urls": true,
@@ -35,11 +35,6 @@
   "observability": {
     "enabled": true,
   },
-  "vars": {
-    // O blog vem do Slop Machine. O segredo SLOP_MACHINE_WEBHOOK_SECRET
-    // fica no painel (wrangler secret put).
-    "SLOP_MACHINE_BASE_URL": "https://cautious-crocodile-345.convex.site",
-  },
   "env": {
     "staging": {
       "name": "mywish-staging",
@@ -54,18 +49,11 @@
       "observability": {
         "enabled": true,
       },
-      "vars": {
-        "SLOP_MACHINE_BASE_URL": "https://insightful-fox-52.convex.site",
-      },
       // Preview de cada branch que não é master, staging nem dev
       // (`npx wrangler preview` no Workers Builds, scripts/cloudflare/).
-      // Variáveis não vêm do ambiente de cima: vão de novo aqui.
       "previews": {
         "observability": {
           "enabled": true,
-        },
-        "vars": {
-          "SLOP_MACHINE_BASE_URL": "https://insightful-fox-52.convex.site",
         },
       },
     },

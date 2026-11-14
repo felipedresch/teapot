@@ -12,10 +12,9 @@
 - `src/routes/sitemap[.]xml.ts` usa o escape de ponto do TanStack Router. Um arquivo chamado `sitemap.xml.ts` cria a rota `/sitemap/xml`, não `/sitemap.xml`.
 - `/sitemap-index.xml` e `/sitemap/xml` redirecionam para o sitemap principal.
 - Não recriar `public/sitemap.xml`: ele ocultaria a resposta dinâmica.
-- O sitemap usa os slugs da mesma API de conteúdo usada no blog. Assim, diferenças de domínio no sitemap do fornecedor não excluem os artigos.
+- O sitemap lista os artigos de `src/content/blog` (ver [BLOG.md](BLOG.md)), com o `updatedAt` de cada um.
 - `lastmod` dos artigos reflete as datas da API. Páginas estáticas omitem esse campo; não inventar uma atualização diária.
-- Falha na API de conteúdo retorna 503 no sitemap, com Retry-After, em vez de publicar silenciosamente um sitemap incompleto.
-- O blog distingue artigo ausente (404) de indisponibilidade do fornecedor.
+- Artigos juntados a outros saem com 301 (`BLOG_REDIRECTS` em `src/lib/blog.ts`).
 
 Os guias de ocasião ficam em `src/content/occasions.ts`: casamento, aniversário, chá de bebê, chá de panela e casa nova. Cada página tem orientações próprias, exemplos e dúvidas relevantes. `/lista-de-presentes` é a página central e `/precos` explica os valores e o que cada pagamento libera. Home, navegação, rodapé e artigos oferecem links para essas páginas.
 
