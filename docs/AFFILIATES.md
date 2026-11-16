@@ -136,10 +136,37 @@ existem no giftInsights).
 
   A comissão só desempata. Quando a busca não dá três faixas honestas,
   aparecem dois cards.
+
 - O resultado fica na tabela `productSuggestions`. A página só lê esse cache e
   nunca chama a API por visita. Se a API cair, o cache do dia anterior fica.
-- **Sem as credenciais no Convex, o cron não faz nada, a tabela fica vazia e
-  o bloco não aparece.**
+- **Sem as credenciais no Convex, o cron não faz nada.** O bloco só aparece
+  para as ideias que têm produto na tabela.
+
+### Curadoria manual (enquanto a Open API não sai)
+
+Desde 2026-11-16 a tabela é preenchida à mão, a partir de
+[`scripts/sugestoes/curadoria.json`](../scripts/sugestoes/curadoria.json):
+
+1. Os produtos saem da busca de **Oferta de produto** do painel de afiliado,
+   com o mesmo critério do ranking (nota, vendas, faixas de preço), revisados
+   à mão: nome curto e limpo, sem refil, peça avulsa ou item quase repetido.
+2. O link de cada um é gerado em **Link personalizado** (até 5 por vez), com
+   `Sub_id 1 = mywish` e `Sub_id 2 = sugestao`. Assim o relatório de vendas
+   do painel separa as compras que vieram das sugestões. É um link curto
+   `s.shopee.com.br/...` que já leva o ID de afiliado; ele é salvo como link
+   do presente, e o `/r/` só repassa.
+3. `node scripts/sugestoes/carregar.mjs --check` valida o arquivo, e
+   `node scripts/sugestoes/carregar.mjs` grava na produção (`--dev` para o
+   deployment de dev). Cada ideia vai para todas as ocasiões que a usam.
+
+Cuidados:
+
+- Não automatize buscas seguidas no painel: depois de umas 20 em sequência a
+  Shopee bloqueia a página por alguns minutos ("Página indisponível").
+- Preço e vendas são do dia da curadoria. Revise uma vez por mês, ou quando um
+  produto sair do ar.
+- Quando a Open API for liberada e as credenciais estiverem no Convex, o cron
+  troca esta curadoria pelas escolhas automáticas.
 
 ### Para o convidado: "Ver opções na Shopee"
 
@@ -184,14 +211,14 @@ Lidas em `process.env` pela rota `/r/$giftId` e pelo aviso de comissão. Só
 na produção (`mywish`): na staging e nos previews, deixe sem, para os testes
 não gerarem cliques de afiliado.
 
-| Variável | Tipo | Valor |
-| --- | --- | --- |
-| `AMAZON_ASSOCIATE_TAG` | variável (`vars` do `wrangler.jsonc`) | o ID de rastreamento, ex.: `mywish-20` |
-| `MELI_AFFILIATE_TAG` | variável | a etiqueta do Mercado Livre (vai em `matt_word`) |
-| `MELI_AFFILIATE_TOOL_ID` | variável | o número que aparece em `matt_tool` |
-| `SHOPEE_AFFILIATE_APP_ID` | variável | o App ID da Open API da Shopee |
-| `SHOPEE_AFFILIATE_SECRET` | **segredo** (`wrangler secret put`) | a senha (Secret) da Open API |
-| `AFFILIATE_LINKS_DISABLED` | opcional | `true` desliga tudo |
+| Variável                   | Tipo                                  | Valor                                            |
+| -------------------------- | ------------------------------------- | ------------------------------------------------ |
+| `AMAZON_ASSOCIATE_TAG`     | variável (`vars` do `wrangler.jsonc`) | o ID de rastreamento, ex.: `mywish-20`           |
+| `MELI_AFFILIATE_TAG`       | variável                              | a etiqueta do Mercado Livre (vai em `matt_word`) |
+| `MELI_AFFILIATE_TOOL_ID`   | variável                              | o número que aparece em `matt_tool`              |
+| `SHOPEE_AFFILIATE_APP_ID`  | variável                              | o App ID da Open API da Shopee                   |
+| `SHOPEE_AFFILIATE_SECRET`  | **segredo** (`wrangler secret put`)   | a senha (Secret) da Open API                     |
+| `AFFILIATE_LINKS_DISABLED` | opcional                              | `true` desliga tudo                              |
 
 O Mercado Livre só liga com as duas variáveis; a Shopee também.
 
@@ -208,8 +235,8 @@ git) e rode `npm run build && npx vite preview`.
 
 ### Convex
 
-| Variável | Valor |
-| --- | --- |
+| Variável                                             | Valor                                                                                             |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | `SHOPEE_AFFILIATE_APP_ID`, `SHOPEE_AFFILIATE_SECRET` | as mesmas do Worker. Ligam o cron das sugestões; só na produção (`npx convex env set --prod ...`) |
 
 O evento do PostHog usa o `POSTHOG_PROJECT_API_KEY` que já existe. A tabela `giftLinkClicks` e as funções de `convex/giftLinks.ts`
@@ -251,11 +278,28 @@ põe na URL os mesmos parâmetros que o link do painel traz.
    (`src/lib/affiliate/mercadolivre.ts`, TODO no topo) precisa de outro
    caminho; deixe o Mercado Livre desligado até lá.
 
+Visto em 2026-11-16: a conta tem a etiqueta `drfe7828713` e `matt_tool`
+`92414274`. O `meli.la` do gerador **não** cai mais na URL do produto: ele
+leva para `mercadolivre.com.br/social/<etiqueta>` com os dois parâmetros e um
+`ref` cifrado, que aponta o produto. Isso aumenta a chance de a URL montada à
+mão não contar; o teste do passo 5 ainda não foi feito. Um navegador sem login
+no Mercado Livre cai numa tela de "acesse sua conta", então faça o teste num
+celular ou numa aba anônima de verdade. Os termos, segundo guias de terceiros,
+só contam cliques das mídias cadastradas no perfil: confira se o
+`mywish.com.br` está lá. O gerador aceita várias URLs, uma por linha.
+
 ### Shopee (Programa de Afiliados)
 
 1. Cadastro em `affiliate.shopee.com.br`. A análise leva alguns dias.
-2. Com a conta aprovada, no painel de afiliado, abra **Open API** e peça o
-   acesso. Saem o **App ID** e a **senha (Secret)**.
+2. Com a conta aprovada, o acesso à Open API é pedido por formulário, não no
+   painel (lá o botão "Aplicar" fica desativado e o "entre em contato" não
+   abre). Formulário:
+   `help.shopee.com.br/portal/webform/bbce78695c364ba18c9cbceb74ec9091` →
+   já é afiliado: Sim → outras dificuldades → ID de afiliado e telefone do
+   cadastro → cadastro / conta → **Quero ativar a API**. Resposta em até 3
+   dias úteis. Depois, em **Abrir API** no painel, clique em Aplicar: saem o
+   **App ID** e a **senha (Secret)**. Pedido feito em 2026-11-16.
+   O `mywish.com.br` já está cadastrado como mídia da conta.
 3. `SHOPEE_AFFILIATE_APP_ID=<app id>` no `vars` e o segredo com
    `npx wrangler secret put SHOPEE_AFFILIATE_SECRET --name mywish`. Para as
    sugestões, as mesmas duas no Convex de produção

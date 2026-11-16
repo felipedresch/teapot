@@ -1,0 +1,450 @@
+{
+  "_sobre": "Curadoria manual das sugestões da Shopee, enquanto a Open API não sai. Dados do painel de afiliados em 2026-11-16. `link` é o link curto de afiliado gerado em Link personalizado. Carregar com `node scripts/sugestoes/carregar.mjs` (docs/AFFILIATES.md).",
+  "geradoEm": "2026-11-16",
+  "ideias": {
+    "potes-hermeticos": [
+      {
+        "slot": "budget",
+        "itemId": "54415008632",
+        "shopId": "352620278",
+        "name": "Kit cantinho do café com 3 potes herméticos",
+        "price": 35.9,
+        "rating": 4.9,
+        "sales": 1000,
+        "commissionRate": 0.03,
+        "image": "br-11134207-820mb-mr7uzk2e1b0nb3",
+        "link": "https://s.shopee.com.br/50agQHshv8"
+      },
+      {
+        "slot": "popular",
+        "itemId": "23594687826",
+        "shopId": "1414811075",
+        "name": "Kit 6 potes de vidro com tampa de bambu",
+        "price": 59.99,
+        "rating": 4.8,
+        "sales": 8000,
+        "commissionRate": 0.03,
+        "image": "sg-11134201-821d2-mh7wuevqd9n0d5",
+        "link": "https://s.shopee.com.br/5Au6cas4aB"
+      },
+      {
+        "slot": "gift",
+        "itemId": "42956460115",
+        "shopId": "475045875",
+        "name": "Kit 10 potes de vidro herméticos, 370 ml",
+        "price": 79.87,
+        "rating": 4.9,
+        "sales": 896,
+        "commissionRate": 0.13,
+        "image": "br-11134207-7r98o-mbclh59izmyh32",
+        "link": "https://s.shopee.com.br/40i9ERwVwy"
+      }
+    ],
+    "formas-assadeiras": [
+      {
+        "slot": "budget",
+        "itemId": "23099530072",
+        "shopId": "940875252",
+        "name": "Kit 2 formas antiaderentes para pão",
+        "price": 16.99,
+        "rating": 4.7,
+        "sales": 419,
+        "commissionRate": 0.03,
+        "image": "br-11134207-820lk-mq4fgc31dn9cf7",
+        "link": "https://s.shopee.com.br/4B1ZQkvsc1"
+      },
+      {
+        "slot": "popular",
+        "itemId": "22897562777",
+        "shopId": "328538026",
+        "name": "Kit 3 formas de silicone para air fryer",
+        "price": 20.49,
+        "rating": 4.6,
+        "sales": 30000,
+        "commissionRate": 0.11,
+        "image": "sg-11134201-8260x-mlny1rsmaa683b",
+        "link": "https://s.shopee.com.br/4LKzd3vFH4"
+      }
+    ],
+    "jogo-pratos": [
+      {
+        "slot": "popular",
+        "itemId": "28624270836",
+        "shopId": "505682429",
+        "name": "Aparelho de jantar de vidro, 12 peças",
+        "price": 49.9,
+        "rating": 4.8,
+        "sales": 10000,
+        "commissionRate": 0.23,
+        "image": "br-11134207-820la-msbm24t1fif90c",
+        "link": "https://s.shopee.com.br/4LKzd58WPX"
+      },
+      {
+        "slot": "gift",
+        "itemId": "20999333862",
+        "shopId": "505682429",
+        "name": "Aparelho de jantar de vidro, 20 peças",
+        "price": 52.9,
+        "rating": 4.8,
+        "sales": 1000,
+        "commissionRate": 0.03,
+        "image": "br-11134207-820l4-mrrl0ysggpaf20",
+        "link": "https://s.shopee.com.br/6AmdoS1Xgu"
+      }
+    ],
+    "toalhas-banho": [
+      {
+        "slot": "budget",
+        "itemId": "21220716936",
+        "shopId": "617730972",
+        "name": "Jogo de toalhas de banho gigantes, 2 peças",
+        "price": 35.99,
+        "rating": 4.7,
+        "sales": 136,
+        "commissionRate": 0.23,
+        "image": "br-11134207-81ztc-mja6qp6fynsy27",
+        "link": "https://s.shopee.com.br/60TDc92B1t"
+      },
+      {
+        "slot": "popular",
+        "itemId": "22996107922",
+        "shopId": "920653955",
+        "name": "Kit 2 toalhas de banho gigantes (banhão)",
+        "price": 169.9,
+        "rating": 4.8,
+        "sales": 20000,
+        "commissionRate": 0.17,
+        "image": "br-11134207-7r98o-lzui6kj1oj6t77",
+        "link": "https://s.shopee.com.br/6VPUD40H10"
+      }
+    ],
+    "faqueiro-talheres": [
+      {
+        "slot": "budget",
+        "itemId": "20898993415",
+        "shopId": "897432560",
+        "name": "Faqueiro inox, 24 peças",
+        "price": 43.89,
+        "rating": 4.7,
+        "sales": 1000,
+        "commissionRate": 0.03,
+        "image": "sg-11134201-7rbkc-lmewdpy7z4mxa9",
+        "link": "https://s.shopee.com.br/6L640l0uLz"
+      },
+      {
+        "slot": "popular",
+        "itemId": "21199370467",
+        "shopId": "835611110",
+        "name": "Faqueiro inox dourado com maleta",
+        "price": 99,
+        "rating": 4.9,
+        "sales": 10000,
+        "commissionRate": 0.11,
+        "image": "br-11134207-820ld-mp39qblr6681e4",
+        "link": "https://s.shopee.com.br/4fxq1ibZvk"
+      }
+    ],
+    "jogo-copos": [
+      {
+        "slot": "budget",
+        "itemId": "52813564277",
+        "shopId": "1310127163",
+        "name": "Jogo de 6 copos de vidro, 300 ml",
+        "price": 26.9,
+        "rating": 4.9,
+        "sales": 119,
+        "commissionRate": 0.03,
+        "image": "br-11134207-820lw-mqdjnlktfaira3",
+        "link": "https://s.shopee.com.br/4qHGE1awan"
+      },
+      {
+        "slot": "popular",
+        "itemId": "18497882223",
+        "shopId": "976908417",
+        "name": "Jogo de copos de vidro decorados",
+        "price": 38.99,
+        "rating": 4.9,
+        "sales": 2000,
+        "commissionRate": 0.03,
+        "image": "br-11134207-7r98o-m0ewymizx5eobd",
+        "link": "https://s.shopee.com.br/50agQKaJFq"
+      }
+    ],
+    "tapete": [
+      {
+        "slot": "popular",
+        "itemId": "19198987658",
+        "shopId": "319730850",
+        "name": "Tapete antiderrapante para sala, 2,00 × 1,40 m",
+        "price": 99.89,
+        "rating": 4.7,
+        "sales": 4000,
+        "commissionRate": 0.03,
+        "image": "br-11134207-820ln-msyfpxuzhipwb5",
+        "link": "https://s.shopee.com.br/5Au6cdZfut"
+      },
+      {
+        "slot": "gift",
+        "itemId": "22797145616",
+        "shopId": "319730850",
+        "name": "Tapete grande para sala, 3,00 × 2,00 m",
+        "price": 249.88,
+        "rating": 4.8,
+        "sales": 3000,
+        "commissionRate": 0.03,
+        "image": "br-11134207-820lo-mv6dpco9wa2oe1",
+        "link": "https://s.shopee.com.br/40i9EUe7Hg"
+      }
+    ],
+    "utensilios-cozinha": [
+      {
+        "slot": "budget",
+        "itemId": "23394346715",
+        "shopId": "1593878986",
+        "name": "Kit 12 utensílios de cozinha",
+        "price": 35.99,
+        "rating": 4.7,
+        "sales": 292,
+        "commissionRate": 0.13,
+        "image": "br-11134207-81z1k-mdwszrffg7b70a",
+        "link": "https://s.shopee.com.br/7KybCdiD0m"
+      },
+      {
+        "slot": "popular",
+        "itemId": "58250586453",
+        "shopId": "1528182604",
+        "name": "Kit 7 utensílios de silicone",
+        "price": 159.99,
+        "rating": 5,
+        "sales": 1000,
+        "commissionRate": 0.11,
+        "image": "br-11134207-81z1k-mh05jq8qqx3838",
+        "link": "https://s.shopee.com.br/7VI1OwhZfp"
+      }
+    ],
+    "jogo-panelas": [
+      {
+        "slot": "popular",
+        "itemId": "12092887185",
+        "shopId": "633539708",
+        "name": "Jogo de panelas antiaderentes, 9 peças",
+        "price": 199.9,
+        "rating": 4.8,
+        "sales": 20000,
+        "commissionRate": 0.17,
+        "image": "br-11134207-820m8-muwrw25fzh1c7d",
+        "link": "https://s.shopee.com.br/7fbRbFgwKs"
+      },
+      {
+        "slot": "gift",
+        "itemId": "58201839882",
+        "shopId": "847598018",
+        "name": "Jogo de panelas antiaderentes para indução",
+        "price": 249.9,
+        "rating": 4.8,
+        "sales": 4000,
+        "commissionRate": 0.17,
+        "image": "br-11134207-820lh-mv61hhyd2gao22",
+        "link": "https://s.shopee.com.br/7purnYgIzv"
+      }
+    ],
+    "mop-rodo-vassoura": [
+      {
+        "slot": "popular",
+        "itemId": "23593417825",
+        "shopId": "748710427",
+        "name": "Mop giratório 360 com balde inox",
+        "price": 29.99,
+        "rating": 4.6,
+        "sales": 321,
+        "commissionRate": 0.03,
+        "image": "sg-11134201-7rdxd-m1517zmtvy353d",
+        "link": "https://s.shopee.com.br/5LDWoxpp4S"
+      }
+    ],
+    "xicaras-canecas": [
+      {
+        "slot": "budget",
+        "itemId": "9919245384",
+        "shopId": "295100583",
+        "name": "Kit 5 xícaras de café",
+        "price": 44,
+        "rating": 4.5,
+        "sales": 95,
+        "commissionRate": 0.03,
+        "image": "a22671e8daeb7254253a3938d49876ac",
+        "link": "https://s.shopee.com.br/70Lko3114h"
+      },
+      {
+        "slot": "popular",
+        "itemId": "17021965784",
+        "shopId": "530569611",
+        "name": "Jogo de 6 xícaras de porcelana branca",
+        "price": 51.8,
+        "rating": 4.8,
+        "sales": 1000,
+        "commissionRate": 0.03,
+        "image": "br-11134201-820lu-mqxakh7zn47839",
+        "link": "https://s.shopee.com.br/8pnOzPu2M4"
+      },
+      {
+        "slot": "gift",
+        "itemId": "23098942612",
+        "shopId": "1391612755",
+        "name": "Jogo de 12 xícaras de porcelana",
+        "price": 69,
+        "rating": 4.8,
+        "sales": 911,
+        "commissionRate": 0.15,
+        "image": "br-11134207-820ly-mtcwlqczhh4w67",
+        "link": "https://s.shopee.com.br/8fTyn6ufh3"
+      }
+    ],
+    "escorredor-louca": [
+      {
+        "slot": "popular",
+        "itemId": "23418361564",
+        "shopId": "408561915",
+        "name": "Escorredor de louça inox, 16 pratos",
+        "price": 119.99,
+        "rating": 4.9,
+        "sales": 2000,
+        "commissionRate": 0.27,
+        "image": "br-11134207-23010-a2nco5jtk9lv5f",
+        "link": "https://s.shopee.com.br/9AQFO1slgA"
+      },
+      {
+        "slot": "gift",
+        "itemId": "19399833012",
+        "shopId": "625622127",
+        "name": "Escorredor de louça inox, 20 pratos",
+        "price": 129,
+        "rating": 5,
+        "sales": 189,
+        "commissionRate": 0.03,
+        "image": "br-11134207-820lf-mtqt5b5ky4n760",
+        "link": "https://s.shopee.com.br/906pBitP19"
+      }
+    ],
+    "roupas-acessorios": [
+      {
+        "slot": "budget",
+        "itemId": "58266389821",
+        "shopId": "1870824296",
+        "name": "Mochila unissex de veludo",
+        "price": 38.95,
+        "rating": 4.9,
+        "sales": 503,
+        "commissionRate": 0.03,
+        "image": "sg-11134201-825a8-muadct52gikq2a",
+        "link": "https://s.shopee.com.br/70Lko4IDCA"
+      },
+      {
+        "slot": "popular",
+        "itemId": "6087450797",
+        "shopId": "422203657",
+        "name": "Mochila casual de nylon",
+        "price": 64.99,
+        "rating": 4.8,
+        "sales": 5000,
+        "commissionRate": 0.11,
+        "image": "br-11134207-7r98o-lwyircbxvwxi0a",
+        "link": "https://s.shopee.com.br/7AfB0NHZrD"
+      }
+    ],
+    "casa-decoracao": [
+      {
+        "slot": "popular",
+        "itemId": "22893642658",
+        "shopId": "1362240140",
+        "name": "Luminária de mesa LED 3D",
+        "price": 20.99,
+        "rating": 4.8,
+        "sales": 10000,
+        "commissionRate": 0.03,
+        "image": "sg-11134201-7ra3r-m51g7w285kuic4",
+        "link": "https://s.shopee.com.br/60TDcEM1E0"
+      }
+    ],
+    "beleza-perfumes": [
+      {
+        "slot": "popular",
+        "itemId": "27980956343",
+        "shopId": "356809834",
+        "name": "Kit de cuidados com a pele: sabonete e demaquilante",
+        "price": 78.9,
+        "rating": 4.9,
+        "sales": 1000,
+        "commissionRate": 0.03,
+        "image": "sg-11134201-7rd6n-m7tlwro280x39c",
+        "link": "https://s.shopee.com.br/6AmdoXLNt3"
+      },
+      {
+        "slot": "gift",
+        "itemId": "48964504759",
+        "shopId": "1223627976",
+        "name": "Kit skincare de limpeza e hidratação",
+        "price": 79.86,
+        "rating": 5,
+        "sales": 1000,
+        "commissionRate": 0.03,
+        "image": "sg-11134201-825bb-mqxp1uo4xoud39",
+        "link": "https://s.shopee.com.br/6L640qKkY6"
+      }
+    ],
+    "brinquedos-infantil": [
+      {
+        "slot": "popular",
+        "itemId": "58258510557",
+        "shopId": "1315014384",
+        "name": "Kit 12 brinquedos educativos sensoriais",
+        "price": 29.99,
+        "rating": 4.8,
+        "sales": 4000,
+        "commissionRate": 0.11,
+        "image": "br-11134207-820l9-mswyfar180zp82",
+        "link": "https://s.shopee.com.br/7purncWN4y"
+      }
+    ],
+    "livros-jogos": [
+      {
+        "slot": "popular",
+        "itemId": "23094627415",
+        "shopId": "1617594011",
+        "name": "Jogo de tabuleiro 7 em 1: xadrez, ludo e dominó",
+        "price": 59.9,
+        "rating": 4.9,
+        "sales": 1000,
+        "commissionRate": 0.19,
+        "image": "sg-11134201-8259x-mg6nj1rqooi069",
+        "link": "https://s.shopee.com.br/7fbRbJX0Px"
+      }
+    ],
+    "eletronicos": [
+      {
+        "slot": "popular",
+        "itemId": "58218105116",
+        "shopId": "1922407414",
+        "name": "Fone de ouvido sem fio X51",
+        "price": 39.99,
+        "rating": 4.8,
+        "sales": 2000,
+        "commissionRate": 0.03,
+        "image": "sg-11134201-8257z-mt45ppf0euwx91",
+        "link": "https://s.shopee.com.br/7VI1P0Xdkw"
+      },
+      {
+        "slot": "gift",
+        "itemId": "58202078013",
+        "shopId": "1669666744",
+        "name": "Fone de ouvido Bluetooth Spoetry M10",
+        "price": 58.9,
+        "rating": 4.9,
+        "sales": 1000,
+        "commissionRate": 0.23,
+        "image": "br-11134207-820l5-msb0d2j5vcw76c",
+        "link": "https://s.shopee.com.br/7KybChYH5v"
+      }
+    ]
+  }
+}
