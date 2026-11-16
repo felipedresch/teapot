@@ -118,7 +118,7 @@ O jeito mais simples é mandar o link da lista no próprio convite digital ou na
 
 Se o convite for impresso, mande o link por mensagem junto com a foto do convite, já que ninguém vai digitar um endereço longo. Evite tom de cobrança e não coloque valores no convite.
 
-No [MyWish](/lista-de-presentes/cha-de-panela), você monta a lista de graça, com itens de qualquer loja, e paga uma vez só (R$ 9,90, via Pix) para liberar o compartilhamento. O convidado abre o link no celular, entra com a conta Google e reserva o presente; os outros veem que aquele item já foi escolhido. A compra é feita na loja que o convidado preferir. Para a parte do envio, veja [como compartilhar a lista no WhatsApp](/blog/como-compartilhar-sua-lista-de-presentes-no-whatsapp-com-elegancia).
+<!-- pago -->No [MyWish](/lista-de-presentes/cha-de-panela), você monta a lista de graça, com itens de qualquer loja, e paga uma vez só (R$ 9,90, via Pix) para liberar o compartilhamento.<!-- /pago --><!-- gratis -->No [MyWish](/lista-de-presentes/cha-de-panela), você monta e compartilha a lista de graça, com itens de qualquer loja.<!-- /gratis --> O convidado abre o link no celular, entra com a conta Google e reserva o presente; os outros veem que aquele item já foi escolhido. A compra é feita na loja que o convidado preferir. Para a parte do envio, veja [como compartilhar a lista no WhatsApp](/blog/como-compartilhar-sua-lista-de-presentes-no-whatsapp-com-elegancia).
 
 ## Perguntas frequentes
 

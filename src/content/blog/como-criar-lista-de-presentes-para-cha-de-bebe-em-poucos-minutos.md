@@ -96,7 +96,7 @@ Coloque um pouco mais de itens do que o número de convidados que devem dar pres
 
 ## Como montar a lista de chá de bebê no MyWish
 
-Montar a lista no MyWish leva poucos minutos e é grátis. Você só paga para compartilhar: R$ 9,90 por lista, uma vez, via Pix.
+<!-- pago -->Montar a lista no MyWish leva poucos minutos e é grátis. Você só paga para compartilhar: R$ 9,90 por lista, uma vez, via Pix.<!-- /pago --><!-- gratis -->Montar e compartilhar a lista no MyWish leva poucos minutos e é grátis.<!-- /gratis -->
 
 1. **Crie o evento** em [Criar lista](/events/create) e escolha a ocasião "chá de bebê".
 2. **Adicione os presentes** com nome, descrição, categoria e imagem. Use as categorias do enxoval (roupas, banho, higiene, passeio, quarto e alimentação) para organizar.

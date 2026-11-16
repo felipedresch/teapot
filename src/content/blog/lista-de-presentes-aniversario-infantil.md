@@ -103,7 +103,7 @@ Antes de colocar na lista, pense no espaço. Piscina, casinha, carro elétrico e
 
 ## Como montar a lista de aniversário infantil no MyWish
 
-No MyWish, você monta a lista de graça e paga R$ 9,90, uma vez, via Pix, para compartilhar. Escolha a ocasião "aniversário" em [Criar lista](/events/create), cadastre cada presente com nome, tamanho, descrição e um link de referência de qualquer loja, e envie o link junto com o convite.
+<!-- pago -->No MyWish, você monta a lista de graça e paga R$ 9,90, uma vez, via Pix, para compartilhar.<!-- /pago --><!-- gratis -->No MyWish, você monta e compartilha a lista de graça.<!-- /gratis --> Escolha a ocasião "aniversário" em [Criar lista](/events/create), cadastre cada presente com nome, tamanho, descrição e um link de referência de qualquer loja, e envie o link junto com o convite.
 
 O convidado abre a lista no celular, entra com a conta Google e reserva o que vai dar. A compra é feita na loja que ele preferir, fora do MyWish. Você acompanha as reservas e marca os presentes recebidos. Veja mais na [página de lista de aniversário](/lista-de-presentes/aniversario).
 

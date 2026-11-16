@@ -87,7 +87,7 @@ Uma conta rápida:
 
 ## Como montar a lista de chá de fraldas no MyWish
 
-No MyWish, você monta a lista de graça e paga R$ 9,90, uma vez, via Pix, para compartilhar. Escolha a ocasião "chá de bebê" em [Criar lista](/events/create) e cadastre cada pacote ou kit como um presente, com o tamanho no nome.
+<!-- pago -->No MyWish, você monta a lista de graça e paga R$ 9,90, uma vez, via Pix, para compartilhar.<!-- /pago --><!-- gratis -->No MyWish, você monta e compartilha a lista de graça.<!-- /gratis --> Escolha a ocasião "chá de bebê" em [Criar lista](/events/create) e cadastre cada pacote ou kit como um presente, com o tamanho no nome.
 
 O convidado abre o link no celular, entra com a conta Google e reserva o pacote que vai levar. Os outros veem que ele foi escolhido, e você acompanha quantos pacotes de cada tamanho já têm dono. A compra acontece na loja que o convidado preferir. Mais ideias na [página de lista de chá de bebê](/lista-de-presentes/cha-de-bebe).
 

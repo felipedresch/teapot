@@ -12,6 +12,10 @@ import { internal } from './_generated/api'
 import type { Id } from './_generated/dataModel'
 import { v } from 'convex/values'
 import { getStoredVisibility, getEffectiveVisibility } from './events'
+import {
+  PAYWALL_ENABLED,
+  effectiveMonetizationStatus,
+} from './lib/paywallSwitch'
 
 const ABACATEPAY_API_BASE_URL = 'https://api.abacatepay.com/v2'
 const PIX_EXPIRES_IN_SECONDS = 60 * 60
@@ -130,6 +134,28 @@ type StatusRefreshPayment = {
   providerCheckoutId?: string
   platformFee?: number
 }
+
+/**
+ * Com a cobrança desligada (convex/lib/paywallSwitch.ts), marca como grátis
+ * para sempre toda lista que ainda esperava pagamento. Roda uma vez, logo
+ * depois de virar a chave: docs/PAYWALL.md.
+ */
+export const liberarListasPendentes = internalMutation({
+  args: {},
+  returns: v.object({ liberadas: v.number() }),
+  handler: async (ctx) => {
+    if (PAYWALL_ENABLED) {
+      throw new Error('A cobrança está ligada (convex/lib/paywallSwitch.ts).')
+    }
+    let liberadas = 0
+    for await (const event of ctx.db.query('events')) {
+      if (event.monetizationStatus !== 'requires_payment') continue
+      await ctx.db.patch(event._id, { monetizationStatus: 'grandfathered' })
+      liberadas++
+    }
+    return { liberadas }
+  },
+})
 
 export const getPaywallState = query({
   args: {
@@ -1298,7 +1324,7 @@ function getPaywallCategory(
 function getEventMonetizationStatus(event: {
   monetizationStatus?: 'grandfathered' | 'requires_payment' | 'paid'
 }) {
-  return event.monetizationStatus ?? 'grandfathered'
+  return effectiveMonetizationStatus(event.monetizationStatus)
 }
 
 async function isEventHost(

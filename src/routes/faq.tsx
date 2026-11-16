@@ -1,22 +1,33 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { pageMeta, toJsonLd } from '../lib/seo'
 import BrandWordmark from '../components/BrandWordmark'
+import { byPaywall } from '../lib/paywall'
 
 const FAQ_ITEMS = [
   {
     question: 'Como criar uma lista de presentes online?',
     answer:
-      'Entre com sua conta Google, escolha a ocasião e personalize o evento. Adicione presentes com descrição, imagem e links de referência. Você pode montar e editar gratuitamente e liberar o compartilhamento quando a lista estiver pronta.',
+      'Entre com sua conta Google, escolha a ocasião e personalize o evento. Adicione presentes com descrição, imagem e links de referência. ' +
+      byPaywall(
+        'Você pode montar e editar gratuitamente e liberar o compartilhamento quando a lista estiver pronta.',
+        'Montar, editar e compartilhar a lista é gratuito.',
+      ),
   },
   {
     question: 'Quanto custa compartilhar uma lista?',
-    answer:
+    answer: byPaywall(
       'O pagamento é único, via Pix: R$ 9,90 para aniversários, chá de bebê, chá de panela, casa nova e outras ocasiões comuns; R$ 29,90 para casamento, noivado e bodas. Há também acesso vitalício para a conta, por R$ 29,90 ou R$ 59,90 conforme a categoria do evento em que ele é contratado. Não há mensalidade.',
+      'Nada. O MyWish é gratuito para qualquer ocasião: montar, compartilhar e acompanhar as reservas não custa nada, sem mensalidade e sem limite de listas.',
+    ),
   },
   {
     question: 'O MyWish fica com alguma porcentagem dos presentes?',
     answer:
-      'Não. O MyWish cobra só o valor fixo para liberar a lista. O convidado paga o presente direto na loja, e nada é descontado. Listas que transformam presentes em dinheiro costumam cobrar uma porcentagem de cada presente; veja o comparativo em mywish.com.br/como-escolher-site-de-lista-de-presentes.',
+      byPaywall(
+        'Não. O MyWish cobra só o valor fixo para liberar a lista.',
+        'Não. O MyWish é gratuito.',
+      ) +
+      ' O convidado paga o presente direto na loja, e nada é descontado. Listas que transformam presentes em dinheiro costumam cobrar uma porcentagem de cada presente; veja o comparativo em mywish.com.br/como-escolher-site-de-lista-de-presentes.',
   },
   {
     question: 'Quais presentes as pessoas mais pedem?',
@@ -36,12 +47,20 @@ const FAQ_ITEMS = [
   {
     question: 'É possível receber o valor dos presentes em dinheiro?',
     answer:
-      'Não. O MyWish organiza listas e reservas de presentes físicos. O Pix cobrado na plataforma é para liberar a lista do anfitrião, não para pagar os produtos nem transferir dinheiro aos anfitriões.',
+      'Não. O MyWish organiza listas e reservas de presentes físicos.' +
+      byPaywall(
+        ' O Pix cobrado na plataforma é para liberar a lista do anfitrião, não para pagar os produtos nem transferir dinheiro aos anfitriões.',
+        ' Ele não recebe o dinheiro dos presentes nem transfere valores aos anfitriões.',
+      ),
   },
   {
     question: 'Qual é a diferença entre lista pública e não listada?',
     answer:
-      'Uma lista pública pode aparecer na busca e na vitrine do MyWish. A não listada é acessível pelo link, mas não aparece nessas áreas de descoberta. Ela não tem senha: quem obtiver o endereço pode acessá-la. Antes de liberar o compartilhamento, o evento fica como rascunho.',
+      'Uma lista pública pode aparecer na busca e na vitrine do MyWish. A não listada é acessível pelo link, mas não aparece nessas áreas de descoberta. Ela não tem senha: quem obtiver o endereço pode acessá-la.' +
+      byPaywall(
+        ' Antes de liberar o compartilhamento, o evento fica como rascunho.',
+        ' Enquanto você não compartilha, o evento fica como rascunho.',
+      ),
   },
   {
     question: 'Outra pessoa pode me ajudar a organizar?',
@@ -53,11 +72,22 @@ const FAQ_ITEMS = [
     answer:
       'Sim. Você pode adicionar e editar presentes e acompanhar os recebidos. Se precisar alterar um presente reservado, combine a mudança com o convidado que o escolheu.',
   },
-  {
-    question: 'Como libero a lista depois de pagar o Pix?',
-    answer:
-      'Após a confirmação do Pix, a lista é liberada automaticamente. Se a tela ainda estiver aguardando, use a opção de verificar o pagamento. Não faça um segundo pagamento antes de conferir o primeiro.',
-  },
+  ...byPaywall(
+    [
+      {
+        question: 'Como libero a lista depois de pagar o Pix?',
+        answer:
+          'Após a confirmação do Pix, a lista é liberada automaticamente. Se a tela ainda estiver aguardando, use a opção de verificar o pagamento. Não faça um segundo pagamento antes de conferir o primeiro.',
+      },
+    ],
+    [
+      {
+        question: 'Como o MyWish se mantém de graça?',
+        answer:
+          'Em alguns presentes, o link da loja é um link de parceiro. Quando um convidado compra por ele, a loja pode pagar uma comissão ao MyWish. O preço para o convidado é o mesmo, e nada sai do valor do presente.',
+      },
+    ],
+  ),
 ]
 
 const faqJsonLd = {
@@ -75,9 +105,15 @@ const faqJsonLd = {
 
 export const Route = createFileRoute('/faq')({
   head: () => ({
-    meta: pageMeta(
-      'Dúvidas sobre listas, reservas e pagamentos',
-      'Entenda os preços do MyWish, como reservar presentes, escolher a visibilidade e compartilhar sua lista. Veja o que é gratuito e quando há pagamento.',
+    meta: byPaywall(
+      pageMeta(
+        'Dúvidas sobre listas, reservas e pagamentos',
+        'Entenda os preços do MyWish, como reservar presentes, escolher a visibilidade e compartilhar sua lista. Veja o que é gratuito e quando há pagamento.',
+      ),
+      pageMeta(
+        'Dúvidas sobre listas de presentes e reservas',
+        'Como criar e compartilhar sua lista de presentes grátis no MyWish, como os convidados reservam e o que muda entre lista pública e não listada.',
+      ),
     ),
   }),
   component: FaqPage,
@@ -123,8 +159,10 @@ function FaqPage() {
           Não encontrou sua dúvida?
         </h2>
         <p className="text-warm-gray mt-2">
-          Veja o passo a passo de criação e os preços antes de preparar seu
-          evento.
+          {byPaywall(
+            'Veja o passo a passo de criação e os preços antes de preparar seu evento.',
+            'Comece a montar a sua: é grátis e leva poucos minutos.',
+          )}
         </p>
         <Link
           to="/events/create"

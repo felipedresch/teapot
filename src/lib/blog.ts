@@ -1,5 +1,6 @@
 // Artigos do blog: arquivos Markdown em src/content/blog, embutidos no build.
 // Formato e regras de escrita em docs/BLOG.md.
+import { PAYWALL_ENABLED } from '../../convex/lib/paywallSwitch'
 import type { BlogOccasion } from '../components/BlogOccasionCta'
 
 export type BlogFaq = { question: string; answer: string }
@@ -40,9 +41,30 @@ const OCCASIONS: BlogOccasion[] = [
   'cha-de-bebe',
 ]
 const FAQ_HEADING = /^## Perguntas frequentes\s*$/im
+const PAYWALL_MARKER = /<!--\s*(pago|gratis)\s*-->([\s\S]*?)<!--\s*\/\1\s*-->/g
 
-export function parseBlogPost(slug: string, raw: string): BlogPost {
-  const text = raw.replace(/\r\n?/g, '\n').replace(/^﻿/, '')
+/**
+ * Trechos que dependem da cobrança: `<!-- pago -->...<!-- /pago -->` só
+ * aparece com ela ligada, `<!-- gratis -->...<!-- /gratis -->` só com ela
+ * desligada (convex/lib/paywallSwitch.ts, docs/BLOG.md).
+ */
+export function applyPaywallMarkers(text: string, paywallEnabled: boolean) {
+  return text
+    .replace(PAYWALL_MARKER, (_, mode: string, content: string) =>
+      (mode === 'pago') === paywallEnabled ? content : '',
+    )
+    .replace(/\n{3,}/g, '\n\n')
+}
+
+export function parseBlogPost(
+  slug: string,
+  raw: string,
+  paywallEnabled = PAYWALL_ENABLED,
+): BlogPost {
+  const text = applyPaywallMarkers(
+    raw.replace(/\r\n?/g, '\n').replace(/^﻿/, ''),
+    paywallEnabled,
+  )
   const match = /^---\n([\s\S]*?)\n---\n?/.exec(text)
   if (!match) throw new Error(`Artigo ${slug}: falta o frontmatter`)
   const meta: Record<string, string> = {}

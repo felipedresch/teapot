@@ -1,3 +1,5 @@
+import { byPaywall } from '../lib/paywall'
+
 export type Occasion = {
   slug: string
   name: string
@@ -36,7 +38,12 @@ export const occasions: Occasion[] = [
       },
       {
         title: 'Organizem a lista a dois',
-        text: 'Um anfitrião cria a lista e pode convidar o outro para ajudar na organização. Adicionem os nomes, a data e uma mensagem de boas-vindas. Depois de preparar os presentes, liberem o compartilhamento com um pagamento único e enviem o link junto do convite.',
+        text:
+          'Um anfitrião cria a lista e pode convidar o outro para ajudar na organização. Adicionem os nomes, a data e uma mensagem de boas-vindas. ' +
+          byPaywall(
+            'Depois de preparar os presentes, liberem o compartilhamento com um pagamento único e enviem o link junto do convite.',
+            'Depois de preparar os presentes, enviem o link junto do convite.',
+          ),
       },
       {
         title: 'Reserva, compra e entrega são etapas diferentes',
@@ -52,7 +59,11 @@ export const occasions: Occasion[] = [
       {
         question: 'Os presentes viram dinheiro para o casal?',
         answer:
-          'Não. O MyWish organiza presentes físicos e suas reservas. O pagamento no site libera o compartilhamento da lista; ele não é o pagamento dos presentes.',
+          'Não. O MyWish organiza presentes físicos e suas reservas.' +
+          byPaywall(
+            ' O pagamento no site libera o compartilhamento da lista; ele não é o pagamento dos presentes.',
+            ' O site não recebe o dinheiro dos presentes: cada convidado compra direto na loja.',
+          ),
       },
     ],
   },
@@ -138,7 +149,13 @@ export const occasions: Occasion[] = [
       },
       {
         title: 'Compartilhe com família e amigos',
-        text: 'Crie um evento do tipo chá de bebê e prepare os presentes antes de publicar. A montagem é gratuita; para liberar o compartilhamento dessa lista, o pagamento único começa em R$ 9,90. Você pode usar a visibilidade não listada para que o evento não apareça na vitrine do site e enviar o link aos convidados.',
+        text:
+          'Crie um evento do tipo chá de bebê e prepare os presentes antes de publicar. ' +
+          byPaywall(
+            'A montagem é gratuita; para liberar o compartilhamento dessa lista, o pagamento único começa em R$ 9,90.',
+            'Montar e compartilhar a lista é gratuito.',
+          ) +
+          ' Você pode usar a visibilidade não listada para que o evento não apareça na vitrine do site e enviar o link aos convidados.',
       },
       {
         title: 'Acompanhe as escolhas sem controlar onde compram',
@@ -184,7 +201,10 @@ export const occasions: Occasion[] = [
       },
       {
         title: 'Crie a lista e envie junto do convite',
-        text: 'Escolha chá de panela no cadastro do evento, personalize a mensagem e adicione os presentes. Depois de liberar o compartilhamento, envie o link por WhatsApp ou no convite digital. Os convidados podem ver os itens e entrar com Google para reservar a opção escolhida.',
+        text:
+          'Escolha chá de panela no cadastro do evento, personalize a mensagem e adicione os presentes. ' +
+          byPaywall('Depois de liberar o compartilhamento, ', 'Depois, ') +
+          'envie o link por WhatsApp ou no convite digital. Os convidados podem ver os itens e entrar com Google para reservar a opção escolhida.',
       },
       {
         title: 'Separe o chá de panela da lista de casamento',
@@ -205,7 +225,11 @@ export const occasions: Occasion[] = [
       {
         question: 'O convidado paga o presente no MyWish?',
         answer:
-          'Não. Ele reserva o item no MyWish e faz a compra diretamente na loja. A cobrança do MyWish é para o anfitrião liberar o compartilhamento da lista.',
+          'Não. Ele reserva o item no MyWish e faz a compra diretamente na loja.' +
+          byPaywall(
+            ' A cobrança do MyWish é para o anfitrião liberar o compartilhamento da lista.',
+            ' O MyWish é gratuito para o convidado e para o anfitrião.',
+          ),
       },
     ],
   },
@@ -235,7 +259,12 @@ export const occasions: Occasion[] = [
       },
       {
         title: 'Organize o chá de casa nova no MyWish',
-        text: 'Crie o evento, adicione uma mensagem de boas-vindas e monte os presentes gratuitamente. Cada item pode incluir imagem, descrição e link de uma loja. Quando estiver pronto, libere o compartilhamento por R$ 9,90 nessa categoria e envie o link para seus convidados.',
+        text:
+          'Crie o evento, adicione uma mensagem de boas-vindas e monte os presentes gratuitamente. Cada item pode incluir imagem, descrição e link de uma loja. ' +
+          byPaywall(
+            'Quando estiver pronto, libere o compartilhamento por R$ 9,90 nessa categoria e envie o link para seus convidados.',
+            'Quando estiver pronto, envie o link para seus convidados.',
+          ),
       },
       {
         title: 'Combine a entrega dos presentes',
@@ -256,7 +285,8 @@ export const occasions: Occasion[] = [
       {
         question: 'A lista precisa aparecer na página inicial?',
         answer:
-          'Não. Depois de liberar a lista, você pode escolher a visibilidade não listada e compartilhar o link diretamente. Quem receber ou obtiver esse link poderá acessá-la.',
+          byPaywall('Não. Depois de liberar a lista, ', 'Não. ') +
+          'Você pode escolher a visibilidade não listada e compartilhar o link diretamente. Quem receber ou obtiver esse link poderá acessá-la.',
       },
     ],
   },

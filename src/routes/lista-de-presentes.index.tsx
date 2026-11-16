@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { occasions } from '../content/occasions'
 import { pageMeta } from '../lib/seo'
+import { byPaywall } from '../lib/paywall'
 
 export const Route = createFileRoute('/lista-de-presentes/')({
   head: () => ({
@@ -58,17 +59,20 @@ function ListsPage() {
           Como funciona uma lista online?
         </h2>
         <p className="text-warm-gray leading-relaxed">
-          Você monta a lista gratuitamente e paga uma única vez para liberar o
-          compartilhamento. O convidado reserva o item no MyWish e compra onde
-          preferir. A plataforma não vende os presentes nem faz a entrega. As
-          reservas ajudam a evitar escolhas repetidas.
+          {byPaywall(
+            'Você monta a lista gratuitamente e paga uma única vez para liberar o compartilhamento.',
+            'Você monta e compartilha a lista gratuitamente.',
+          )}{' '}
+          O convidado reserva o item no MyWish e compra onde preferir. A
+          plataforma não vende os presentes nem faz a entrega. As reservas
+          ajudam a evitar escolhas repetidas.
         </p>
         <div className="flex flex-wrap gap-5">
           <Link to="/events/create" className="text-primary underline">
             Criar minha lista
           </Link>
           <Link to="/precos" className="text-primary underline">
-            Ver preços
+            {byPaywall('Ver preços', 'Por que é grátis')}
           </Link>
           <Link to="/how-it-works" className="text-primary underline">
             Ver o passo a passo

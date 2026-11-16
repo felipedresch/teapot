@@ -58,7 +58,7 @@ Numa lista com dezenas de presentes, uma porcentagem pequena vira uma quantia co
 
 ## Onde o MyWish entra nessa decisão?
 
-O MyWish é para presentes físicos. Vocês montam a lista com itens de qualquer loja, os convidados reservam pelo link e compram onde preferirem. O MyWish não recebe pagamento pelos presentes, não entrega e não transforma presentes em dinheiro. Vocês pagam um valor fixo, uma vez, para liberar o compartilhamento da lista, sem porcentagem sobre o que receberem; os valores estão na [página de preços](/precos).
+O MyWish é para presentes físicos. Vocês montam a lista com itens de qualquer loja, os convidados reservam pelo link e compram onde preferirem. O MyWish não recebe pagamento pelos presentes, não entrega e não transforma presentes em dinheiro. <!-- pago -->Vocês pagam um valor fixo, uma vez, para liberar o compartilhamento da lista, sem porcentagem sobre o que receberem; os valores estão na [página de preços](/precos).<!-- /pago --><!-- gratis -->Montar e compartilhar a lista é de graça.<!-- /gratis -->
 
 Se vocês querem receber principalmente dinheiro, o caminho certo é uma lista virtual de cotas, não o MyWish.
 
