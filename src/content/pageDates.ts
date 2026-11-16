@@ -8,7 +8,7 @@ export const pageDates: Record<string, string> = {
   '/': '2026-11-14',
   '/how-it-works': '2026-09-29',
   '/faq': '2026-11-14',
-  '/precos': '2026-11-14',
+  '/precos': '2026-11-16',
   '/lista-de-presentes': '2026-11-14',
   '/lista-de-presentes/casamento': '2026-11-14',
   '/lista-de-presentes/aniversario': '2026-11-14',

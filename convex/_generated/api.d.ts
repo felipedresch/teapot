@@ -22,6 +22,7 @@ import type * as gifts from "../gifts.js";
 import type * as http from "../http.js";
 import type * as lib_deployment from "../lib/deployment.js";
 import type * as lib_giftLinkValidators from "../lib/giftLinkValidators.js";
+import type * as lib_paywallSwitch from "../lib/paywallSwitch.js";
 import type * as lib_shopeeAffiliateApi from "../lib/shopeeAffiliateApi.js";
 import type * as lib_suggestionIdeas from "../lib/suggestionIdeas.js";
 import type * as lib_suggestionRanking from "../lib/suggestionRanking.js";
@@ -51,6 +52,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "lib/deployment": typeof lib_deployment;
   "lib/giftLinkValidators": typeof lib_giftLinkValidators;
+  "lib/paywallSwitch": typeof lib_paywallSwitch;
   "lib/shopeeAffiliateApi": typeof lib_shopeeAffiliateApi;
   "lib/suggestionIdeas": typeof lib_suggestionIdeas;
   "lib/suggestionRanking": typeof lib_suggestionRanking;
