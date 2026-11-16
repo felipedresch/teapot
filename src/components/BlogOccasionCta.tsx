@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { track } from '../integrations/posthog/events'
+import { byPaywall } from '../lib/paywall'
 
 // Chamada para criar lista dentro dos artigos do blog, conforme o campo
 // `occasion` do artigo (docs/BLOG.md). O post de ideias de aniversário, por
@@ -32,7 +33,10 @@ const COPY: Record<
   casamento: {
     kicker: 'para o casal',
     title: 'Monte a lista de casamento de vocês',
-    text: 'Presentes de qualquer loja numa página só, com reserva para os convidados não repetirem. Montar é grátis.',
+    text: byPaywall(
+      'Presentes de qualquer loja numa página só, com reserva para os convidados não repetirem. Montar é grátis.',
+      'Presentes de qualquer loja numa página só, com reserva para os convidados não repetirem. Montar e compartilhar é grátis.',
+    ),
     button: 'Criar lista de casamento',
     guide: 'Guia da lista de casamento',
   },
@@ -60,7 +64,10 @@ const COPY: Record<
   geral: {
     kicker: 'coloque em prática',
     title: 'Monte sua lista de presentes',
-    text: 'Presentes de qualquer loja numa página só, com reserva para ninguém repetir. Monte grátis e libere o compartilhamento a partir de R$ 9,90.',
+    text: byPaywall(
+      'Presentes de qualquer loja numa página só, com reserva para ninguém repetir. Monte grátis e libere o compartilhamento a partir de R$ 9,90.',
+      'Presentes de qualquer loja numa página só, com reserva para ninguém repetir. Grátis do começo ao fim.',
+    ),
     button: 'Criar minha lista',
   },
 }
@@ -121,11 +128,21 @@ export function BlogOccasionCta({
       </div>
       {position === 'fim' && (
         <p className="text-sm text-warm-gray">
-          Montar é grátis. Para compartilhar, pagamento único a partir de R$
-          9,90.{' '}
-          <Link to="/precos" className="underline">
-            Ver preços
-          </Link>
+          {byPaywall(
+            <>
+              Montar é grátis. Para compartilhar, pagamento único a partir de R$
+              9,90.{' '}
+              <Link to="/precos" className="underline">
+                Ver preços
+              </Link>
+            </>,
+            <>
+              Montar e compartilhar é grátis, sem limite de presentes.{' '}
+              <Link to="/precos" className="underline">
+                Por que é grátis
+              </Link>
+            </>,
+          )}
         </p>
       )}
     </aside>

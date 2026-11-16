@@ -10,6 +10,7 @@ import {
   toJsonLd,
 } from '../lib/seo'
 import { OccasionLinks } from '../components/OccasionLinks'
+import { byPaywall } from '../lib/paywall'
 
 const PATH = '/como-escolher-site-de-lista-de-presentes'
 const PUBLISHED = '2026-11-14'
@@ -26,7 +27,10 @@ const OPTIONS = [
     stores: 'Qualquer loja',
     repeated: 'Sim: o convidado reserva o presente',
     receives: 'O presente físico',
-    cost: `Taxa única (no ${SITE_NAME}, R$ 9,90 ou R$ 29,90 por lista)`,
+    cost: byPaywall(
+      `Taxa única (no ${SITE_NAME}, R$ 9,90 ou R$ 29,90 por lista)`,
+      `Taxa única ou grátis (no ${SITE_NAME}, grátis)`,
+    ),
     goodFor:
       'Quem quer presentes de verdade, de lojas diferentes, sem presente repetido.',
     watch:
@@ -96,7 +100,10 @@ const CRITERIA = [
   },
   {
     title: 'Quanto custa de verdade?',
-    text: 'Compare a taxa fixa (paga uma vez por quem cria a lista) com a porcentagem sobre presentes (descontada de cada presente). Numa lista com dezenas de itens, a diferença pode ser grande.',
+    text: byPaywall(
+      'Compare a taxa fixa (paga uma vez por quem cria a lista) com a porcentagem sobre presentes (descontada de cada presente). Numa lista com dezenas de itens, a diferença pode ser grande.',
+      'Compare a lista grátis ou de taxa fixa (paga uma vez por quem cria a lista) com a porcentagem sobre presentes (descontada de cada presente). Numa lista com dezenas de itens, a diferença pode ser grande.',
+    ),
   },
   {
     title: 'O convidado consegue usar pelo celular?',
@@ -111,7 +118,10 @@ const FAQ = [
   },
   {
     question: 'Existe lista de presentes online grátis?',
-    answer: `Sim: planilhas, listas de uma loja só e listas de desejos de marketplace costumam ser gratuitas, mas não juntam lojas diferentes ou não controlam reservas. No ${SITE_NAME}, montar a lista é grátis e o compartilhamento custa um valor único a partir de R$ 9,90, sem porcentagem sobre os presentes.`,
+    answer: `Sim: planilhas, listas de uma loja só e listas de desejos de marketplace costumam ser gratuitas, mas não juntam lojas diferentes ou não controlam reservas. ${byPaywall(
+      ` No ${SITE_NAME}, montar a lista é grátis e o compartilhamento custa um valor único a partir de R$ 9,90, sem porcentagem sobre os presentes.`,
+      ` O ${SITE_NAME} junta as duas coisas de graça: presentes de qualquer loja, reserva para não repetir e compartilhamento sem custo, sem porcentagem sobre os presentes.`,
+    )}`,
   },
   {
     question: 'Como fazer uma lista de presentes com produtos de várias lojas?',
@@ -273,11 +283,12 @@ function ComparisonPage() {
             Onde o {SITE_NAME} se encaixa
           </h2>
           <p className="text-warm-gray leading-relaxed">
-            O {SITE_NAME} é uma lista de qualquer loja com reserva. Você monta a
-            lista de graça, cola links de qualquer loja e libera o
-            compartilhamento com um Pix único: R$ 9,90 para aniversário, chá de
-            bebê, chá de panela e casa nova; R$ 29,90 para casamento, noivado e
-            bodas. Não há mensalidade nem porcentagem sobre os presentes.
+            O {SITE_NAME} é uma lista de qualquer loja com reserva.{' '}
+            {byPaywall(
+              'Você monta a lista de graça, cola links de qualquer loja e libera o compartilhamento com um Pix único: R$ 9,90 para aniversário, chá de bebê, chá de panela e casa nova; R$ 29,90 para casamento, noivado e bodas.',
+              'Você monta e compartilha a lista de graça, com links de qualquer loja.',
+            )}{' '}
+            Não há mensalidade nem porcentagem sobre os presentes.
           </p>
           <p className="text-warm-gray leading-relaxed">
             O {SITE_NAME} não é a melhor opção se você quer receber os presentes
@@ -288,7 +299,7 @@ function ComparisonPage() {
               to="/precos"
               className="text-primary underline underline-offset-4"
             >
-              Ver preços
+              {byPaywall('Ver preços', 'Por que é grátis')}
             </Link>{' '}
             ·{' '}
             <Link
@@ -320,8 +331,10 @@ function ComparisonPage() {
             Quer testar antes de decidir?
           </h2>
           <p className="text-warm-gray">
-            Monte sua lista no {SITE_NAME} sem pagar nada. Você só paga se
-            quiser compartilhar.
+            {byPaywall(
+              `Monte sua lista no ${SITE_NAME} sem pagar nada. Você só paga se quiser compartilhar.`,
+              `Monte e compartilhe sua lista no ${SITE_NAME} sem pagar nada.`,
+            )}
           </p>
           <Link
             to="/events/create"

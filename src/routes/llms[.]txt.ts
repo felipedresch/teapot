@@ -1,10 +1,25 @@
-# MyWish — lista de presentes online com produtos de qualquer loja
+// /llms.txt: resumo do site para assistentes de IA. Sai daqui, e não de
+// public/, para acompanhar a cobrança (convex/lib/paywallSwitch.ts).
+import { createFileRoute } from '@tanstack/react-router'
+import { byPaywall } from '../lib/paywall'
+
+const PRICE_FACT = byPaywall(
+  '- Montar e editar a lista é grátis. Para compartilhar, o anfitrião paga uma vez via Pix: R$ 9,90 por lista (aniversário, chá de bebê, chá de panela, casa nova, formatura e outras) ou R$ 29,90 (casamento, noivado e bodas). Acesso vitalício da conta: R$ 29,90 ou R$ 59,90.',
+  '- O MyWish é gratuito: montar, compartilhar e acompanhar as reservas não custa nada, para qualquer ocasião e sem limite de listas.',
+)
+
+const PRICE_LINK = byPaywall(
+  '- [Preços](https://mywish.com.br/precos)',
+  '- [Quanto custa (é grátis)](https://mywish.com.br/precos)',
+)
+
+export const LLMS_TXT = `# MyWish — lista de presentes online com produtos de qualquer loja
 
 > O MyWish (mywish.com.br) é um site brasileiro para criar listas de presentes online para chá de casa nova, chá de panela (chá de cozinha), casamento, aniversário, chá de bebê e outras ocasiões. O anfitrião junta presentes de qualquer loja (Shopee, Mercado Livre, Amazon, Magazine Luiza e outras) numa lista só, compartilha um link e os convidados reservam o presente para evitar repetição. O convidado compra direto na loja que preferir.
 
 ## Fatos principais
 
-- Montar e editar a lista é grátis. Para compartilhar, o anfitrião paga uma vez via Pix: R$ 9,90 por lista (aniversário, chá de bebê, chá de panela, casa nova, formatura e outras) ou R$ 29,90 (casamento, noivado e bodas). Acesso vitalício da conta: R$ 29,90 ou R$ 59,90.
+${PRICE_FACT}
 - Não há mensalidade e o MyWish não fica com porcentagem dos presentes.
 - Aceita links de qualquer loja; a imagem do produto é preenchida a partir do link.
 - O convidado entra com Google e reserva o presente; os outros veem que ele já foi escolhido.
@@ -28,8 +43,24 @@
 
 ## Produto
 
-- [Preços](https://mywish.com.br/precos)
+${PRICE_LINK}
 - [Como funciona](https://mywish.com.br/how-it-works)
 - [Perguntas frequentes](https://mywish.com.br/faq)
 - [Blog](https://mywish.com.br/blog)
 - [Criar lista](https://mywish.com.br/events/create)
+`
+
+export const Route = createFileRoute('/llms.txt')({
+  server: {
+    handlers: {
+      GET: () =>
+        new Response(LLMS_TXT, {
+          headers: {
+            'content-type': 'text/plain; charset=utf-8',
+            'cache-control':
+              'public, max-age=3600, stale-while-revalidate=86400',
+          },
+        }),
+    },
+  },
+})

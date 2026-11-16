@@ -16,6 +16,12 @@ import { SITE_NAME, absoluteUrl } from '../lib/seo'
 import { OccasionLinks } from '../components/OccasionLinks'
 import { GiftInsightsTeaser } from '../components/GiftInsightsTeaser'
 import { cn } from '../lib/utils'
+import { byPaywall } from '../lib/paywall'
+
+const HOME_DESCRIPTION = byPaywall(
+  'Monte sua lista de presentes com itens de qualquer loja. Compartilhe com convidados e acompanhe reservas. Liberação por Pix a partir de R$ 9,90.',
+  'Monte sua lista de presentes grátis, com itens de qualquer loja. Compartilhe com os convidados e acompanhe as reservas, sem pagar nada.',
+)
 
 export const Route = createFileRoute('/')({
   head: () => ({
@@ -25,8 +31,7 @@ export const Route = createFileRoute('/')({
       },
       {
         name: 'description',
-        content:
-          'Monte sua lista de presentes com itens de qualquer loja. Compartilhe com convidados e acompanhe reservas. Liberação por Pix a partir de R$ 9,90.',
+        content: HOME_DESCRIPTION,
       },
       {
         property: 'og:title',
@@ -34,8 +39,7 @@ export const Route = createFileRoute('/')({
       },
       {
         property: 'og:description',
-        content:
-          'Monte sua lista de presentes com itens de qualquer loja. Compartilhe com convidados e acompanhe reservas. Liberação por Pix a partir de R$ 9,90.',
+        content: HOME_DESCRIPTION,
       },
       {
         property: 'og:type',
@@ -51,8 +55,7 @@ export const Route = createFileRoute('/')({
       },
       {
         name: 'twitter:description',
-        content:
-          'Monte sua lista de presentes com itens de qualquer loja. Compartilhe com convidados e acompanhe reservas. Liberação por Pix a partir de R$ 9,90.',
+        content: HOME_DESCRIPTION,
       },
     ],
   }),
@@ -159,7 +162,9 @@ function HomePage() {
           >
             <span className="text-expresso">my</span>
             <span className="text-primary">wish</span>
-            <span className="block font-sans not-italic text-lg md:text-xl tracking-normal leading-relaxed mt-8">Lista de presentes online para celebrar com quem importa</span>
+            <span className="block font-sans not-italic text-lg md:text-xl tracking-normal leading-relaxed mt-8">
+              Lista de presentes online para celebrar com quem importa
+            </span>
           </motion.h1>
 
           <motion.p
@@ -168,7 +173,8 @@ function HomePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease, delay: 0.25 }}
           >
-            Reúna presentes de qualquer loja em um link. Seus convidados escolhem e reservam; você acompanha tudo por aqui.
+            Reúna presentes de qualquer loja em um link. Seus convidados
+            escolhem e reservam; você acompanha tudo por aqui.
           </motion.p>
 
           <motion.div
@@ -180,16 +186,16 @@ function HomePage() {
           >
             <div className="marquee-fade overflow-hidden">
               <div className="marquee-track">
-              {[...USE_CASES, ...USE_CASES].map((item, index) => (
-                <span
-                  key={`${item}-${index}`}
-                  className="inline-flex items-center text-sm text-warm-gray/80 whitespace-nowrap"
-                >
-                  {item}
-                  <span className="mx-3 text-muted-rose/45">•</span>
-                </span>
-              ))}
-            </div>
+                {[...USE_CASES, ...USE_CASES].map((item, index) => (
+                  <span
+                    key={`${item}-${index}`}
+                    className="inline-flex items-center text-sm text-warm-gray/80 whitespace-nowrap"
+                  >
+                    {item}
+                    <span className="mx-3 text-muted-rose/45">•</span>
+                  </span>
+                ))}
+              </div>
             </div>
           </motion.div>
 
@@ -265,7 +271,10 @@ function HomePage() {
                 personalize com carinho e compartilhe quando estiver pronto.
               </p>
               <div className="mt-4 flex flex-wrap gap-4 text-sm">
-                <Link to="/how-it-works" className="text-muted-rose hover:underline">
+                <Link
+                  to="/how-it-works"
+                  className="text-muted-rose hover:underline"
+                >
                   Como funciona
                 </Link>
                 <Link to="/faq" className="text-muted-rose hover:underline">
@@ -364,7 +373,8 @@ function HomePage() {
                         const hosts = getDisplayHostNames(event.hosts ?? [])
                         const hostsName = hosts.join(' • ')
                         const isPairEvent =
-                          PAIR_EVENT_TYPES.has(event.eventType) && hosts.length === 2
+                          PAIR_EVENT_TYPES.has(event.eventType) &&
+                          hosts.length === 2
                         const eventTypeLabel =
                           event.customEventType ||
                           EVENT_TYPE_LABELS[event.eventType] ||
@@ -388,10 +398,14 @@ function HomePage() {
                             >
                               <div className="min-w-0 flex-1 space-y-1.5">
                                 <p className="text-sm font-medium text-espresso">
-                                  {capitalizeFirst(event.name || 'Evento sem nome')}
+                                  {capitalizeFirst(
+                                    event.name || 'Evento sem nome',
+                                  )}
                                 </p>
                                 <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs">
-                                  <span className="text-muted-rose/80">{eventTypeLabel}</span>
+                                  <span className="text-muted-rose/80">
+                                    {eventTypeLabel}
+                                  </span>
                                   <span className="text-muted-rose/35">•</span>
                                   {isPairEvent ? (
                                     <span className="text-warm-gray/70">
@@ -410,7 +424,9 @@ function HomePage() {
                                 {event.location && (
                                   <div className="flex items-center gap-1.5 text-xs text-warm-gray/60">
                                     <MapPin className="size-3 shrink-0" />
-                                    <span>{capitalizeFirst(event.location)}</span>
+                                    <span>
+                                      {capitalizeFirst(event.location)}
+                                    </span>
                                   </div>
                                 )}
                                 {event.description && (
@@ -448,7 +464,9 @@ function HomePage() {
             {hosting.length > 0 && (
               <div className="space-y-5">
                 <div className="flex items-baseline gap-3">
-                  <span className="font-accent text-xl text-muted-rose/85">você organiza</span>
+                  <span className="font-accent text-xl text-muted-rose/85">
+                    você organiza
+                  </span>
                   <span className="h-px flex-1 bg-gradient-to-r from-muted-rose/25 to-transparent" />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -471,7 +489,9 @@ function HomePage() {
             {attending.length > 0 && (
               <div className="space-y-5">
                 <div className="flex items-baseline gap-3">
-                  <span className="font-accent text-xl text-muted-rose/85">você foi convidado</span>
+                  <span className="font-accent text-xl text-muted-rose/85">
+                    você foi convidado
+                  </span>
                   <span className="h-px flex-1 bg-gradient-to-r from-muted-rose/25 to-transparent" />
                   <Link
                     to="/my-gifts"
@@ -492,7 +512,8 @@ function HomePage() {
                       coverImageUrl={event.coverImageUrl}
                       role="guest"
                       reservationCount={
-                        reservationCountByEventId.get(String(event.eventId)) ?? 0
+                        reservationCountByEventId.get(String(event.eventId)) ??
+                        0
                       }
                     />
                   ))}
@@ -529,18 +550,15 @@ function MyEventCard({
 }) {
   const displayHosts = getDisplayHostNames(hosts)
   const hostsName = displayHosts.join(' • ')
-  const eventTypeLabel = customEventType || EVENT_TYPE_LABELS[eventType] || 'Evento'
+  const eventTypeLabel =
+    customEventType || EVENT_TYPE_LABELS[eventType] || 'Evento'
   const isPairEvent =
     PAIR_EVENT_TYPES.has(eventType) && displayHosts.length === 2
 
   const isHost = role === 'host'
 
   return (
-    <Link
-      to="/events/$slug"
-      params={{ slug }}
-      className="group relative block"
-    >
+    <Link to="/events/$slug" params={{ slug }} className="group relative block">
       <article
         className={cn(
           'relative overflow-hidden rounded-[1.5rem] border bg-warm-white px-6 pt-6 pb-5 md:px-7 md:pt-7 md:pb-6 shadow-dreamy transition-all duration-500 ease-out',
@@ -580,7 +598,12 @@ function MyEventCard({
           <div className="relative shrink-0 w-[84px] sm:w-[96px] -rotate-[3deg] origin-center transition-transform duration-500 ease-out group-hover:-rotate-[1.5deg] group-hover:-translate-y-0.5">
             <div
               className="washi-tape"
-              style={{ top: '-0.4rem', left: '14%', transform: 'rotate(-12deg) scale(0.55)', width: '2.4rem' }}
+              style={{
+                top: '-0.4rem',
+                left: '14%',
+                transform: 'rotate(-12deg) scale(0.55)',
+                width: '2.4rem',
+              }}
               aria-hidden="true"
             />
             <div className="photo-print relative p-1.5 pb-4">
@@ -592,10 +615,19 @@ function MyEventCard({
                       alt=""
                       loading="lazy"
                       className="w-full h-full object-cover"
-                      style={{ filter: 'saturate(0.92) contrast(1.03) brightness(1.01)' }}
+                      style={{
+                        filter:
+                          'saturate(0.92) contrast(1.03) brightness(1.01)',
+                      }}
                     />
-                    <div className="photo-print-grain absolute inset-0" aria-hidden="true" />
-                    <div className="photo-vignette absolute inset-0" aria-hidden="true" />
+                    <div
+                      className="photo-print-grain absolute inset-0"
+                      aria-hidden="true"
+                    />
+                    <div
+                      className="photo-vignette absolute inset-0"
+                      aria-hidden="true"
+                    />
                   </>
                 ) : (
                   <div
@@ -607,7 +639,10 @@ function MyEventCard({
                     )}
                   >
                     <Sparkles className="size-5 text-muted-rose/55" />
-                    <div className="photo-print-grain absolute inset-0" aria-hidden="true" />
+                    <div
+                      className="photo-print-grain absolute inset-0"
+                      aria-hidden="true"
+                    />
                   </div>
                 )}
               </div>

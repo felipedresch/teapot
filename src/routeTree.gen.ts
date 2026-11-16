@@ -13,6 +13,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SitemapIndexDotxmlRouteImport } from './routes/sitemap-index[.]xml'
 import { Route as PrecosRouteImport } from './routes/precos'
 import { Route as MyGiftsRouteImport } from './routes/my-gifts'
+import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as ListaDePresentesRouteImport } from './routes/lista-de-presentes'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as FaqRouteImport } from './routes/faq'
@@ -51,6 +52,11 @@ const PrecosRoute = PrecosRouteImport.update({
 const MyGiftsRoute = MyGiftsRouteImport.update({
   id: '/my-gifts',
   path: '/my-gifts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
+  id: '/llms.txt',
+  path: '/llms.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ListaDePresentesRoute = ListaDePresentesRouteImport.update({
@@ -160,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/faq': typeof FaqRoute
   '/how-it-works': typeof HowItWorksRoute
   '/lista-de-presentes': typeof ListaDePresentesRouteWithChildren
+  '/llms.txt': typeof LlmsDottxtRoute
   '/my-gifts': typeof MyGiftsRoute
   '/precos': typeof PrecosRoute
   '/sitemap-index.xml': typeof SitemapIndexDotxmlRoute
@@ -183,6 +190,7 @@ export interface FileRoutesByTo {
   '/como-escolher-site-de-lista-de-presentes': typeof ComoEscolherSiteDeListaDePresentesRoute
   '/faq': typeof FaqRoute
   '/how-it-works': typeof HowItWorksRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/my-gifts': typeof MyGiftsRoute
   '/precos': typeof PrecosRoute
   '/sitemap-index.xml': typeof SitemapIndexDotxmlRoute
@@ -209,6 +217,7 @@ export interface FileRoutesById {
   '/faq': typeof FaqRoute
   '/how-it-works': typeof HowItWorksRoute
   '/lista-de-presentes': typeof ListaDePresentesRouteWithChildren
+  '/llms.txt': typeof LlmsDottxtRoute
   '/my-gifts': typeof MyGiftsRoute
   '/precos': typeof PrecosRoute
   '/sitemap-index.xml': typeof SitemapIndexDotxmlRoute
@@ -236,6 +245,7 @@ export interface FileRouteTypes {
     | '/faq'
     | '/how-it-works'
     | '/lista-de-presentes'
+    | '/llms.txt'
     | '/my-gifts'
     | '/precos'
     | '/sitemap-index.xml'
@@ -259,6 +269,7 @@ export interface FileRouteTypes {
     | '/como-escolher-site-de-lista-de-presentes'
     | '/faq'
     | '/how-it-works'
+    | '/llms.txt'
     | '/my-gifts'
     | '/precos'
     | '/sitemap-index.xml'
@@ -284,6 +295,7 @@ export interface FileRouteTypes {
     | '/faq'
     | '/how-it-works'
     | '/lista-de-presentes'
+    | '/llms.txt'
     | '/my-gifts'
     | '/precos'
     | '/sitemap-index.xml'
@@ -310,6 +322,7 @@ export interface RootRouteChildren {
   FaqRoute: typeof FaqRoute
   HowItWorksRoute: typeof HowItWorksRoute
   ListaDePresentesRoute: typeof ListaDePresentesRouteWithChildren
+  LlmsDottxtRoute: typeof LlmsDottxtRoute
   MyGiftsRoute: typeof MyGiftsRoute
   PrecosRoute: typeof PrecosRoute
   SitemapIndexDotxmlRoute: typeof SitemapIndexDotxmlRoute
@@ -353,6 +366,13 @@ declare module '@tanstack/react-router' {
       path: '/my-gifts'
       fullPath: '/my-gifts'
       preLoaderRoute: typeof MyGiftsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/llms.txt': {
+      id: '/llms.txt'
+      path: '/llms.txt'
+      fullPath: '/llms.txt'
+      preLoaderRoute: typeof LlmsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lista-de-presentes': {
@@ -524,6 +544,7 @@ const rootRouteChildren: RootRouteChildren = {
   FaqRoute: FaqRoute,
   HowItWorksRoute: HowItWorksRoute,
   ListaDePresentesRoute: ListaDePresentesRouteWithChildren,
+  LlmsDottxtRoute: LlmsDottxtRoute,
   MyGiftsRoute: MyGiftsRoute,
   PrecosRoute: PrecosRoute,
   SitemapIndexDotxmlRoute: SitemapIndexDotxmlRoute,

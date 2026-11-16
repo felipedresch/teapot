@@ -10,6 +10,7 @@ import {
   toJsonLd,
 } from '../lib/seo'
 import { OccasionLinks } from '../components/OccasionLinks'
+import { byPaywall } from '../lib/paywall'
 
 // Ocasiões com dados próprios suficientes para o bloco "o que as listas reais
 // mostram" (ver scripts/dados-presentes.mjs).
@@ -101,12 +102,20 @@ function OccasionPage() {
             Montar minha lista
           </Link>
           <p className="text-sm text-warm-gray">
-            Monte gratuitamente. Libere o compartilhamento desta lista por R${' '}
-            {page.price}, sem mensalidade.{' '}
-            <Link to="/precos" className="underline">
-              Ver planos
-            </Link>
-            .
+            {byPaywall(
+              <>
+                Monte gratuitamente. Libere o compartilhamento desta lista por
+                R$ {page.price}, sem mensalidade.{' '}
+                <Link to="/precos" className="underline">
+                  Ver planos
+                </Link>
+                .
+              </>,
+              <>
+                Montar e compartilhar é grátis, sem mensalidade e sem limite de
+                presentes.
+              </>,
+            )}
           </p>
         </header>
         {page.sections.map((section, index) => (

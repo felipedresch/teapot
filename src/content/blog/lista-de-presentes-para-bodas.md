@@ -79,7 +79,7 @@ Muitas vezes são os filhos ou netos, como surpresa. Nesse caso, vale conversar 
 
 Se mais de uma pessoa vai cuidar da lista, divida as tarefas: alguém monta os itens, alguém confere as reservas e alguém responde às dúvidas dos convidados.
 
-No [MyWish](/lista-de-presentes/casamento), você monta a lista de bodas de graça, com itens de qualquer loja, e paga uma vez só para compartilhar: R$ 29,90 via Pix, o mesmo valor do casamento e do noivado. No cadastro, escolha a ocasião "Outro", escreva "Bodas" em "Qual é o tipo do evento?" e dê ao evento um nome como "Bodas de Ouro de Maria e João". Você pode convidar um co-anfitrião para ajudar a organizar. O convidado abre o link no celular, entra com a conta Google e reserva o presente, e os outros veem que aquele item já foi escolhido. A compra é feita na loja que ele preferir.
+<!-- pago -->No [MyWish](/lista-de-presentes/casamento), você monta a lista de bodas de graça, com itens de qualquer loja, e paga uma vez só para compartilhar: R$ 29,90 via Pix, o mesmo valor do casamento e do noivado.<!-- /pago --><!-- gratis -->No [MyWish](/lista-de-presentes/casamento), você monta e compartilha a lista de bodas de graça, com itens de qualquer loja.<!-- /gratis --> No cadastro, escolha a ocasião "Outro", escreva "Bodas" em "Qual é o tipo do evento?" e dê ao evento um nome como "Bodas de Ouro de Maria e João". Você pode convidar um co-anfitrião para ajudar a organizar. O convidado abre o link no celular, entra com a conta Google e reserva o presente, e os outros veem que aquele item já foi escolhido. A compra é feita na loja que ele preferir.
 
 ## Bodas não é lua de mel
 

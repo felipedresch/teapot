@@ -1,3 +1,5 @@
+import { PAYWALL_ENABLED } from '../../convex/lib/paywallSwitch'
+
 export type PaywallCategory = 'common' | 'premium'
 export type PaymentTier = 'single' | 'lifetime'
 export type PaymentStatus =
@@ -68,4 +70,12 @@ export function getCategoryCopy(category: PaywallCategory) {
       'Crie e compartilhe quantas listas quiser, pra sempre. Aniversários, chás, formaturas e tudo que vier depois.',
     cta: 'Liberar agora',
   }
+}
+
+/**
+ * Escolhe o texto pela cobrança (convex/lib/paywallSwitch.ts): o primeiro
+ * com ela ligada, o segundo com tudo grátis.
+ */
+export function byPaywall<T>(paid: T, free: T): T {
+  return PAYWALL_ENABLED ? paid : free
 }

@@ -18,7 +18,7 @@
 
 Os guias de ocasião ficam em `src/content/occasions.ts`: casamento, aniversário, chá de bebê, chá de panela e casa nova. Cada página tem orientações próprias, exemplos e dúvidas relevantes. `/lista-de-presentes` é a página central e `/precos` explica os valores e o que cada pagamento libera. Home, navegação, rodapé e artigos oferecem links para essas páginas.
 
-Os textos devem refletir o produto: montagem gratuita; compartilhamento pago; compra e entrega dos presentes fora do MyWish. Não anunciar conversão de presentes em dinheiro. Os valores devem acompanhar `getPrices` e `getPaywallCategory` em `convex/payments.ts`.
+Os textos devem refletir o produto: compra e entrega dos presentes fora do MyWish; não anunciar conversão de presentes em dinheiro. O preço depende do interruptor da cobrança ([PAYWALL.md](PAYWALL.md)): todo texto com preço vem em par, versão paga e versão grátis. Os valores da versão paga acompanham `getPrices` e `getPaywallCategory` em `convex/payments.ts`.
 
 ## Citações por IA (ChatGPT, Perplexity, Copilot)
 

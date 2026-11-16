@@ -7,6 +7,10 @@ import {
 } from './_generated/server'
 import type { Id } from './_generated/dataModel'
 import { v } from 'convex/values'
+import {
+  effectiveMonetizationStatus,
+  newEventMonetizationStatus,
+} from './lib/paywallSwitch'
 
 const DEFAULT_EVENT_TYPES: Array<{
   value: string
@@ -66,11 +70,7 @@ export const createEvent = mutation({
     customEventType: v.optional(v.string()),
     hosts: v.array(v.string()),
     visibility: v.optional(
-      v.union(
-        v.literal('draft'),
-        v.literal('unlisted'),
-        v.literal('public'),
-      ),
+      v.union(v.literal('draft'), v.literal('unlisted'), v.literal('public')),
     ),
     createdByPartner: v.optional(
       v.union(v.literal('partnerOne'), v.literal('partnerTwo')),
@@ -158,7 +158,7 @@ export const createEvent = mutation({
       location: args.location,
       description: args.description,
       coverImageId: args.coverImageId,
-      monetizationStatus: hasLifetimeAccess ? 'paid' : 'requires_payment',
+      monetizationStatus: newEventMonetizationStatus(hasLifetimeAccess),
       paidAt: hasLifetimeAccess ? Date.now() : undefined,
     })
 
@@ -702,11 +702,7 @@ export const updateEvent = mutation({
     customEventType: v.optional(v.string()),
     hosts: v.optional(v.array(v.string())),
     visibility: v.optional(
-      v.union(
-        v.literal('draft'),
-        v.literal('unlisted'),
-        v.literal('public'),
-      ),
+      v.union(v.literal('draft'), v.literal('unlisted'), v.literal('public')),
     ),
     createdByPartner: v.optional(
       v.union(v.literal('partnerOne'), v.literal('partnerTwo')),
@@ -761,8 +757,9 @@ export const updateEvent = mutation({
     }
 
     const hasLifetimeAccess = await hasActiveLifetimeAccess(ctx, userId)
-    const currentMonetizationStatus =
-      event.monetizationStatus ?? 'grandfathered'
+    const currentMonetizationStatus = effectiveMonetizationStatus(
+      event.monetizationStatus,
+    )
     const isUnlocked =
       hasLifetimeAccess ||
       currentMonetizationStatus === 'grandfathered' ||
@@ -928,7 +925,7 @@ export function isEventUnlocked(
   event: EventVisibilityFields,
   hostHasLifetime: boolean,
 ): boolean {
-  const status = event.monetizationStatus ?? 'grandfathered'
+  const status = effectiveMonetizationStatus(event.monetizationStatus)
   return hostHasLifetime || status === 'grandfathered' || status === 'paid'
 }
 

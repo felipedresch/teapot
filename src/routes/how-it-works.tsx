@@ -1,12 +1,16 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { pageMeta, toJsonLd } from '../lib/seo'
 import BrandWordmark from '../components/BrandWordmark'
+import { byPaywall } from '../lib/paywall'
 
 const HOW_TO_STEPS = [
   'Acesse a página de criação e informe o nome do evento.',
   'Selecione o tipo de ocasião e adicione os anfitriões.',
   'Inclua os presentes desejados com descrição, imagem e link de referência.',
-  'Quando a lista estiver pronta, escolha o plano e libere o compartilhamento com um pagamento único via Pix.',
+  byPaywall(
+    'Quando a lista estiver pronta, escolha o plano e libere o compartilhamento com um pagamento único via Pix.',
+    'Quando a lista estiver pronta, publique e copie o link. Não há nada a pagar.',
+  ),
   'Compartilhe o link com convidados por WhatsApp ou redes sociais para que eles reservem um presente.',
 ]
 
@@ -28,7 +32,10 @@ export const Route = createFileRoute('/how-it-works')({
   head: () => ({
     meta: pageMeta(
       'Como criar e compartilhar sua lista de presentes',
-      'Veja como montar sua lista no MyWish, adicionar presentes de qualquer loja, liberar o compartilhamento via Pix e acompanhar as reservas dos convidados.',
+      byPaywall(
+        'Veja como montar sua lista no MyWish, adicionar presentes de qualquer loja, liberar o compartilhamento via Pix e acompanhar as reservas dos convidados.',
+        'Veja como montar sua lista grátis no MyWish, adicionar presentes de qualquer loja, compartilhar com os convidados e acompanhar as reservas.',
+      ),
     ),
   }),
   component: HowItWorksPage,
@@ -89,15 +96,25 @@ function HowItWorksPage() {
       </section>
       <section className="space-y-3">
         <h2 className="text-2xl font-medium text-espresso">Quanto custa?</h2>
-        <p className="text-warm-gray leading-relaxed">
-          Montar a lista é gratuito. A liberação de uma lista custa R$ 9,90 para
-          ocasiões comuns ou R$ 29,90 para casamento, noivado e bodas. Há também
-          um plano vitalício vinculado à conta.{' '}
-          <Link to="/precos" className="underline">
-            Confira todos os preços
-          </Link>
-          .
-        </p>
+        {byPaywall(
+          <p className="text-warm-gray leading-relaxed">
+            Montar a lista é gratuito. A liberação de uma lista custa R$ 9,90
+            para ocasiões comuns ou R$ 29,90 para casamento, noivado e bodas. Há
+            também um plano vitalício vinculado à conta.{' '}
+            <Link to="/precos" className="underline">
+              Confira todos os preços
+            </Link>
+            .
+          </p>,
+          <p className="text-warm-gray leading-relaxed">
+            Nada. Montar, compartilhar e acompanhar a lista é gratuito, para
+            qualquer ocasião e sem limite de listas.{' '}
+            <Link to="/precos" className="underline">
+              Entenda como o MyWish se mantém
+            </Link>
+            .
+          </p>,
+        )}
       </section>
       <Link
         to="/events/create"

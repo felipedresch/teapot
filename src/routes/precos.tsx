@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { SITE_NAME, SITE_URL, pageMeta, toJsonLd } from '../lib/seo'
 import { formatLongDatePtBr, pageDates } from '../content/pageDates'
+import { PAYWALL_ENABLED } from '../../convex/lib/paywallSwitch'
 
 // Valores precisam acompanhar getPrices em convex/payments.ts.
 const OFFERS = [
@@ -30,15 +31,129 @@ const serviceJsonLd = {
     url: `${SITE_URL}/precos`,
   })),
 }
+
+const freeServiceJsonLd = {
+  ...serviceJsonLd,
+  description:
+    'Lista de presentes online gratuita: montar, compartilhar e acompanhar as reservas não custa nada, sem mensalidade e sem porcentagem sobre os presentes.',
+  offers: {
+    '@type': 'Offer',
+    name: 'Lista de presentes online gratuita',
+    price: '0',
+    priceCurrency: 'BRL',
+    url: `${SITE_URL}/precos`,
+  },
+}
+
 export const Route = createFileRoute('/precos')({
   head: () => ({
-    meta: pageMeta(
-      'Preços da lista de presentes: a partir de R$ 9,90',
-      'Monte sua lista gratuitamente. Libere o compartilhamento por pagamento único via Pix, a partir de R$ 9,90. Confira os preços por ocasião e o acesso vitalício.',
-    ),
+    meta: PAYWALL_ENABLED
+      ? pageMeta(
+          'Preços da lista de presentes: a partir de R$ 9,90',
+          'Monte sua lista gratuitamente. Libere o compartilhamento por pagamento único via Pix, a partir de R$ 9,90. Confira os preços por ocasião e o acesso vitalício.',
+        )
+      : pageMeta(
+          'Quanto custa a lista de presentes? É grátis',
+          'No MyWish, montar, compartilhar e acompanhar a lista de presentes é gratuito. Sem mensalidade, sem taxa e sem porcentagem sobre os presentes.',
+        ),
   }),
-  component: PricingPage,
+  component: PAYWALL_ENABLED ? PricingPage : FreePricingPage,
 })
+
+function FreePricingPage() {
+  return (
+    <article className="max-w-4xl mx-auto px-6 py-14 space-y-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: toJsonLd(freeServiceJsonLd) }}
+      />
+      <header className="space-y-4">
+        <p className="font-accent text-3xl text-muted-rose">
+          simples, desde o começo
+        </p>
+        <h1 className="font-display text-4xl md:text-5xl text-espresso">
+          Quanto custa uma lista no MyWish?
+        </h1>
+        <p className="text-lg text-warm-gray leading-relaxed">
+          Nada. Montar, compartilhar e acompanhar a lista de presentes é
+          gratuito, para qualquer ocasião. Não há mensalidade, taxa para
+          compartilhar nem porcentagem sobre os presentes.
+        </p>
+        <p className="text-sm text-warm-gray">
+          Atualizado em{' '}
+          <time dateTime={pageDates['/precos']}>
+            {formatLongDatePtBr(pageDates['/precos'])}
+          </time>
+        </p>
+      </header>
+      <section className="space-y-3">
+        <h2 className="font-display text-2xl text-espresso">
+          O que está incluído?
+        </h2>
+        <ul className="list-disc pl-5 space-y-2 text-warm-gray">
+          <li>Listas ilimitadas, para qualquer ocasião.</li>
+          <li>Presentes com descrição, imagem e link de referência.</li>
+          <li>Uma página para compartilhar com os convidados.</li>
+          <li>Reserva de presentes e acompanhamento dos itens recebidos.</li>
+          <li>Convite para outro anfitrião ajudar na organização.</li>
+          <li>Escolha entre evento público e não listado.</li>
+        </ul>
+      </section>
+      <section className="space-y-3">
+        <h2 className="font-display text-2xl text-espresso">
+          Como o MyWish se mantém de graça?
+        </h2>
+        <p className="text-warm-gray leading-relaxed">
+          Em alguns presentes, o link da loja é um link de parceiro. Quando um
+          convidado compra por ele, a loja pode pagar uma comissão ao MyWish. O
+          preço para o convidado é o mesmo, e nada sai do valor do presente.
+        </p>
+      </section>
+      <section className="space-y-3">
+        <h2 className="font-display text-2xl text-espresso">
+          Os convidados precisam pagar ao MyWish?
+        </h2>
+        <p className="text-warm-gray leading-relaxed">
+          Não. Os convidados visualizam a lista e entram com Google para
+          reservar um presente. A compra do produto é feita diretamente na loja
+          escolhida. O MyWish não recebe o dinheiro dos presentes e não converte
+          presentes em dinheiro.
+        </p>
+      </section>
+      <section className="space-y-3">
+        <h2 className="font-display text-2xl text-espresso">
+          E as listas que cobram porcentagem?
+        </h2>
+        <p className="text-warm-gray leading-relaxed">
+          Listas que transformam presentes em dinheiro costumam descontar uma
+          porcentagem de cada presente recebido. No MyWish, o convidado compra o
+          presente na loja e nada é descontado.{' '}
+          <Link
+            to="/como-escolher-site-de-lista-de-presentes"
+            className="underline"
+          >
+            Compare os tipos de lista de presentes
+          </Link>
+          .
+        </p>
+      </section>
+      <Link
+        to="/events/create"
+        className="inline-flex rounded-full bg-primary text-primary-foreground px-6 py-3 font-medium"
+      >
+        Montar minha lista grátis
+      </Link>
+      <p className="text-sm text-warm-gray">
+        Mais detalhes nas{' '}
+        <Link to="/faq" className="underline">
+          perguntas frequentes
+        </Link>
+        .
+      </p>
+    </article>
+  )
+}
+
 function PricingPage() {
   return (
     <article className="max-w-4xl mx-auto px-6 py-14 space-y-8">

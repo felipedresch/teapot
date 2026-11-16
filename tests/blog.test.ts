@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { BLOG_REDIRECTS, getBlogPosts, parseBlogPost } from '../src/lib/blog'
+import {
+  BLOG_REDIRECTS,
+  applyPaywallMarkers,
+  getBlogPosts,
+  parseBlogPost,
+} from '../src/lib/blog'
 import { canonicalRedirect } from '../src/lib/canonical'
 
 const sample = `---
@@ -101,6 +106,38 @@ describe('blog', () => {
           pages.includes(href) ||
           (href.startsWith('/blog/') && slugs.has(href.slice(6)))
         expect(ok, `${post.slug} → ${href}`).toBe(true)
+      }
+    }
+  })
+})
+
+describe('marcadores da cobrança', () => {
+  const text =
+    'Antes. <!-- pago -->Custa R$ 9,90.<!-- /pago --><!-- gratis -->É grátis.<!-- /gratis --> Depois.'
+
+  it('mostra só a versão da cobrança ligada ou desligada', () => {
+    expect(applyPaywallMarkers(text, true)).toBe(
+      'Antes. Custa R$ 9,90. Depois.',
+    )
+    expect(applyPaywallMarkers(text, false)).toBe('Antes. É grátis. Depois.')
+  })
+
+  const files = Object.entries(
+    import.meta.glob('../src/content/blog/*.md', {
+      query: '?raw',
+      import: 'default',
+      eager: true,
+    }) as Record<string, string>,
+  )
+
+  it.each(files)('%s: nada de preço com a cobrança desligada', (path, raw) => {
+    const slug = path.split('/').pop()!.replace(/\.md$/, '')
+    for (const enabled of [true, false]) {
+      const post = parseBlogPost(slug, raw, enabled)
+      const all = [post.markdown, ...post.faq.map((f) => f.answer)].join('\n')
+      expect(all).not.toMatch(/<!--\s*\/?(pago|gratis)/)
+      if (!enabled) {
+        expect(all).not.toMatch(/R\$ ?(9|29|59),90|\/precos|vitalíci/)
       }
     }
   })

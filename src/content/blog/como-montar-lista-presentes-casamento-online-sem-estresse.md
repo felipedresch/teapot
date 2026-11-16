@@ -96,7 +96,7 @@ Agradeçam cada presente de forma individual, de preferência até um mês depoi
 
 Para não esquecer ninguém, usem a própria lista: as reservas mostram quem escolheu cada item, e o convidado pode ter deixado uma mensagem junto. Vão marcando como recebido e agradecendo na mesma hora.
 
-Se quiserem começar, a [lista de presentes de casamento do MyWish](/lista-de-presentes/casamento) é grátis para montar; vocês pagam um valor único só quando forem compartilhar. E vale ler também os [erros mais comuns na lista de casamento](/blog/quais-erros-evitar-ao-criar-uma-lista-de-presentes-para-casamento).
+Se quiserem começar, a [lista de presentes de casamento do MyWish](/lista-de-presentes/casamento) <!-- pago -->é grátis para montar; vocês pagam um valor único só quando forem compartilhar.<!-- /pago --><!-- gratis -->é grátis para montar e compartilhar.<!-- /gratis --> E vale ler também os [erros mais comuns na lista de casamento](/blog/quais-erros-evitar-ao-criar-uma-lista-de-presentes-para-casamento).
 
 ## Perguntas frequentes
 

@@ -39,7 +39,7 @@ Não. É importante deixar isso claro para os convidados:
 - **Reservar não cobra nada.** O convidado não paga no MyWish e não informa cartão.
 - **O MyWish não vende nem entrega.** A compra e a entrega acontecem fora da plataforma, na loja escolhida pelo convidado.
 - **O MyWish não transforma presentes em dinheiro.** A lista é de presentes de verdade, não de cotas ou transferências.
-- **O único pagamento é do anfitrião.** Montar e editar a lista é grátis; para compartilhar, o anfitrião paga uma vez, via Pix (R$ 9,90 para a maioria das ocasiões ou R$ 29,90 para casamento, noivado e bodas).
+- <!-- pago -->**O único pagamento é do anfitrião.** Montar e editar a lista é grátis; para compartilhar, o anfitrião paga uma vez, via Pix (R$ 9,90 para a maioria das ocasiões ou R$ 29,90 para casamento, noivado e bodas).<!-- /pago --><!-- gratis -->**O anfitrião também não paga.** Montar, editar e compartilhar a lista é grátis.<!-- /gratis -->
 
 Como a reserva é um compromisso de palavra, vale incluir no convite uma frase como "reserve na lista antes de comprar, para ninguém repetir". Para comparar esse modelo com sites que cobram porcentagem sobre os presentes, veja [como escolher um site de lista de presentes](/como-escolher-site-de-lista-de-presentes).
 

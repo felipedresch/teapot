@@ -98,7 +98,7 @@ O que faz um chá bar dar certo é a comida e o cuidado com os convidados, não 
 
 Uma lista online evita que o casal ganhe cinco saca-rolhas e nenhum prato. O convidado reserva o que vai dar e os outros veem que o item já foi escolhido.
 
-No [MyWish](/lista-de-presentes/cha-de-panela), você cria o evento como chá de panela, adiciona presentes de qualquer loja com descrição e link de referência e paga uma vez só (R$ 9,90, via Pix) para liberar o compartilhamento. O convidado abre o link no celular, entra com a conta Google, reserva e compra onde preferir. Ele também pode deixar uma mensagem para os anfitriões.
+No [MyWish](/lista-de-presentes/cha-de-panela), você cria o evento como chá de panela, adiciona presentes de qualquer loja com descrição e link de referência <!-- pago -->e paga uma vez só (R$ 9,90, via Pix) para liberar o compartilhamento.<!-- /pago --><!-- gratis -->e compartilha a lista de graça.<!-- /gratis --> O convidado abre o link no celular, entra com a conta Google, reserva e compra onde preferir. Ele também pode deixar uma mensagem para os anfitriões.
 
 Na descrição de cada item, diga a quantidade de peças, o material (vidro, cristal, acrílico para área externa) e a cor. Para taças e copos, vale indicar se precisam ir à lava-louças.
 
