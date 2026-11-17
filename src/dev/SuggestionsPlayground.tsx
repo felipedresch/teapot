@@ -14,7 +14,6 @@ import type {
   SuggestionIdeaView,
   SuggestionProduct,
 } from '../components/gift-suggestions/types'
-import { AffiliateDisclosureNote } from '../components/GiftReferenceLink'
 import { Button } from '../components/ui/button'
 import { parseProductOffers } from '../../convex/lib/shopeeAffiliateApi'
 import { rankSuggestions } from '../../convex/lib/suggestionRanking'
@@ -22,8 +21,6 @@ import { SUGGESTION_OCCASIONS } from '../../convex/lib/suggestionIdeas'
 import { giftInsights } from '../content/giftInsights'
 import { SHOPEE_FIXTURE_RESPONSES } from './shopeeFixtures'
 import { FIXTURE_IMAGES } from './fixtureImages'
-
-const DISCLOSURE = { enabled: true, amazon: false, shopee: true }
 
 const SHARES = Object.fromEntries(
   giftInsights.occasions.chaDeCasaNova.items.map((i) => [i.name, i.listShare]),
@@ -106,7 +103,6 @@ export default function SuggestionsPlayground() {
           occasionLabel="chá de casa nova"
           ideas={ideas}
           listShares={SHARES}
-          disclosure={DISCLOSURE}
           defaultIdeaId="potes-hermeticos"
           addedItemIds={new Set(added ? [added] : [])}
           addingItemId={adding}
@@ -122,8 +118,7 @@ export default function SuggestionsPlayground() {
         />
         {lastAdded ? (
           <p className="text-xs text-warm-gray">
-            Lista recebeu: <b>{lastAdded.name}</b> ·{' '}
-            {lastAdded.productLink}
+            Lista recebeu: <b>{lastAdded.name}</b> · {lastAdded.productLink}
           </p>
         ) : null}
       </Frame>
@@ -133,7 +128,6 @@ export default function SuggestionsPlayground() {
           occasionLabel="chá de casa nova"
           ideas={ideas}
           listShares={SHARES}
-          disclosure={DISCLOSURE}
           defaultIdeaId="jogo-pratos"
           addedItemIds={new Set(['202'])}
           onAdd={() => {}}
@@ -145,7 +139,6 @@ export default function SuggestionsPlayground() {
           occasionLabel="chá de casa nova"
           ideas={ideas}
           listShares={SHARES}
-          disclosure={DISCLOSURE}
           onAdd={() => {}}
         />
       </Frame>
@@ -154,7 +147,6 @@ export default function SuggestionsPlayground() {
         <GiftSuggestions
           occasionLabel="chá de casa nova"
           ideas={undefined}
-          disclosure={DISCLOSURE}
           onAdd={() => {}}
         />
       </Frame>
@@ -164,7 +156,6 @@ export default function SuggestionsPlayground() {
           occasionLabel="chá de casa nova"
           ideas={ideas}
           listShares={SHARES}
-          disclosure={DISCLOSURE}
           defaultIdeaId="tapete"
           onAdd={() => {}}
         />
@@ -175,14 +166,16 @@ export default function SuggestionsPlayground() {
           occasionLabel="chá de casa nova"
           ideas={brokenIdeas}
           listShares={SHARES}
-          disclosure={DISCLOSURE}
           defaultIdeaId="toalhas-banho"
           onAdd={() => {}}
         />
       </Frame>
 
       {matchProduct ? (
-        <Frame id="onde-comprar" title="Convidado · presente sem link que combina">
+        <Frame
+          id="onde-comprar"
+          title="Convidado · presente sem link que combina"
+        >
           <div className="max-w-xs rounded-2xl border border-gift-available/20 bg-gift-available/10 p-5 flex flex-col gap-3">
             <div className="h-36 rounded-xl border border-border/95 bg-blush/20" />
             <h3 className="font-display italic text-base text-espresso">
@@ -198,7 +191,10 @@ export default function SuggestionsPlayground() {
       ) : null}
 
       {matchProduct ? (
-        <Frame id="link-sugerido" title="Anfitrião · presente sem link que combina">
+        <Frame
+          id="link-sugerido"
+          title="Anfitrião · presente sem link que combina"
+        >
           <div className="max-w-xs rounded-2xl border border-gift-available/20 bg-gift-available/10 p-5 flex flex-col gap-3">
             <div className="h-36 rounded-xl border border-border/95 bg-blush/20" />
             <h3 className="font-display italic text-base text-espresso">
@@ -222,7 +218,6 @@ export default function SuggestionsPlayground() {
           occasionLabel="chá de casa nova"
           hostNames="Gabriel e Giovanna"
           everythingReserved={false}
-          disclosure={DISCLOSURE}
           onProductClick={() => {}}
         />
       </Frame>
@@ -264,10 +259,6 @@ export default function SuggestionsPlayground() {
             <ArrowRight className="size-3" />
           </a>
         </div>
-        <AffiliateDisclosureNote
-          disclosure={DISCLOSURE}
-          className="text-[11px] leading-relaxed text-warm-gray/60"
-        />
       </Frame>
     </div>
   )

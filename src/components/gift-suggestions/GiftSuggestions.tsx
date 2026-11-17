@@ -2,8 +2,6 @@ import { AnimatePresence, motion } from 'motion/react'
 import { Check, Gift, Loader2, Plus, Sparkles, Star } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { AffiliateDisclosureNote } from '../GiftReferenceLink'
-import type { AffiliateDisclosure } from '../../lib/affiliate/disclosure'
 import type {
   SuggestionIdeaView,
   SuggestionProduct,
@@ -72,7 +70,6 @@ export function GiftSuggestions({
   occasionLabel,
   ideas,
   listShares,
-  disclosure,
   addedItemIds,
   addingItemId,
   defaultIdeaId,
@@ -86,7 +83,6 @@ export function GiftSuggestions({
   ideas: SuggestionIdeaView[] | undefined
   // % das listas da ocasião com a ideia (giftInsights), pelo rótulo.
   listShares?: Record<string, number>
-  disclosure: AffiliateDisclosure | undefined
   addedItemIds?: ReadonlySet<string>
   // Produto sendo adicionado agora (mostra "Adicionando…").
   addingItemId?: string | null
@@ -282,16 +278,6 @@ export function GiftSuggestions({
           </motion.p>
         )}
       </AnimatePresence>
-
-      {/* Os links da curadoria já são de afiliado: o aviso vale sempre aqui. */}
-      <AffiliateDisclosureNote
-        disclosure={{
-          enabled: true,
-          amazon: disclosure?.amazon ?? false,
-          shopee: disclosure?.shopee ?? false,
-        }}
-        className="mt-4 border-t border-dashed border-muted-rose/20 pt-3 text-[11px] leading-relaxed text-warm-gray/60"
-      />
     </section>
   )
 }

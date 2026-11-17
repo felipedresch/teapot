@@ -1,7 +1,5 @@
 import { ArrowUpRight, Star } from 'lucide-react'
 import { useState } from 'react'
-import { AffiliateDisclosureNote } from '../GiftReferenceLink'
-import type { AffiliateDisclosure } from '../../lib/affiliate/disclosure'
 import type { SuggestionIdeaView, SuggestionProduct } from './types'
 
 // "Outras ideias", no fim da lista, só para o convidado: um produto por ideia
@@ -49,7 +47,6 @@ export function OutsideListSuggestions({
   occasionLabel,
   hostNames,
   everythingReserved,
-  disclosure,
   onProductClick,
 }: {
   ideas: SuggestionIdeaView[] | undefined
@@ -59,7 +56,6 @@ export function OutsideListSuggestions({
   hostNames: string
   // Nenhum presente disponível: o título muda.
   everythingReserved: boolean
-  disclosure: AffiliateDisclosure | undefined
   onProductClick: (product: SuggestionProduct, idea: SuggestionIdeaView) => void
 }) {
   const picks = ideas ? pickProducts(ideas) : []
@@ -139,15 +135,6 @@ export function OutsideListSuggestions({
             </li>
           ))}
         </ul>
-
-        <AffiliateDisclosureNote
-          disclosure={{
-            enabled: true,
-            amazon: disclosure?.amazon ?? false,
-            shopee: disclosure?.shopee ?? false,
-          }}
-          className="mt-5 text-[11px] leading-relaxed text-warm-gray/60"
-        />
       </div>
     </section>
   )

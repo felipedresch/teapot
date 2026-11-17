@@ -64,16 +64,19 @@ O módulo é puro e testado (`tests/affiliate.test.ts`). Ordem de cada clique:
 
 ### Aviso de comissão
 
-Embaixo da grade de presentes aparece, só com alguma loja ligada e algum
-presente com link:
+O aviso fica no rodapé de todas as páginas
+([`Footer`](../src/components/Footer.tsx)) e na pergunta "Como o MyWish se
+mantém de graça?" do FAQ, não no meio das telas: dentro do bloco de
+sugestões e da lista, ele pesava a página.
 
-> Podemos receber uma comissão por compras feitas pelos links dos presentes,
-> sem custo extra pra você.
+> Alguns links de produto são de parceiros: o MyWish pode receber uma
+> comissão, sem custo extra para quem compra.
 
-Com a Amazon ligada, vem junto a frase que o programa de associados exige:
-"Como Associado da Amazon, o mywish ganha com compras qualificadas." O
-navegador só sabe se há loja ligada (server function
-`getAffiliateDisclosure`, no loader da página); os IDs ficam no Worker.
+Ao ligar a Amazon, o programa de associados exige a frase "Como Associado da
+Amazon, o mywish ganha com compras qualificadas." no site: ponha no mesmo
+rodapé. A server function `getAffiliateDisclosure` (loader da página da
+lista) diz ao navegador só se há loja ligada (`shopee` liga o "Ver opções na
+Shopee"); os IDs ficam no Worker.
 
 ### O que medir
 
@@ -236,8 +239,8 @@ No PostHog, do navegador:
 - `outside_list_suggestion_clicked`: convidado clicou num produto "fora da
   lista".
 
-O aviso de comissão aparece sempre que um desses blocos aparece: os links da
-curadoria já são de afiliado, mesmo sem nenhuma loja ligada no Worker.
+Os links da curadoria já são de afiliado, mesmo sem nenhuma loja ligada no
+Worker: o aviso do rodapé cobre todos eles.
 
 O clique em si chega também como `gift_link_clicked`, pelo servidor.
 

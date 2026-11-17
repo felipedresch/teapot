@@ -47,10 +47,7 @@ import { SITE_NAME, absoluteUrl, toJsonLd } from '../lib/seo'
 import { PaywallDialog } from '../components/paywall/Paywall'
 import { usePaywallState } from '../hooks/usePaywall'
 import { track } from '../integrations/posthog/events'
-import {
-  AffiliateDisclosureNote,
-  GiftReferenceLink,
-} from '../components/GiftReferenceLink'
+import { GiftReferenceLink } from '../components/GiftReferenceLink'
 import {
   getAffiliateDisclosure,
   type AffiliateDisclosure,
@@ -2278,7 +2275,6 @@ function EventGiftsPageShell() {
                             ? undefined
                             : SUGGESTION_LIST_SHARES[suggestionOccasion]
                         }
-                        disclosure={affiliateDisclosure}
                         addedItemIds={addedSuggestionIds}
                         addingItemId={addingSuggestionId}
                         onAdd={(product, idea) =>
@@ -3149,23 +3145,6 @@ function EventGiftsPageShell() {
               </AnimatePresence>
             </div>
 
-            {(filteredGifts.some((gift) => gift.referenceUrl) ||
-              affiliateDisclosure.shopee ||
-              giftMatches.size > 0) && (
-              <AffiliateDisclosureNote
-                disclosure={
-                  // Os produtos da curadoria já vêm com link de afiliado.
-                  giftMatches.size > 0 ||
-                  filteredGifts.some((gift) =>
-                    gift.referenceUrl?.startsWith('https://s.shopee.com.br/'),
-                  )
-                    ? { ...affiliateDisclosure, enabled: true }
-                    : affiliateDisclosure
-                }
-                className="mt-6 text-center text-[11px] leading-relaxed text-warm-gray/60"
-              />
-            )}
-
             {(hasMoreGifts || isLoadingMoreGifts) && (
               <div ref={loadMoreTriggerRef} className="h-1 w-full" />
             )}
@@ -3194,7 +3173,6 @@ function EventGiftsPageShell() {
             !hasMoreGifts &&
             !gifts.some((gift) => gift.status === 'available')
           }
-          disclosure={affiliateDisclosure}
           onProductClick={(product, idea) =>
             track.outsideListSuggestionClicked({
               eventId: String(event._id),

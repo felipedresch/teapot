@@ -89,6 +89,19 @@ export default function Footer() {
         <p className="text-warm-gray/50 mt-4 font-accent text-2xl">
           com amor, sempre
         </p>
+
+        {/* Aviso de afiliado do site inteiro: fica aqui e no FAQ, não no
+            meio das telas (docs/AFFILIATES.md). */}
+        <p className="mx-auto mt-6 max-w-md text-[11px] leading-relaxed text-warm-gray/55">
+          Alguns links de produto são de parceiros: o MyWish pode receber uma
+          comissão, sem custo extra para quem compra.{' '}
+          <Link
+            to="/faq"
+            className="underline underline-offset-2 hover:text-espresso"
+          >
+            Saiba mais
+          </Link>
+        </p>
       </div>
     </footer>
   )

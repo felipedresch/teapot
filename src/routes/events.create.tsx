@@ -1203,7 +1203,6 @@ function EventCreatePageShell() {
                   suggestionOccasion,
                 )}
                 ideas={productSuggestions}
-                disclosure={undefined}
                 addedItemIds={addedSuggestionIds}
                 onAdd={handleAddSuggestion}
                 onIdeaViewed={(idea) =>

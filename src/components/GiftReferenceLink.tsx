@@ -1,7 +1,6 @@
 import posthog from 'posthog-js'
 import { useEffect, useState, type ReactNode } from 'react'
 import { giftLinkHref, type GiftLinkSource } from '../lib/affiliate/links'
-import type { AffiliateDisclosure } from '../lib/affiliate/disclosure'
 
 // Link "ver referência" de um presente salvo. Passa por /r/<giftId>, que
 // registra o clique e troca pelo link de afiliado quando a loja está ligada
@@ -43,26 +42,5 @@ export function GiftReferenceLink({
     >
       {children}
     </a>
-  )
-}
-
-// Aviso de comissão perto dos links de produto. Só aparece com alguma loja
-// ligada; a frase da Amazon é exigida pelo programa de associados.
-export function AffiliateDisclosureNote({
-  disclosure,
-  className,
-}: {
-  disclosure: AffiliateDisclosure | undefined
-  className?: string
-}) {
-  if (!disclosure?.enabled) return null
-  return (
-    <p className={className}>
-      Podemos receber uma comissão por compras feitas pelos links dos presentes,
-      sem custo extra pra você.
-      {disclosure.amazon
-        ? ' Como Associado da Amazon, o mywish ganha com compras qualificadas.'
-        : null}
-    </p>
   )
 }
