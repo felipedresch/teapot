@@ -47,22 +47,26 @@ import { SITE_NAME, absoluteUrl, toJsonLd } from '../lib/seo'
 import { PaywallDialog } from '../components/paywall/Paywall'
 import { usePaywallState } from '../hooks/usePaywall'
 import { track } from '../integrations/posthog/events'
-import {
-  AffiliateDisclosureNote,
-  GiftReferenceLink,
-} from '../components/GiftReferenceLink'
+import { GiftReferenceLink } from '../components/GiftReferenceLink'
 import {
   getAffiliateDisclosure,
   type AffiliateDisclosure,
 } from '../lib/affiliate/disclosure'
 
 import { GiftSuggestions } from '../components/gift-suggestions/GiftSuggestions'
+import {
+  GuestShoppingMatch,
+  HostShoppingMatch,
+  type GiftShoppingMatchProduct,
+} from '../components/gift-suggestions/GiftShoppingMatch'
+import { OutsideListSuggestions } from '../components/gift-suggestions/OutsideListSuggestions'
 import type {
   SuggestionIdeaView,
   SuggestionProduct,
 } from '../components/gift-suggestions/types'
 import {
   SUGGESTION_OCCASIONS,
+  suggestionHeadingLabel,
   suggestionOccasionForEventType,
 } from '../../convex/lib/suggestionIdeas'
 import { giftInsights } from '../content/giftInsights'
@@ -1185,7 +1189,6 @@ function EventGiftsPageShell() {
       })
       setNewGiftReferenceTouched(false)
       setNewGiftReferenceImageError(null)
-      setSuggestionInForm(null)
     } catch (createError) {
       setError(
         createError instanceof Error
@@ -1201,14 +1204,92 @@ function EventGiftsPageShell() {
   const suggestionOccasion = suggestionOccasionForEventType(event?.eventType)
   const productSuggestions = useQuery(
     api.productSuggestions.listProductSuggestions,
-    isHostView && suggestionOccasion ? { occasion: suggestionOccasion } : 'skip',
+    suggestionOccasion ? { occasion: suggestionOccasion } : 'skip',
   )
-  const [suggestionInForm, setSuggestionInForm] = useState<string | null>(null)
-  const addedSuggestionIds = useMemo(
-    () => new Set(suggestionInForm ? [suggestionInForm] : []),
-    [suggestionInForm],
+
+  // Produto da curadoria para cada presente sem link (convex/lib/
+  // suggestionMatch.ts): "Onde comprar" do convidado, "Link sugerido" do
+  // anfitrião.
+  const linklessGifts = useMemo(
+    () =>
+      gifts.filter((gift) => !gift.referenceUrl && gift.status !== 'received'),
+    [gifts],
   )
-  const newGiftFormRef = useRef<HTMLDivElement>(null)
+  const linklessGiftNames = useMemo(
+    () => linklessGifts.map((gift) => gift.name),
+    [linklessGifts],
+  )
+  const giftMatchResults = useQuery(
+    api.productSuggestions.matchSuggestionsForGiftNames,
+    linklessGiftNames.length > 0 ? { names: linklessGiftNames } : 'skip',
+  )
+  const giftMatches = useMemo(() => {
+    const byGiftId = new Map<string, GiftShoppingMatchProduct>()
+    if (!giftMatchResults) return byGiftId
+    linklessGifts.forEach((gift, index) => {
+      const match = giftMatchResults[index]
+      if (match) byGiftId.set(gift._id, match)
+    })
+    return byGiftId
+  }, [giftMatchResults, linklessGifts])
+  const [savingSuggestedLinkGiftId, setSavingSuggestedLinkGiftId] = useState<
+    string | null
+  >(null)
+
+  const handleUseSuggestedLink = useCallback(
+    async (
+      gift: { _id: Id<'gifts'>; imageUrl?: string | null },
+      product: GiftShoppingMatchProduct,
+    ) => {
+      if (!event) return
+      setSavingSuggestedLinkGiftId(gift._id)
+      setError(null)
+      try {
+        // Sem foto no presente, leva a do produto junto.
+        const image = gift.imageUrl
+          ? null
+          : await extractGiftImageFromReferenceUrl({
+              referenceUrl: product.productLink,
+              sourceImageUrl: product.imageUrl,
+            }).catch(() => null)
+        await updateGift({
+          giftId: gift._id,
+          referenceUrl: product.productLink,
+          ...(image?.success && image.imageId ? { imageId: image.imageId } : {}),
+        })
+        track.suggestedLinkUsed({
+          eventId: String(event._id),
+          giftId: String(gift._id),
+          price: product.price,
+        })
+      } catch (saveError) {
+        setError(
+          saveError instanceof Error
+            ? saveError.message
+            : 'Não foi possível salvar o link agora.',
+        )
+      } finally {
+        setSavingSuggestedLinkGiftId(null)
+      }
+    },
+    [event, extractGiftImageFromReferenceUrl, updateGift],
+  )
+  const [addingSuggestionId, setAddingSuggestionId] = useState<string | null>(
+    null,
+  )
+  // "Na lista" sobrevive ao reload: o link salvo do presente é o da sugestão.
+  const addedSuggestionIds = useMemo(() => {
+    const savedLinks = new Set(
+      gifts.map((gift) => gift.referenceUrl).filter(Boolean),
+    )
+    const ids = new Set<string>()
+    for (const idea of productSuggestions ?? []) {
+      for (const product of idea.products) {
+        if (savedLinks.has(product.productLink)) ids.add(product.itemId)
+      }
+    }
+    return ids
+  }, [gifts, productSuggestions])
 
   const handleSuggestionViewed = useCallback(
     (idea: SuggestionIdeaView) => {
@@ -1223,78 +1304,55 @@ function EventGiftsPageShell() {
     [event, suggestionOccasion],
   )
 
-  // "Adicionar" preenche o formulário (o anfitrião ainda edita e salva). O
-  // link salvo é o normal do produto: a troca pelo de afiliado fica no /r/.
+  // "Adicionar à lista" cria o presente de uma vez, com nome, categoria, link
+  // e foto. O anfitrião edita depois no card, se quiser. O link salvo é o curto
+  // de afiliado da curadoria; o /r/ só repassa.
   const handleAddSuggestion = useCallback(
-    (product: SuggestionProduct, idea: SuggestionIdeaView) => {
-      if (!event || !suggestionOccasion) return
-      setNewGiftReferenceTouched(false)
-      setNewGiftReferenceImageError(null)
-      setNewGiftForm((current) => {
-        if (current.imageId) {
-          void discardTemporaryGiftImage({ imageId: current.imageId })
-        }
-        return {
-          ...current,
-          name: product.name.slice(0, 120),
-          category: idea.category ?? current.category,
+    async (product: SuggestionProduct, idea: SuggestionIdeaView) => {
+      if (!event || !suggestionOccasion || addingSuggestionId) return
+      setAddingSuggestionId(product.itemId)
+      setError(null)
+      try {
+        const image = await extractGiftImageFromReferenceUrl({
           referenceUrl: product.productLink,
-          imageId: undefined,
-          imageUrl: undefined,
-        }
-      })
-      setSuggestionInForm(product.itemId)
-      track.giftSuggestionAdded({
-        eventId: String(event._id),
-        occasion: suggestionOccasion,
-        ideaId: idea.ideaId,
-        slot: product.slot,
-        price: product.price,
-      })
-
-      const extractionId = newGiftExtractionIdRef.current + 1
-      newGiftExtractionIdRef.current = extractionId
-      setIsExtractingNewGiftImage(true)
-      void extractGiftImageFromReferenceUrl({
-        referenceUrl: product.productLink,
-        sourceImageUrl: product.imageUrl,
-      })
-        .then((result) => {
-          if (newGiftExtractionIdRef.current !== extractionId) return
-          if (!result.success || !result.imageId || !result.imageUrl) {
-            setNewGiftReferenceImageError(
-              result.error ?? 'Não conseguimos trazer a foto desse produto.',
-            )
-            return
-          }
-          setNewGiftForm((current) => ({
-            ...current,
-            imageId: result.imageId,
-            imageUrl: result.imageUrl,
-          }))
+          sourceImageUrl: product.imageUrl,
+        }).catch(() => null)
+        await createGift({
+          eventId: event._id,
+          name: product.name.slice(0, 120),
+          category: idea.category,
+          referenceUrl: product.productLink,
+          imageId: image?.success ? image.imageId : undefined,
         })
-        .catch(() => {
-          if (newGiftExtractionIdRef.current !== extractionId) return
-          setNewGiftReferenceImageError(
-            'Não conseguimos trazer a foto desse produto.',
-          )
+        track.giftSuggestionAdded({
+          eventId: String(event._id),
+          occasion: suggestionOccasion,
+          ideaId: idea.ideaId,
+          slot: product.slot,
+          price: product.price,
         })
-        .finally(() => {
-          if (newGiftExtractionIdRef.current !== extractionId) return
-          setIsExtractingNewGiftImage(false)
+        track.giftAdded({
+          eventId: String(event._id),
+          eventType: event.eventType,
+          totalGifts: gifts.length + 1,
+          hasImage: Boolean(image?.success),
         })
-
-      window.setTimeout(() => {
-        newGiftFormRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start',
-        })
-      }, 120)
+      } catch (addError) {
+        setError(
+          addError instanceof Error
+            ? addError.message
+            : 'Não foi possível adicionar este presente agora.',
+        )
+      } finally {
+        setAddingSuggestionId(null)
+      }
     },
     [
-      discardTemporaryGiftImage,
+      addingSuggestionId,
+      createGift,
       event,
       extractGiftImageFromReferenceUrl,
+      gifts.length,
       suggestionOccasion,
     ],
   )
@@ -2206,17 +2264,26 @@ function EventGiftsPageShell() {
                   <div className="p-6 sm:p-8 md:p-10 space-y-6 bg-gradient-to-b from-sage/8 via-warm-white/60 to-warm-white/40">
                     {suggestionOccasion ? (
                       <GiftSuggestions
-                        occasionLabel={SUGGESTION_OCCASIONS[suggestionOccasion].label}
+                        occasionLabel={suggestionHeadingLabel(
+                          event?.eventType,
+                          suggestionOccasion,
+                        )}
                         ideas={productSuggestions}
-                        listShares={SUGGESTION_LIST_SHARES[suggestionOccasion]}
-                        disclosure={affiliateDisclosure}
+                        listShares={
+                          // As porcentagens são de listas de chá de panela.
+                          event?.eventType === 'wedding'
+                            ? undefined
+                            : SUGGESTION_LIST_SHARES[suggestionOccasion]
+                        }
                         addedItemIds={addedSuggestionIds}
-                        onAdd={handleAddSuggestion}
+                        addingItemId={addingSuggestionId}
+                        onAdd={(product, idea) =>
+                          void handleAddSuggestion(product, idea)
+                        }
                         onIdeaViewed={handleSuggestionViewed}
                       />
                     ) : null}
                     <div
-                      ref={newGiftFormRef}
                       className="grid grid-cols-1 md:grid-cols-2 gap-4 scroll-mt-28"
                     >
                       <Input
@@ -2834,7 +2901,7 @@ function EventGiftsPageShell() {
                         {gift.category || ''}
                       </p>
 
-                      <div className="mt-3 min-h-16">
+                      <div className={cn('mt-3', gift.description && 'min-h-16')}>
                         {gift.description ? (
                           <>
                             <p
@@ -2855,43 +2922,86 @@ function EventGiftsPageShell() {
                               </button>
                             )}
                           </>
-                        ) : (
-                          <p className="text-sm text-warm-gray/45">Sem descrição</p>
-                        )}
+                        ) : null}
                       </div>
 
                       <div className="min-h-6 mt-1">
-                        {gift.referenceUrl ? (
-                          <GiftReferenceLink
-                            giftId={gift._id}
-                            source={isHostView ? 'host' : 'guest'}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-espresso/85 hover:text-espresso hover:underline underline-offset-2"
-                          >
-                            Ver referência
-                            <ArrowRight className="size-3" />
-                          </GiftReferenceLink>
-                        ) : affiliateDisclosure.shopee &&
-                          gift.status !== 'received' ? (
-                          <GiftReferenceLink
-                            giftId={gift._id}
-                            source={isHostView ? 'host' : 'guest'}
-                            view="shopee"
-                            onClick={() =>
-                              track.shopeeOptionsClicked({
-                                eventId: String(gift.eventId),
-                                giftId: String(gift._id),
-                                isHost: isHostView,
-                              })
-                            }
-                            className="inline-flex items-center gap-1 text-xs text-warm-gray/80 hover:text-espresso hover:underline underline-offset-2"
-                          >
-                            <ShoppingBag className="size-3" strokeWidth={1.8} />
-                            Ver opções na Shopee
-                          </GiftReferenceLink>
-                        ) : (
-                          <span className="text-xs font-medium text-espresso/70">
-                          </span>
-                        )}
+                        {(() => {
+                          const isReservedByCurrentGuest =
+                            gift.reservedByCurrentUser ||
+                            locallyReservedGiftIds.has(gift._id)
+                          const match = giftMatches.get(gift._id)
+                          if (gift.referenceUrl) {
+                            return (
+                              <GiftReferenceLink
+                                giftId={gift._id}
+                                source={isHostView ? 'host' : 'guest'}
+                                className="inline-flex items-center gap-1 text-xs font-semibold text-espresso/85 hover:text-espresso hover:underline underline-offset-2"
+                              >
+                                {isHostView ? 'Ver referência' : 'Ver na loja'}
+                                <ArrowRight className="size-3" />
+                              </GiftReferenceLink>
+                            )
+                          }
+                          if (match && isHostView && !isMembershipLoading) {
+                            return (
+                              <HostShoppingMatch
+                                product={match}
+                                isSaving={savingSuggestedLinkGiftId === gift._id}
+                                onUse={() =>
+                                  void handleUseSuggestedLink(gift, match)
+                                }
+                                className="mt-1"
+                              />
+                            )
+                          }
+                          if (
+                            match &&
+                            !isHostView &&
+                            (gift.status === 'available' ||
+                              isReservedByCurrentGuest)
+                          ) {
+                            return (
+                              <GuestShoppingMatch
+                                giftId={gift._id}
+                                product={match}
+                                className="mt-1"
+                                onClick={() =>
+                                  track.shopeeOptionsClicked({
+                                    eventId: String(gift.eventId),
+                                    giftId: String(gift._id),
+                                    isHost: false,
+                                    hasMatch: true,
+                                  })
+                                }
+                              />
+                            )
+                          }
+                          if (
+                            affiliateDisclosure.shopee &&
+                            gift.status !== 'received'
+                          ) {
+                            return (
+                              <GiftReferenceLink
+                                giftId={gift._id}
+                                source={isHostView ? 'host' : 'guest'}
+                                view="shopee"
+                                onClick={() =>
+                                  track.shopeeOptionsClicked({
+                                    eventId: String(gift.eventId),
+                                    giftId: String(gift._id),
+                                    isHost: isHostView,
+                                  })
+                                }
+                                className="inline-flex items-center gap-1 text-xs text-warm-gray/80 hover:text-espresso hover:underline underline-offset-2"
+                              >
+                                <ShoppingBag className="size-3" strokeWidth={1.8} />
+                                Ver opções na Shopee
+                              </GiftReferenceLink>
+                            )
+                          }
+                          return null
+                        })()}
                       </div>
 
                       <div className="mt-auto h-10 flex items-center">
@@ -3035,14 +3145,6 @@ function EventGiftsPageShell() {
               </AnimatePresence>
             </div>
 
-            {(filteredGifts.some((gift) => gift.referenceUrl) ||
-              affiliateDisclosure.shopee) && (
-              <AffiliateDisclosureNote
-                disclosure={affiliateDisclosure}
-                className="mt-6 text-center text-[11px] leading-relaxed text-warm-gray/60"
-              />
-            )}
-
             {(hasMoreGifts || isLoadingMoreGifts) && (
               <div ref={loadMoreTriggerRef} className="h-1 w-full" />
             )}
@@ -3060,6 +3162,27 @@ function EventGiftsPageShell() {
           </div>
         )}
       </section>
+
+      {!isHostView && !isMembershipLoading && suggestionOccasion && event ? (
+        <OutsideListSuggestions
+          ideas={productSuggestions}
+          occasionLabel={SUGGESTION_OCCASIONS[suggestionOccasion].label}
+          hostNames={headerHosts.join(' e ') || 'quem organizou'}
+          everythingReserved={
+            gifts.length > 0 &&
+            !hasMoreGifts &&
+            !gifts.some((gift) => gift.status === 'available')
+          }
+          onProductClick={(product, idea) =>
+            track.outsideListSuggestionClicked({
+              eventId: String(event._id),
+              occasion: suggestionOccasion,
+              ideaId: idea.ideaId,
+              price: product.price,
+            })
+          }
+        />
+      ) : null}
 
       {/* ═══ RESERVATION MESSAGE DIALOG ═══ */}
       <Dialog

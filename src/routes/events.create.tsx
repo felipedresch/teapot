@@ -19,6 +19,15 @@ import { DEFAULT_GIFT_CATEGORIES } from '../constants/giftCategories'
 import { EventInvitationHero } from '../components/EventInvitationHero'
 import { SITE_NAME, absoluteUrl } from '../lib/seo'
 import { track } from '../integrations/posthog/events'
+import { GiftSuggestions } from '../components/gift-suggestions/GiftSuggestions'
+import type {
+  SuggestionIdeaView,
+  SuggestionProduct,
+} from '../components/gift-suggestions/types'
+import {
+  suggestionHeadingLabel,
+  suggestionOccasionForEventType,
+} from '../../convex/lib/suggestionIdeas'
 
 export const Route = createFileRoute('/events/create')({
   head: () => ({
@@ -557,6 +566,18 @@ function EventCreatePageShell() {
 
       for (const draftGift of draftGifts) {
         let uploadedImageId: Id<'_storage'> | undefined = draftGift.imageId
+        // Presente de sugestão: a foto ainda é a da loja.
+        if (
+          !uploadedImageId &&
+          draftGift.imageUrl?.startsWith('https://') &&
+          draftGift.referenceUrl
+        ) {
+          const image = await extractGiftImageFromReferenceUrl({
+            referenceUrl: draftGift.referenceUrl,
+            sourceImageUrl: draftGift.imageUrl,
+          }).catch(() => null)
+          if (image?.success) uploadedImageId = image.imageId
+        }
         if (!uploadedImageId && draftGift.imageUrl?.startsWith('data:image/')) {
           const uploadUrl = await generateGiftImageUploadUrl({ eventId })
           const imageFile = dataUrlToFile(
@@ -610,6 +631,7 @@ function EventCreatePageShell() {
     isPairEventType,
     generateEventDraftCoverUploadUrl,
     generateGiftImageUploadUrl,
+    extractGiftImageFromReferenceUrl,
   ])
 
   useEffect(() => {
@@ -681,6 +703,48 @@ function EventCreatePageShell() {
     giftReferenceUrl,
     setGiftReferenceImageError,
   ])
+
+  // ── Sugestões (src/components/gift-suggestions) ──
+  // O primeiro presente é o momento de mais intenção: as ideias mais pedidas
+  // da ocasião aparecem antes do formulário, e um toque põe o presente na
+  // lista. A foto sobe para o Convex só na publicação.
+  const suggestionOccasion = suggestionOccasionForEventType(eventData.eventType)
+  const productSuggestions = useQuery(
+    api.productSuggestions.listProductSuggestions,
+    suggestionOccasion ? { occasion: suggestionOccasion } : 'skip',
+  )
+  const addedSuggestionIds = useMemo(() => {
+    const draftLinks = new Set(draftGifts.map((gift) => gift.referenceUrl))
+    const ids = new Set<string>()
+    for (const idea of productSuggestions ?? []) {
+      for (const product of idea.products) {
+        if (draftLinks.has(product.productLink)) ids.add(product.itemId)
+      }
+    }
+    return ids
+  }, [draftGifts, productSuggestions])
+
+  const handleAddSuggestion = useCallback(
+    (product: SuggestionProduct, idea: SuggestionIdeaView) => {
+      if (!suggestionOccasion) return
+      setError(null)
+      addDraftGift({
+        tempId: crypto.randomUUID(),
+        name: product.name.slice(0, 120),
+        category: idea.category,
+        referenceUrl: product.productLink,
+        imageUrl: product.imageUrl,
+      })
+      track.giftSuggestionAdded({
+        eventId: 'draft',
+        occasion: suggestionOccasion,
+        ideaId: idea.ideaId,
+        slot: product.slot,
+        price: product.price,
+      })
+    },
+    [addDraftGift, suggestionOccasion],
+  )
 
   const handleAddCustomCategory = useCallback(() => {
     const normalized = customCategoryInput.trim()
@@ -1125,8 +1189,42 @@ function EventCreatePageShell() {
             Presentes
           </h2>
           <p className="text-sm text-warm-gray mb-8">
-            Comece com uma lista inicial — você pode ajustar com calma depois.
+            {suggestionOccasion
+              ? 'Comece pelos presentes mais pedidos ou adicione os seus. Dá para ajustar tudo depois.'
+              : 'Comece com uma lista inicial. Dá para ajustar tudo depois.'}
           </p>
+
+          {suggestionOccasion ? (
+            <>
+              <GiftSuggestions
+                key={suggestionOccasion}
+                occasionLabel={suggestionHeadingLabel(
+                  eventData.eventType,
+                  suggestionOccasion,
+                )}
+                ideas={productSuggestions}
+                addedItemIds={addedSuggestionIds}
+                onAdd={handleAddSuggestion}
+                onIdeaViewed={(idea) =>
+                  track.giftSuggestionViewed({
+                    eventId: 'draft',
+                    occasion: suggestionOccasion,
+                    ideaId: idea.ideaId,
+                    products: idea.products.length,
+                  })
+                }
+              />
+              {productSuggestions && productSuggestions.length > 0 ? (
+                <div className="my-6 flex items-center gap-3">
+                  <div className="h-px flex-1 bg-muted-rose/15" />
+                  <span className="font-accent text-lg text-muted-rose/80">
+                    ou adicione o seu
+                  </span>
+                  <div className="h-px flex-1 bg-muted-rose/15" />
+                </div>
+              ) : null}
+            </>
+          ) : null}
 
           {/* Add gift form */}
           <div className="rounded-2xl border border-sage/30 bg-sage/5 p-5 md:p-6 space-y-4 mb-8">
@@ -1373,8 +1471,14 @@ function EventCreatePageShell() {
                           <img
                             src={gift.imageUrl}
                             alt={`Imagem do presente ${gift.name}`}
-                            className="w-full h-36 object-cover"
+                            className={cn(
+                              'w-full h-36',
+                              gift.imageUrl.startsWith('https://')
+                                ? 'bg-white object-contain p-2'
+                                : 'object-cover',
+                            )}
                             loading="lazy"
+                            referrerPolicy="no-referrer"
                           />
                         ) : (
                           <GiftPlaceholderIllustration category={gift.category} />
@@ -1391,15 +1495,13 @@ function EventCreatePageShell() {
                       <p className="text-xs text-warm-gray/60 mt-1 min-h-4">
                         {gift.category || 'Sem categoria'}
                       </p>
-                      <div className="mt-3 min-h-16">
-                        {gift.description ? (
+                      {gift.description ? (
+                        <div className="mt-3 min-h-16">
                           <p className="text-sm text-warm-gray leading-relaxed line-clamp-3">
                             {capitalizeFirst(gift.description)}
                           </p>
-                        ) : (
-                          <p className="text-sm text-warm-gray/45">Sem descrição</p>
-                        )}
-                      </div>
+                        </div>
+                      ) : null}
                       <div className="min-h-6 mt-1">
                         {gift.referenceUrl ? (
                           <a
@@ -1410,11 +1512,7 @@ function EventCreatePageShell() {
                           >
                             Referência
                           </a>
-                        ) : (
-                          <span className="text-xs text-warm-gray/45">
-                            Sem link de referência
-                          </span>
-                        )}
+                        ) : null}
                       </div>
                       <div className="mt-auto h-10 flex items-center justify-end">
                         <Button

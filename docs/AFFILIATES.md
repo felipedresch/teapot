@@ -64,16 +64,19 @@ O módulo é puro e testado (`tests/affiliate.test.ts`). Ordem de cada clique:
 
 ### Aviso de comissão
 
-Embaixo da grade de presentes aparece, só com alguma loja ligada e algum
-presente com link:
+O aviso fica no rodapé de todas as páginas
+([`Footer`](../src/components/Footer.tsx)) e na pergunta "Como o MyWish se
+mantém de graça?" do FAQ, não no meio das telas: dentro do bloco de
+sugestões e da lista, ele pesava a página.
 
-> Podemos receber uma comissão por compras feitas pelos links dos presentes,
-> sem custo extra pra você.
+> Alguns links de produto são de parceiros: o MyWish pode receber uma
+> comissão, sem custo extra para quem compra.
 
-Com a Amazon ligada, vem junto a frase que o programa de associados exige:
-"Como Associado da Amazon, o mywish ganha com compras qualificadas." O
-navegador só sabe se há loja ligada (server function
-`getAffiliateDisclosure`, no loader da página); os IDs ficam no Worker.
+Ao ligar a Amazon, o programa de associados exige a frase "Como Associado da
+Amazon, o mywish ganha com compras qualificadas." no site: ponha no mesmo
+rodapé. A server function `getAffiliateDisclosure` (loader da página da
+lista) diz ao navegador só se há loja ligada (`shopee` liga o "Ver opções na
+Shopee"); os IDs ficam no Worker.
 
 ### O que medir
 
@@ -101,18 +104,38 @@ dois lados.
 
 ### Para o anfitrião: "Ideias para o seu <ocasião>"
 
-No topo de "Adicionar presente" da página da lista
+Em dois lugares
 ([`GiftSuggestions`](../src/components/gift-suggestions/GiftSuggestions.tsx)):
+
+- no passo "Presentes" da criação da lista (`/events/create`), antes do
+  formulário: é o momento de mais intenção, quando a pessoa ainda não tem
+  nenhum presente;
+- no topo de "Adicionar presente" da página da lista.
+
+O bloco:
 
 - chips com as ideias mais pedidas nas listas do mywish, tiradas de
   `src/content/giftInsights.ts`: chá de casa nova, chá de panela (também
   usado em casamento) e as categorias de aniversário. Os outros tipos de
   evento ficam sem o bloco;
-- ao tocar num chip, até 3 cards: "Mais em conta", "Mais escolhido" e "Para
-  presentear", com foto, nome, preço, nota e vendas;
-- "Adicionar" preenche nome, categoria, link e foto no formulário. O
-  anfitrião ainda pode editar antes de salvar. O link salvo é o normal do
-  produto: a troca pelo de afiliado continua no `/r/`.
+- a primeira ideia já vem aberta, com até 3 cards: "Mais em conta", "Mais
+  escolhido" e "Para presentear", com foto, nome, preço, nota e vendas;
+- "Adicionar à lista" põe o presente na lista com um toque: nome, categoria,
+  link e foto. Na página da lista, cria o presente na hora; na criação, entra
+  no rascunho e a foto sobe na publicação. Depois o botão vira "Na lista"
+  (pelo link salvo, então sobrevive ao reload). Para mudar algo, o anfitrião
+  edita o card.
+
+### Para o anfitrião: "Link sugerido"
+
+Num presente sem link que combina com um produto da curadoria, o card mostra
+o produto e "Usar este link no presente". O toque salva o link curto de
+afiliado no presente (e a foto, se o presente não tinha). O casamento de
+nomes fica em
+[`convex/lib/suggestionMatch.ts`](../convex/lib/suggestionMatch.ts): o
+substantivo principal do presente ("Pano" em "Pano de pratos") precisa ser o
+do produto ou o da ideia; com duas palavras fortes, as duas batem. Melhor
+deixar de mostrar do que mostrar o produto errado.
 
 Ideias e buscas ficam em
 [`convex/lib/suggestionIdeas.ts`](../convex/lib/suggestionIdeas.ts) (troque
@@ -168,10 +191,28 @@ Cuidados:
 - Quando a Open API for liberada e as credenciais estiverem no Convex, o cron
   troca esta curadoria pelas escolhas automáticas.
 
+### Para o convidado: "Onde comprar"
+
+Num presente sem link, disponível ou reservado pelo próprio convidado, que
+combina com um produto da curadoria (o mesmo casamento do "Link sugerido"), o
+card mostra foto, nome e preço do produto, com "Onde comprar". O clique vai
+para `/r/<giftId>?v=shopee`, que registra o clique e, sem a Open API, manda
+para o link curto da curadoria (`reason: own_affiliate`).
+
+### Para o convidado: "Fora da lista"
+
+No fim da página da lista, só para o convidado
+([`OutsideListSuggestions`](../src/components/gift-suggestions/OutsideListSuggestions.tsx)):
+um produto por ideia mais pedida da ocasião (até 8), com o aviso de que não
+fazem parte da lista dos anfitriões. Quando tudo já foi reservado, o título
+muda para "Os presentes da lista já foram escolhidos". O link vai direto para
+o link curto da curadoria.
+
 ### Para o convidado: "Ver opções na Shopee"
 
-Num presente sem link (e ainda não recebido), com a Shopee ligada no Worker,
-aparece um link discreto. Ele vai para `/r/<giftId>?v=shopee`
+Num presente sem link e sem produto que combine (e ainda não recebido), com a
+Shopee ligada no Worker, aparece um link discreto. Ele vai para
+`/r/<giftId>?v=shopee`
 ([`shopeeOptions.ts`](../src/lib/affiliate/shopeeOptions.ts)), que tenta, em
 ordem:
 
@@ -190,8 +231,16 @@ No PostHog, do navegador:
 
 - `gift_suggestion_viewed`: chip aberto, com `occasion`, `ideaId` e quantos
   produtos;
-- `gift_suggestion_added`: com `slot` e `price`;
-- `shopee_options_clicked`.
+- `gift_suggestion_added`: com `slot` e `price` (`eventId: draft` quando vem
+  da criação da lista);
+- `shopee_options_clicked`: com `hasMatch: true` quando veio do "Onde
+  comprar";
+- `suggested_link_used`: anfitrião usou o "Link sugerido";
+- `outside_list_suggestion_clicked`: convidado clicou num produto "fora da
+  lista".
+
+Os links da curadoria já são de afiliado, mesmo sem nenhuma loja ligada no
+Worker: o aviso do rodapé cobre todos eles.
 
 O clique em si chega também como `gift_link_clicked`, pelo servidor.
 

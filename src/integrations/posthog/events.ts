@@ -34,8 +34,23 @@ export const track = {
     eventId: string
     giftId: string
     isHost: boolean
+    // true: "Onde comprar" com produto da curadoria no card.
+    hasMatch?: boolean
   }) {
     safeCapture('shopee_options_clicked', props)
+  },
+  // Anfitrião salvou o "Link sugerido" num presente sem link.
+  suggestedLinkUsed(props: { eventId: string; giftId: string; price: number }) {
+    safeCapture('suggested_link_used', props)
+  },
+  // Convidado: "Outras ideias" fora da lista, no fim da página.
+  outsideListSuggestionClicked(props: {
+    eventId: string
+    occasion: string
+    ideaId: string
+    price: number
+  }) {
+    safeCapture('outside_list_suggestion_clicked', props)
   },
   eventCreated(props: { eventType?: string; isPublic?: boolean }) {
     safeCapture('event_created', props)

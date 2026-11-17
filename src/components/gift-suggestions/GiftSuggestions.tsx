@@ -1,9 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { Check, Gift, Plus, Sparkles, Star } from 'lucide-react'
+import { Check, Gift, Loader2, Plus, Sparkles, Star } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { AffiliateDisclosureNote } from '../GiftReferenceLink'
-import type { AffiliateDisclosure } from '../../lib/affiliate/disclosure'
 import type {
   SuggestionIdeaView,
   SuggestionProduct,
@@ -11,10 +9,12 @@ import type {
 } from './types'
 
 // Sugestões de produto da Shopee para o anfitrião, no topo de "Adicionar
-// presente": chips com as ideias mais pedidas nas listas do mywish e, ao
-// tocar num chip, 3 opções por faixa de preço. Os dados vêm do cache diário
-// (convex/productSuggestions.ts). Sem sugestões (Shopee desligada), não
-// aparece. docs/AFFILIATES.md.
+// presente" (página da lista) e do passo de presentes da criação: chips com as
+// ideias mais pedidas nas listas do mywish e até 3 opções por faixa de preço.
+// A primeira ideia já vem aberta: um bloco fechado esconde os produtos atrás
+// de um toque. "Adicionar à lista" põe o presente na lista de uma vez. Os
+// dados vêm de convex/productSuggestions.ts. Sem sugestões, não aparece.
+// docs/AFFILIATES.md.
 
 const SLOT_LABELS: Record<SuggestionSlot, string> = {
   budget: 'Mais em conta',
@@ -70,8 +70,8 @@ export function GiftSuggestions({
   occasionLabel,
   ideas,
   listShares,
-  disclosure,
   addedItemIds,
+  addingItemId,
   defaultIdeaId,
   onAdd,
   onIdeaViewed,
@@ -83,17 +83,22 @@ export function GiftSuggestions({
   ideas: SuggestionIdeaView[] | undefined
   // % das listas da ocasião com a ideia (giftInsights), pelo rótulo.
   listShares?: Record<string, number>
-  disclosure: AffiliateDisclosure | undefined
   addedItemIds?: ReadonlySet<string>
-  // Só para a página de dev mostrar um chip aberto.
+  // Produto sendo adicionado agora (mostra "Adicionando…").
+  addingItemId?: string | null
+  // Ideia aberta de início; sem ela, a primeira.
   defaultIdeaId?: string
   onAdd: (product: SuggestionProduct, idea: SuggestionIdeaView) => void
   onIdeaViewed?: (idea: SuggestionIdeaView) => void
   className?: string
 }) {
-  const [selectedId, setSelectedId] = useState<string | null>(
-    defaultIdeaId ?? null,
+  // undefined: a pessoa ainda não tocou em nada (abre a primeira ideia);
+  // null: fechou de propósito.
+  const [pickedId, setPickedId] = useState<string | null | undefined>(
+    defaultIdeaId,
   )
+  const selectedId =
+    pickedId === undefined ? (ideas?.[0]?.ideaId ?? null) : pickedId
   const [showAllIdeas, setShowAllIdeas] = useState(false)
   const viewed = useRef(new Set<string>())
   const selected = ideas?.find((idea) => idea.ideaId === selectedId) ?? null
@@ -159,11 +164,7 @@ export function GiftSuggestions({
                     type="button"
                     role="tab"
                     aria-selected={isActive}
-                    onClick={() =>
-                      setSelectedId((current) =>
-                        current === idea.ideaId ? null : idea.ideaId,
-                      )
-                    }
+                    onClick={() => setPickedId(isActive ? null : idea.ideaId)}
                     className={cn(
                       'shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] transition-all duration-200',
                       isFolded && 'sm:hidden',
@@ -246,6 +247,7 @@ export function GiftSuggestions({
                     <SuggestionCard
                       product={product}
                       isAdded={addedItemIds?.has(product.itemId) ?? false}
+                      isAdding={addingItemId === product.itemId}
                       onAdd={() => onAdd(product, selected)}
                     />
                   </motion.div>
@@ -271,16 +273,11 @@ export function GiftSuggestions({
             exit={{ opacity: 0 }}
             className="mt-4 text-xs text-warm-gray/75"
           >
-            Toque numa ideia para ver três opções da Shopee, em faixas de preço
+            Toque numa ideia para ver opções bem avaliadas, em faixas de preço
             diferentes.
           </motion.p>
         )}
       </AnimatePresence>
-
-      <AffiliateDisclosureNote
-        disclosure={disclosure}
-        className="mt-4 border-t border-dashed border-muted-rose/20 pt-3 text-[11px] leading-relaxed text-warm-gray/60"
-      />
     </section>
   )
 }
@@ -324,10 +321,12 @@ function SuggestionImage({ src, alt }: { src: string; alt: string }) {
 function SuggestionCard({
   product,
   isAdded,
+  isAdding,
   onAdd,
 }: {
   product: SuggestionProduct
   isAdded: boolean
+  isAdding: boolean
   onAdd: () => void
 }) {
   return (
@@ -376,23 +375,32 @@ function SuggestionCard({
       <button
         type="button"
         onClick={onAdd}
+        disabled={isAdded || isAdding}
+        aria-live="polite"
         className={cn(
-          'inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border text-[12px] font-medium transition-all duration-200 sm:text-[12.5px]',
+          'inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border text-[12px] font-medium transition-all duration-200 sm:text-[12.5px]',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           isAdded
-            ? 'border-sage/60 bg-sage/20 text-espresso'
-            : 'border-espresso/15 bg-warm-white text-espresso hover:border-espresso/35 hover:bg-blush/20',
+            ? 'cursor-default border-sage/60 bg-sage/20 text-espresso'
+            : isAdding
+              ? 'cursor-wait border-muted-rose/40 bg-blush/25 text-espresso/80'
+              : 'border-transparent bg-primary text-primary-foreground hover:brightness-[1.04] active:scale-[0.98]',
         )}
       >
         {isAdded ? (
           <>
             <Check className="size-3.5" strokeWidth={2} />
-            No formulário
+            Na lista
+          </>
+        ) : isAdding ? (
+          <>
+            <Loader2 className="size-3.5 animate-spin" strokeWidth={2} />
+            Adicionando…
           </>
         ) : (
           <>
             <Plus className="size-3.5" strokeWidth={2} />
-            Adicionar
+            Adicionar à lista
           </>
         )}
       </button>

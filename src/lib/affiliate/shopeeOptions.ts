@@ -12,6 +12,15 @@ import type { AffiliateConfig, AffiliateResult } from './index'
 import type { FetchLike } from './resolve'
 import { shopeeAffiliateUrl } from './shopee'
 
+function isShopeeShortLink(url: string) {
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'https:' && parsed.hostname === 's.shopee.com.br'
+  } catch {
+    return false
+  }
+}
+
 export function shopeeSearchUrl(giftName: string) {
   const url = new URL('https://shopee.com.br/search')
   url.searchParams.set('keyword', giftName.trim().slice(0, 120))
@@ -35,7 +44,20 @@ export async function shopeeOptionsUrl(
     rewritten: false,
     reason: config.shopee ? 'generator_failed' : 'store_disabled',
   })
-  if (!config.shopee) return passthrough(searchUrl.toString())
+  if (!config.shopee) {
+    // Sem a Open API, só a curadoria: o link salvo já é o curto de afiliado
+    // gerado no painel (s.shopee.com.br, docs/AFFILIATES.md).
+    const curated = await deps.findMatch(giftName).catch(() => null)
+    if (curated && isShopeeShortLink(curated)) {
+      return {
+        url: curated,
+        store: 'shopee',
+        rewritten: false,
+        reason: 'own_affiliate',
+      }
+    }
+    return passthrough(searchUrl.toString())
+  }
 
   const fetchImpl = deps.fetch ?? fetch
   const subIds = deps.subIds ?? ['mywish', 'options']
