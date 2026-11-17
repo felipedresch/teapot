@@ -5,7 +5,12 @@
 // página só lê esse cache: nunca chama a API por visita. Sem as credenciais,
 // o cron não faz nada, a tabela fica vazia e a interface não aparece.
 // docs/AFFILIATES.md.
-import { internalAction, internalMutation, query } from './_generated/server'
+import {
+  internalAction,
+  internalMutation,
+  query,
+  type QueryCtx,
+} from './_generated/server'
 import { internal } from './_generated/api'
 import { v } from 'convex/values'
 import {
@@ -16,6 +21,7 @@ import { rankSuggestions } from './lib/suggestionRanking'
 import {
   SUGGESTION_OCCASIONS,
   uniqueSuggestionKeywords,
+  type SuggestionOccasion,
 } from './lib/suggestionIdeas'
 import {
   suggestionOccasionValidator,
@@ -174,6 +180,23 @@ export const listProductSuggestions = query({
 
 type SuggestionRow = Doc<'productSuggestions'>
 
+// Produtos que podem casar com um presente da lista. Com a ocasião, só os
+// dela: "Manta casal" num chá de casa nova não pode cair numa manta de bebê.
+// Sem ocasião (formatura, outro), tudo menos chá de bebê.
+async function matchRows(
+  ctx: QueryCtx,
+  occasion: SuggestionOccasion | undefined,
+): Promise<SuggestionRow[]> {
+  if (occasion) {
+    return ctx.db
+      .query('productSuggestions')
+      .withIndex('by_occasion_and_idea', (q) => q.eq('occasion', occasion))
+      .take(500)
+  }
+  const rows = await ctx.db.query('productSuggestions').take(500)
+  return rows.filter((row) => row.occasion !== 'bebe')
+}
+
 function matchCandidates(rows: SuggestionRow[]): MatchCandidate[] {
   return rows.map((row) => {
     const idea = SUGGESTION_OCCASIONS[row.occasion].ideas.find(
@@ -187,10 +210,13 @@ function matchCandidates(rows: SuggestionRow[]): MatchCandidate[] {
 // /r/<giftId>?v=shopee (convex/lib/suggestionMatch.ts). null quando nada
 // combina.
 export const findSuggestionForGiftName = query({
-  args: { name: v.string() },
+  args: {
+    name: v.string(),
+    occasion: v.optional(suggestionOccasionValidator),
+  },
   returns: v.union(v.null(), v.object({ productLink: v.string() })),
   handler: async (ctx, args) => {
-    const rows = await ctx.db.query('productSuggestions').take(500)
+    const rows = await matchRows(ctx, args.occasion)
     const index = bestMatchIndex(args.name, matchCandidates(rows))
     return index < 0 ? null : { productLink: rows[index].productLink }
   },
@@ -200,7 +226,10 @@ export const findSuggestionForGiftName = query({
 // vez: "Onde comprar" do convidado e "Link sugerido" do anfitrião. Mesma
 // ordem dos nomes; null onde nada combina. Os produtos são públicos.
 export const matchSuggestionsForGiftNames = query({
-  args: { names: v.array(v.string()) },
+  args: {
+    names: v.array(v.string()),
+    occasion: v.optional(suggestionOccasionValidator),
+  },
   returns: v.array(
     v.union(
       v.null(),
@@ -214,7 +243,7 @@ export const matchSuggestionsForGiftNames = query({
     ),
   ),
   handler: async (ctx, args) => {
-    const rows = await ctx.db.query('productSuggestions').take(500)
+    const rows = await matchRows(ctx, args.occasion)
     const candidates = matchCandidates(rows)
     return args.names.slice(0, 300).map((name) => {
       const index = bestMatchIndex(name, candidates)

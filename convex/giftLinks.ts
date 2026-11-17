@@ -42,6 +42,8 @@ export const getGiftForShopeeOptions = query({
       giftId: v.id('gifts'),
       eventId: v.id('events'),
       name: v.string(),
+      // Para o casamento de nomes usar só os produtos da ocasião.
+      eventType: v.optional(v.string()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -50,7 +52,13 @@ export const getGiftForShopeeOptions = query({
     const gift = await ctx.db.get(giftId)
     const name = gift?.name.trim()
     if (!gift || !name) return null
-    return { giftId: gift._id, eventId: gift.eventId, name }
+    const event = await ctx.db.get(gift.eventId)
+    return {
+      giftId: gift._id,
+      eventId: gift.eventId,
+      name,
+      eventType: event?.eventType,
+    }
   },
 })
 

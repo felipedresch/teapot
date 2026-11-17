@@ -1,6 +1,6 @@
 {
-  "_sobre": "Curadoria manual das sugestões da Shopee, enquanto a Open API não sai. Dados do painel de afiliados em 2026-11-16. `link` é o link curto de afiliado gerado em Link personalizado. Carregar com `node scripts/sugestoes/carregar.mjs` (docs/AFFILIATES.md).",
-  "geradoEm": "2026-11-16",
+  "_sobre": "Curadoria manual das sugestões da Shopee, enquanto a Open API não sai. Dados do painel de afiliados em 2026-11-16 (chá de bebê e ideias novas em 2026-11-17). `link` é o link curto de afiliado gerado em Link personalizado. Carregar com `node scripts/sugestoes/carregar.mjs` (docs/AFFILIATES.md).",
+  "geradoEm": "2026-11-17",
   "ideias": {
     "potes-hermeticos": [
       {
@@ -260,6 +260,18 @@
         "commissionRate": 0.03,
         "image": "sg-11134201-7rdxd-m1517zmtvy353d",
         "link": "https://s.shopee.com.br/5LDWoxpp4S"
+      },
+      {
+        "slot": "gift",
+        "itemId": "58264249143",
+        "shopId": "540795079",
+        "name": "Mop spray Bettanin com reservatório",
+        "price": 94.9,
+        "rating": 4.7,
+        "sales": 45,
+        "commissionRate": 0.03,
+        "image": "br-11134207-820mf-mrqcj0c6rthj4b",
+        "link": "https://s.shopee.com.br/5VWxbyc96K"
       }
     ],
     "xicaras-canecas": [
@@ -364,6 +376,18 @@
         "commissionRate": 0.03,
         "image": "sg-11134201-7ra3r-m51g7w285kuic4",
         "link": "https://s.shopee.com.br/60TDcEM1E0"
+      },
+      {
+        "slot": "gift",
+        "itemId": "54111107472",
+        "shopId": "1006215031",
+        "name": "Luminária de mesa cilíndrica com folha de ouro",
+        "price": 71.06,
+        "rating": 4.8,
+        "sales": 34,
+        "commissionRate": 0.23,
+        "image": "sg-11134201-825a3-msnuj2cjokcl05",
+        "link": "https://s.shopee.com.br/1BNyRzOjHI"
       }
     ],
     "beleza-perfumes": [
@@ -394,6 +418,18 @@
     ],
     "brinquedos-infantil": [
       {
+        "slot": "budget",
+        "itemId": "58203933523",
+        "shopId": "318166823",
+        "name": "Quebra-cabeça de encaixe de madeira",
+        "price": 28.61,
+        "rating": 4.9,
+        "sales": 1000,
+        "commissionRate": 0.13,
+        "image": "br-11134207-81ztc-mju1xemfu0ap17",
+        "link": "https://s.shopee.com.br/114YFgPMcH"
+      },
+      {
         "slot": "popular",
         "itemId": "58258510557",
         "shopId": "1315014384",
@@ -404,9 +440,33 @@
         "commissionRate": 0.11,
         "image": "br-11134207-820l9-mswyfar180zp82",
         "link": "https://s.shopee.com.br/7purncWN4y"
+      },
+      {
+        "slot": "gift",
+        "itemId": "22296116740",
+        "shopId": "346640741",
+        "name": "Cubo didático com telefone e encaixes",
+        "price": 98.52,
+        "rating": 5,
+        "sales": 493,
+        "commissionRate": 0.13,
+        "image": "br-11134207-81z1k-mfwxsu97fevb08",
+        "link": "https://s.shopee.com.br/80EIaYXufT"
       }
     ],
     "livros-jogos": [
+      {
+        "slot": "budget",
+        "itemId": "23498482465",
+        "shopId": "417823667",
+        "name": "Jogos de tabuleiro: dama, ludo, trilha, dominó e xadrez",
+        "price": 49.9,
+        "rating": 4.9,
+        "sales": 2000,
+        "commissionRate": 0.16,
+        "image": "br-11134207-7r98o-m9xi880s5hqa70",
+        "link": "https://s.shopee.com.br/9AQFyhTTIi"
+      },
       {
         "slot": "popular",
         "itemId": "23094627415",
@@ -444,6 +504,418 @@
         "commissionRate": 0.23,
         "image": "br-11134207-820l5-msb0d2j5vcw76c",
         "link": "https://s.shopee.com.br/7KybChYH5v"
+      }
+    ],
+    "fraldas": [
+      {
+        "slot": "budget",
+        "itemId": "58267488057",
+        "shopId": "1857301694",
+        "name": "Fralda Pampers Supersec",
+        "price": 38.99,
+        "rating": 5,
+        "sales": 30,
+        "commissionRate": 0.03,
+        "image": "sg-11134201-8259d-mso7xr03o64h2e",
+        "link": "https://s.shopee.com.br/906pmLVBFm"
+      },
+      {
+        "slot": "popular",
+        "itemId": "58211492814",
+        "shopId": "1767570325",
+        "name": "Fralda Pampers Supersec Mega",
+        "price": 65.2,
+        "rating": 4.6,
+        "sales": 55,
+        "commissionRate": 0.03,
+        "image": "br-11134207-820ld-mqonthfufrpfea",
+        "link": "https://s.shopee.com.br/9AQFyeUXup"
+      }
+    ],
+    "body-roupinhas": [
+      {
+        "slot": "budget",
+        "itemId": "43163071281",
+        "shopId": "1334313125",
+        "name": "Kit 5 bodies de manga curta estampados",
+        "price": 31.5,
+        "rating": 4.8,
+        "sales": 1000,
+        "commissionRate": 0.13,
+        "image": "br-11134207-7r98o-mdf8k0j768r5f0",
+        "link": "https://s.shopee.com.br/9KjgAxTuZs"
+      },
+      {
+        "slot": "popular",
+        "itemId": "22293286318",
+        "shopId": "1334313125",
+        "name": "Kit 5 bodies de manga curta canelados",
+        "price": 39.99,
+        "rating": 4.8,
+        "sales": 1000,
+        "commissionRate": 0.13,
+        "image": "br-11134207-7r98o-m058mx1ylol98f",
+        "link": "https://s.shopee.com.br/9V36NGTHEv"
+      },
+      {
+        "slot": "gift",
+        "itemId": "23097747333",
+        "shopId": "1334313125",
+        "name": "Kit 10 bodies de manga longa canelados",
+        "price": 79.99,
+        "rating": 4.9,
+        "sales": 333,
+        "commissionRate": 0.13,
+        "image": "br-11134207-7r98o-lzm9lags7frpb2",
+        "link": "https://s.shopee.com.br/9fMWZZSdty"
+      }
+    ],
+    "lencos-umedecidos": [
+      {
+        "slot": "budget",
+        "itemId": "23293691317",
+        "shopId": "560644869",
+        "name": "Lenços umedecidos Huggies, 120 unidades",
+        "price": 24.99,
+        "rating": 5,
+        "sales": 243,
+        "commissionRate": 0.13,
+        "image": "br-11134207-7r98o-m6nz8q1au5wn66",
+        "link": "https://s.shopee.com.br/1LhOeHFd9y"
+      },
+      {
+        "slot": "popular",
+        "itemId": "22198425844",
+        "shopId": "1455703839",
+        "name": "Kit lenços umedecidos Huggies Max Clean, 192 unidades",
+        "price": 49.99,
+        "rating": 4.9,
+        "sales": 882,
+        "commissionRate": 0.14,
+        "image": "br-11134207-7r98o-m8mkvjh4x9td8b",
+        "link": "https://s.shopee.com.br/1W0oqaEzp1"
+      }
+    ],
+    "toalha-capuz": [
+      {
+        "slot": "popular",
+        "itemId": "22103933300",
+        "shopId": "406043840",
+        "name": "Toalha com capuz de orelhinha, kit 3 peças",
+        "price": 29.79,
+        "rating": 4.8,
+        "sales": 703,
+        "commissionRate": 0.09,
+        "image": "br-11134207-7qukw-lhf4nd4yx0emb7",
+        "link": "https://s.shopee.com.br/906pmMmRbU"
+      },
+      {
+        "slot": "gift",
+        "itemId": "23898734070",
+        "shopId": "477064410",
+        "name": "Toalha com capuz personalizada com nome",
+        "price": 74.4,
+        "rating": 4.9,
+        "sales": 335,
+        "commissionRate": 0.03,
+        "image": "br-11134207-820m7-mpbfa7ahjmytbc",
+        "link": "https://s.shopee.com.br/9AQFyfloGX"
+      }
+    ],
+    "banheira": [
+      {
+        "slot": "budget",
+        "itemId": "22698667098",
+        "shopId": "1106817797",
+        "name": "Banheira com lixeira e cesto de roupa",
+        "price": 178.99,
+        "rating": 4.7,
+        "sales": 575,
+        "commissionRate": 0.03,
+        "image": "br-11134207-7r98o-mb8gt61nr3pra2",
+        "link": "https://s.shopee.com.br/8fTzNkniHS"
+      },
+      {
+        "slot": "popular",
+        "itemId": "41269768635",
+        "shopId": "390278034",
+        "name": "Banheira com suporte",
+        "price": 299.99,
+        "rating": 4.9,
+        "sales": 4000,
+        "commissionRate": 0.03,
+        "image": "br-11134207-820l6-munhsvuj435t4d",
+        "link": "https://s.shopee.com.br/4qHGoifyNe"
+      }
+    ],
+    "kit-higiene": [
+      {
+        "slot": "popular",
+        "itemId": "19798264359",
+        "shopId": "1256572557",
+        "name": "Kit higiene e cuidados para recém-nascido",
+        "price": 26.9,
+        "rating": 4.9,
+        "sales": 583,
+        "commissionRate": 0.12,
+        "image": "sg-11134201-823rf-mov6ajpqgs1ta5",
+        "link": "https://s.shopee.com.br/4fxqcPgbid"
+      },
+      {
+        "slot": "gift",
+        "itemId": "22096531102",
+        "shopId": "1043355020",
+        "name": "Kit higiene nuvem personalizado com nome",
+        "price": 199.9,
+        "rating": 4.9,
+        "sales": 61,
+        "commissionRate": 0.03,
+        "image": "br-11134207-7qukw-lk669canl9k3da",
+        "link": "https://s.shopee.com.br/4VeQQ6hF3c"
+      }
+    ],
+    "manta-bebe": [
+      {
+        "slot": "budget",
+        "itemId": "10596767214",
+        "shopId": "326703793",
+        "name": "Manta de bebê com sherpa",
+        "price": 29.9,
+        "rating": 4.7,
+        "sales": 303,
+        "commissionRate": 0.03,
+        "image": "br-11134207-7r98o-mbmtqhhsb6qqfc",
+        "link": "https://s.shopee.com.br/4LL0DnhsOb"
+      },
+      {
+        "slot": "popular",
+        "itemId": "23994038140",
+        "shopId": "237704797",
+        "name": "Kit 2 mantas de bebê: sherpa e soft",
+        "price": 35.73,
+        "rating": 4.9,
+        "sales": 3000,
+        "commissionRate": 0.1,
+        "image": "br-11134207-7r98o-maa1rgstfl2x08",
+        "link": "https://s.shopee.com.br/4B1a1UiVja"
+      },
+      {
+        "slot": "gift",
+        "itemId": "22498488670",
+        "shopId": "237704797",
+        "name": "Kit 3 itens: manta sherpa, manta soft e naninha",
+        "price": 54.65,
+        "rating": 4.9,
+        "sales": 1000,
+        "commissionRate": 0.1,
+        "image": "br-11134207-7r98o-mc8ch1eq4ru3a7",
+        "link": "https://s.shopee.com.br/LorSSRty5"
+      }
+    ],
+    "mordedor": [
+      {
+        "slot": "popular",
+        "itemId": "22597324280",
+        "shopId": "569523965",
+        "name": "Mordedor massageador de gengiva",
+        "price": 20.41,
+        "rating": 5,
+        "sales": 169,
+        "commissionRate": 0.13,
+        "image": "sg-11134201-825b5-ms0ckmrfur60b0",
+        "link": "https://s.shopee.com.br/BVRG9SXJ4"
+      },
+      {
+        "slot": "gift",
+        "itemId": "23194659443",
+        "shopId": "484881531",
+        "name": "Mordedor de silicone macio",
+        "price": 28.89,
+        "rating": 4.9,
+        "sales": 34,
+        "commissionRate": 0.03,
+        "image": "sg-11134201-821fg-mgmser1666fc19",
+        "link": "https://s.shopee.com.br/1C13qTAe3"
+      }
+    ],
+    "jogo-cama": [
+      {
+        "slot": "budget",
+        "itemId": "22993264193",
+        "shopId": "313676628",
+        "name": "Jogo de lençol casal 4 peças, 400 fios",
+        "price": 29.68,
+        "rating": 4.9,
+        "sales": 1000,
+        "commissionRate": 0.08,
+        "image": "br-11134207-81z1k-mihjxynvd7ure3",
+        "link": "https://s.shopee.com.br/906pmOU6dh"
+      },
+      {
+        "slot": "popular",
+        "itemId": "19098745351",
+        "shopId": "332579272",
+        "name": "Jogo de cama casal percal 300 fios",
+        "price": 45.69,
+        "rating": 4.8,
+        "sales": 3000,
+        "commissionRate": 0.13,
+        "image": "br-11134207-81zuc-mkpphkhv2znldc",
+        "link": "https://s.shopee.com.br/8pnPa5Ujyg"
+      },
+      {
+        "slot": "gift",
+        "itemId": "50155786627",
+        "shopId": "319426772",
+        "name": "Jogo de lençol casal com bordado inglês",
+        "price": 59.9,
+        "rating": 4.8,
+        "sales": 665,
+        "commissionRate": 0.13,
+        "image": "br-11134207-81ztc-mkdt3bmygzy977",
+        "link": "https://s.shopee.com.br/5LDXPfcmRJ"
+      }
+    ],
+    "panela-pressao": [
+      {
+        "slot": "popular",
+        "itemId": "22293698148",
+        "shopId": "457635641",
+        "name": "Panela de pressão antiaderente Panelux, 4,5 litros",
+        "price": 58.89,
+        "rating": 4.9,
+        "sales": 8000,
+        "commissionRate": 0.03,
+        "image": "br-11134207-7r98o-m7aqdi0nbhhoce",
+        "link": "https://s.shopee.com.br/8fTzNmVNJf"
+      },
+      {
+        "slot": "gift",
+        "itemId": "13773078309",
+        "shopId": "663505037",
+        "name": "Jogo de 3 panelas de pressão: 2,5, 4,5 e 7 litros",
+        "price": 267.9,
+        "rating": 4.9,
+        "sales": 94,
+        "commissionRate": 0.08,
+        "image": "br-11134207-7r98o-m3npatmvctej74",
+        "link": "https://s.shopee.com.br/60TECt9qMq"
+      }
+    ],
+    "liquidificador": [
+      {
+        "slot": "budget",
+        "itemId": "23994624020",
+        "shopId": "1617519379",
+        "name": "Liquidificador Mondial 1,5 L, 550 W",
+        "price": 95,
+        "rating": 5,
+        "sales": 18,
+        "commissionRate": 0.07,
+        "image": "sg-11134201-7rdxu-lyp7vr3oj1ayd2",
+        "link": "https://s.shopee.com.br/6AmePC9D1t"
+      },
+      {
+        "slot": "popular",
+        "itemId": "23994839328",
+        "shopId": "1708922937",
+        "name": "Liquidificador Mondial Turbo Power 550 W",
+        "price": 144.9,
+        "rating": 5,
+        "sales": 336,
+        "commissionRate": 0.04,
+        "image": "br-11134207-81zuj-mko86rxtlp8gbf",
+        "link": "https://s.shopee.com.br/6L64bV8Zgw"
+      }
+    ],
+    "cobertor": [
+      {
+        "slot": "budget",
+        "itemId": "23194935405",
+        "shopId": "1733253656",
+        "name": "Manta casal canelada, 2,00 × 1,80 m",
+        "price": 27.89,
+        "rating": 4.7,
+        "sales": 3000,
+        "commissionRate": 0.03,
+        "image": "br-11134207-820mf-mmd2hn5umu4g41",
+        "link": "https://s.shopee.com.br/6VPUno7wLz"
+      },
+      {
+        "slot": "popular",
+        "itemId": "58255187856",
+        "shopId": "1422784508",
+        "name": "Cobertor casal canelado com 2 fronhas",
+        "price": 71.99,
+        "rating": 4.8,
+        "sales": 8000,
+        "commissionRate": 0.03,
+        "image": "br-11134207-820lh-mle0xufv84jq44",
+        "link": "https://s.shopee.com.br/2BGVdrJyfr"
+      },
+      {
+        "slot": "gift",
+        "itemId": "40451853489",
+        "shopId": "310274254",
+        "name": "Cobertor casal Jolitex antialérgico, 2,20 × 1,80 m",
+        "price": 76.9,
+        "rating": 4.7,
+        "sales": 2000,
+        "commissionRate": 0.109,
+        "image": "br-11134207-820ly-mqlzxzuvgnwgac",
+        "link": "https://s.shopee.com.br/5LDXPfCNim"
+      }
+    ],
+    "air-fryer": [
+      {
+        "slot": "budget",
+        "itemId": "18698155187",
+        "shopId": "1522422029",
+        "name": "Air fryer 5 litros, 127 V",
+        "price": 269.99,
+        "rating": 4.8,
+        "sales": 44,
+        "commissionRate": 0.13,
+        "image": "br-11134207-81zu8-mko798aptou801",
+        "link": "https://s.shopee.com.br/60TECtaF5N"
+      },
+      {
+        "slot": "popular",
+        "itemId": "23998928641",
+        "shopId": "647119477",
+        "name": "Air fryer e forno elétrico 3 em 1, 6,5 litros",
+        "price": 419.99,
+        "rating": 4.8,
+        "sales": 231,
+        "commissionRate": 0.08,
+        "image": "br-11134207-81z1k-mf5k354ta1omaa",
+        "link": "https://s.shopee.com.br/6VPUnoYL4U"
+      }
+    ],
+    "pano-prato": [
+      {
+        "slot": "budget",
+        "itemId": "22893005189",
+        "shopId": "1234893285",
+        "name": "Kit 5 panos de prato coloridos",
+        "price": 17,
+        "rating": 4.8,
+        "sales": 46,
+        "commissionRate": 0.03,
+        "image": "br-11134207-81z1k-mhm24b5n7y832c",
+        "link": "https://s.shopee.com.br/6L64bVYyPT"
+      },
+      {
+        "slot": "popular",
+        "itemId": "19997494422",
+        "shopId": "1107569308",
+        "name": "Kit 3 panos de prato atoalhados de microfibra",
+        "price": 32,
+        "rating": 4.8,
+        "sales": 336,
+        "commissionRate": 0.03,
+        "image": "br-11134207-820l5-mucc7cuxj0u887",
+        "link": "https://s.shopee.com.br/1gKF2wLsgm"
       }
     ]
   }

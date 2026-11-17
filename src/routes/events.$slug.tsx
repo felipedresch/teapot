@@ -80,6 +80,7 @@ const SUGGESTION_LIST_SHARES = {
     giftInsights.occasions.chaDePanela.items.map((i) => [i.name, i.listShare]),
   ),
   aniversario: undefined,
+  bebe: undefined,
 } as const
 
 const AFFILIATE_DISCLOSURE_OFF: AffiliateDisclosure = {
@@ -1221,7 +1222,12 @@ function EventGiftsPageShell() {
   )
   const giftMatchResults = useQuery(
     api.productSuggestions.matchSuggestionsForGiftNames,
-    linklessGiftNames.length > 0 ? { names: linklessGiftNames } : 'skip',
+    linklessGiftNames.length > 0
+      ? {
+          names: linklessGiftNames,
+          occasion: suggestionOccasion ?? undefined,
+        }
+      : 'skip',
   )
   const giftMatches = useMemo(() => {
     const byGiftId = new Map<string, GiftShoppingMatchProduct>()

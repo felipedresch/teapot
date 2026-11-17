@@ -161,8 +161,12 @@ describe('ranking por faixa de preço', () => {
 
 describe('ideias', () => {
   it('saem dos itens mais pedidos do giftInsights', () => {
-    const names = (key: 'chaDeCasaNova' | 'chaDePanela') =>
-      giftInsights.occasions[key].items.map((item) => item.name)
+    // O giftInsights não tem estas: vêm de listas reais olhadas à mão.
+    const fromRealLists = ['Pano de prato', 'Air fryer']
+    const names = (key: 'chaDeCasaNova' | 'chaDePanela') => [
+      ...giftInsights.occasions[key].items.map((item) => item.name),
+      ...fromRealLists,
+    ]
     for (const idea of SUGGESTION_OCCASIONS.casaNova.ideas) {
       expect(names('chaDeCasaNova')).toContain(idea.label)
     }
@@ -173,6 +177,17 @@ describe('ideias', () => {
     for (const idea of SUGGESTION_OCCASIONS.aniversario.ideas) {
       expect(birthday).toContain(idea.label)
     }
+    // Sem dados de chá de bebê no giftInsights: as categorias clássicas.
+    expect(SUGGESTION_OCCASIONS.bebe.ideas.map((idea) => idea.label)).toEqual([
+      'Fraldas',
+      'Body e roupinhas',
+      'Lenços umedecidos',
+      'Toalha com capuz',
+      'Banheira',
+      'Kit higiene',
+      'Manta',
+      'Mordedor',
+    ])
   })
 
   it('a mesma busca em duas ocasiões roda uma vez só', () => {
@@ -187,6 +202,7 @@ describe('ideias', () => {
     expect(suggestionOccasionForEventType('housewarming')).toBe('casaNova')
     expect(suggestionOccasionForEventType('wedding')).toBe('panela')
     expect(suggestionOccasionForEventType('birthday')).toBe('aniversario')
+    expect(suggestionOccasionForEventType('baby-shower')).toBe('bebe')
     expect(suggestionOccasionForEventType('graduation')).toBeNull()
   })
 })

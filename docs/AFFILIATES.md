@@ -116,8 +116,11 @@ O bloco:
 
 - chips com as ideias mais pedidas nas listas do mywish, tiradas de
   `src/content/giftInsights.ts`: chá de casa nova, chá de panela (também
-  usado em casamento) e as categorias de aniversário. Os outros tipos de
-  evento ficam sem o bloco;
+  usado em casamento) e as categorias de aniversário. O chá de bebê, sem
+  dados no giftInsights, usa as categorias clássicas (fraldas, body, lenços,
+  toalha com capuz, banheira, kit higiene, manta, mordedor); pano de prato e
+  air fryer também vêm de listas reais olhadas à mão. Formatura e "outro"
+  ficam sem o bloco;
 - a primeira ideia já vem aberta, com até 3 cards: "Mais em conta", "Mais
   escolhido" e "Para presentear", com foto, nome, preço, nota e vendas;
 - "Adicionar à lista" põe o presente na lista com um toque: nome, categoria,

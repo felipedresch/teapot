@@ -1,9 +1,11 @@
 // Ideias de presente que viram sugestões da Shopee para o anfitrião. Saem dos
 // itens mais pedidos de src/content/giftInsights.ts (npm run dados:gerar), na
 // mesma ordem; o teste tests/giftSuggestions.test.ts confere que os nomes
-// ainda existem lá. Para mudar a busca de uma ideia, troque só o `keyword`.
+// ainda existem lá. As que o giftInsights não tem (chá de bebê, pano de prato,
+// air fryer) vêm de listas reais olhadas à mão e ficam listadas no teste.
+// Para mudar a busca de uma ideia, troque só o `keyword`.
 
-export type SuggestionOccasion = 'casaNova' | 'panela' | 'aniversario'
+export type SuggestionOccasion = 'casaNova' | 'panela' | 'aniversario' | 'bebe'
 
 export type SuggestionIdea = {
   // Fica no banco (productSuggestions.ideaId): não renomeie à toa.
@@ -83,6 +85,42 @@ export const SUGGESTION_OCCASIONS: Record<
         keyword: 'cesto de roupa suja',
         category: 'Banheiro',
       },
+      {
+        id: 'jogo-cama',
+        label: 'Jogo de cama e lençóis',
+        keyword: 'jogo de cama casal 4 peças',
+        category: 'Quarto',
+      },
+      {
+        id: 'panela-pressao',
+        label: 'Panela de pressão',
+        keyword: 'panela de pressão 4,5 litros',
+        category: 'Cozinha',
+      },
+      {
+        id: 'liquidificador',
+        label: 'Liquidificador',
+        keyword: 'liquidificador',
+        category: 'Eletro',
+      },
+      {
+        id: 'cobertor',
+        label: 'Edredom, manta ou cobertor',
+        keyword: 'cobertor casal',
+        category: 'Quarto',
+      },
+      {
+        id: 'air-fryer',
+        label: 'Air fryer',
+        keyword: 'air fryer',
+        category: 'Eletro',
+      },
+      {
+        id: 'pano-prato',
+        label: 'Pano de prato',
+        keyword: 'kit pano de prato',
+        category: 'Cozinha',
+      },
     ],
   },
   panela: {
@@ -147,6 +185,42 @@ export const SUGGESTION_OCCASIONS: Record<
         keyword: 'escorredor de louça inox',
         category: 'Cozinha',
       },
+      {
+        id: 'jogo-cama',
+        label: 'Jogo de cama e lençóis',
+        keyword: 'jogo de cama casal 4 peças',
+        category: 'Quarto',
+      },
+      {
+        id: 'panela-pressao',
+        label: 'Panela de pressão',
+        keyword: 'panela de pressão 4,5 litros',
+        category: 'Cozinha',
+      },
+      {
+        id: 'cobertor',
+        label: 'Edredom, manta ou cobertor',
+        keyword: 'cobertor casal',
+        category: 'Quarto',
+      },
+      {
+        id: 'liquidificador',
+        label: 'Liquidificador',
+        keyword: 'liquidificador',
+        category: 'Eletro',
+      },
+      {
+        id: 'pano-prato',
+        label: 'Pano de prato',
+        keyword: 'kit pano de prato',
+        category: 'Cozinha',
+      },
+      {
+        id: 'air-fryer',
+        label: 'Air fryer',
+        keyword: 'air fryer',
+        category: 'Eletro',
+      },
     ],
   },
   aniversario: {
@@ -186,6 +260,54 @@ export const SUGGESTION_OCCASIONS: Record<
       },
     ],
   },
+  bebe: {
+    label: 'chá de bebê',
+    ideas: [
+      {
+        id: 'fraldas',
+        label: 'Fraldas',
+        keyword: 'fralda descartável',
+      },
+      {
+        id: 'body-roupinhas',
+        label: 'Body e roupinhas',
+        keyword: 'kit body bebê',
+      },
+      {
+        id: 'lencos-umedecidos',
+        label: 'Lenços umedecidos',
+        keyword: 'lenço umedecido bebê',
+      },
+      {
+        id: 'toalha-capuz',
+        label: 'Toalha com capuz',
+        keyword: 'toalha de banho bebê com capuz',
+        category: 'Banheiro',
+      },
+      {
+        id: 'banheira',
+        label: 'Banheira',
+        keyword: 'banheira bebê',
+        category: 'Banheiro',
+      },
+      {
+        id: 'kit-higiene',
+        label: 'Kit higiene',
+        keyword: 'kit higiene bebê',
+      },
+      {
+        id: 'manta-bebe',
+        label: 'Manta',
+        keyword: 'manta bebê',
+        category: 'Quarto',
+      },
+      {
+        id: 'mordedor',
+        label: 'Mordedor',
+        keyword: 'mordedor bebê',
+      },
+    ],
+  },
 }
 
 // Ocasião das sugestões pelo tipo do evento. Casamento usa as ideias do chá de
@@ -201,6 +323,8 @@ export function suggestionOccasionForEventType(
       return 'panela'
     case 'birthday':
       return 'aniversario'
+    case 'baby-shower':
+      return 'bebe'
     default:
       return null
   }

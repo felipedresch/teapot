@@ -31,6 +31,7 @@ export const suggestionOccasionValidator = v.union(
   v.literal('casaNova'),
   v.literal('panela'),
   v.literal('aniversario'),
+  v.literal('bebe'),
 )
 
 export const suggestionSlotValidator = v.union(
