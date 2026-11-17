@@ -25,6 +25,7 @@ import type * as lib_giftLinkValidators from "../lib/giftLinkValidators.js";
 import type * as lib_paywallSwitch from "../lib/paywallSwitch.js";
 import type * as lib_shopeeAffiliateApi from "../lib/shopeeAffiliateApi.js";
 import type * as lib_suggestionIdeas from "../lib/suggestionIdeas.js";
+import type * as lib_suggestionMatch from "../lib/suggestionMatch.js";
 import type * as lib_suggestionRanking from "../lib/suggestionRanking.js";
 import type * as payments from "../payments.js";
 import type * as productSuggestions from "../productSuggestions.js";
@@ -55,6 +56,7 @@ declare const fullApi: ApiFromModules<{
   "lib/paywallSwitch": typeof lib_paywallSwitch;
   "lib/shopeeAffiliateApi": typeof lib_shopeeAffiliateApi;
   "lib/suggestionIdeas": typeof lib_suggestionIdeas;
+  "lib/suggestionMatch": typeof lib_suggestionMatch;
   "lib/suggestionRanking": typeof lib_suggestionRanking;
   payments: typeof payments;
   productSuggestions: typeof productSuggestions;

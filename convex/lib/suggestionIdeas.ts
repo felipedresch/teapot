@@ -206,6 +206,17 @@ export function suggestionOccasionForEventType(
   }
 }
 
+// Como chamar a ocasião no "Ideias para o seu …". Casamento usa as ideias do
+// chá de panela, mas o título fala de casamento.
+export function suggestionHeadingLabel(
+  eventType: string | undefined,
+  occasion: SuggestionOccasion,
+) {
+  return eventType === 'wedding'
+    ? 'casamento'
+    : SUGGESTION_OCCASIONS[occasion].label
+}
+
 // Todas as buscas únicas (a mesma ideia em duas ocasiões busca uma vez só).
 export function uniqueSuggestionKeywords() {
   const byKeyword = new Map<

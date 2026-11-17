@@ -252,6 +252,30 @@ describe('ver opções na Shopee', () => {
     expect(result.reason).toBe('store_disabled')
     expect(fetch).not.toHaveBeenCalled()
   })
+
+  it('Shopee desligada: usa o link curto da curadoria quando combina', async () => {
+    const fetch = vi.fn<FetchLike>()
+    const result = await shopeeOptionsUrl(
+      'Potes de vidro',
+      {},
+      { fetch, findMatch: async () => 'https://s.shopee.com.br/AbC123' },
+    )
+    expect(result).toMatchObject({
+      url: 'https://s.shopee.com.br/AbC123',
+      rewritten: false,
+      reason: 'own_affiliate',
+    })
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('Shopee desligada: link da curadoria fora do formato curto não vale', async () => {
+    const result = await shopeeOptionsUrl(
+      'Potes de vidro',
+      {},
+      { findMatch: async () => 'https://shopee.com.br/product/1/2' },
+    )
+    expect(result.reason).toBe('store_disabled')
+  })
 })
 
 describe('cron', () => {

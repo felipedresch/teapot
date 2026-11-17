@@ -5,6 +5,11 @@
 import { useMemo, useState } from 'react'
 import { ArrowRight, Heart, ShoppingBag } from 'lucide-react'
 import { GiftSuggestions } from '../components/gift-suggestions/GiftSuggestions'
+import {
+  GuestShoppingMatch,
+  HostShoppingMatch,
+} from '../components/gift-suggestions/GiftShoppingMatch'
+import { OutsideListSuggestions } from '../components/gift-suggestions/OutsideListSuggestions'
 import type {
   SuggestionIdeaView,
   SuggestionProduct,
@@ -75,6 +80,11 @@ export default function SuggestionsPlayground() {
   const ideas = useMemo(() => buildIdeas(), [])
   const brokenIdeas = useMemo(() => buildIdeas({ brokenImages: true }), [])
   const [added, setAdded] = useState<string | null>(null)
+  const [adding, setAdding] = useState<string | null>(null)
+  const [savingLink, setSavingLink] = useState(false)
+  const matchProduct = ideas
+    .flatMap((idea) => idea.products)
+    .find((product) => product.slot === 'popular')
   const [lastAdded, setLastAdded] = useState<SuggestionProduct | null>(null)
 
   return (
@@ -99,20 +109,26 @@ export default function SuggestionsPlayground() {
           disclosure={DISCLOSURE}
           defaultIdeaId="potes-hermeticos"
           addedItemIds={new Set(added ? [added] : [])}
+          addingItemId={adding}
           onAdd={(product) => {
-            setAdded(product.itemId)
-            setLastAdded(product)
+            // Simula a foto e o createGift do Convex.
+            setAdding(product.itemId)
+            setTimeout(() => {
+              setAdding(null)
+              setAdded(product.itemId)
+              setLastAdded(product)
+            }, 900)
           }}
         />
         {lastAdded ? (
           <p className="text-xs text-warm-gray">
-            Formulário recebeu: <b>{lastAdded.name}</b> ·{' '}
+            Lista recebeu: <b>{lastAdded.name}</b> ·{' '}
             {lastAdded.productLink}
           </p>
         ) : null}
       </Frame>
 
-      <Frame id="adicionado" title="Anfitrião · depois de Adicionar">
+      <Frame id="adicionado" title="Anfitrião · depois de Adicionar à lista">
         <GiftSuggestions
           occasionLabel="chá de casa nova"
           ideas={ideas}
@@ -124,7 +140,7 @@ export default function SuggestionsPlayground() {
         />
       </Frame>
 
-      <Frame id="inicial" title="Anfitrião · nenhum chip escolhido">
+      <Frame id="inicial" title="Anfitrião · padrão (primeira ideia aberta)">
         <GiftSuggestions
           occasionLabel="chá de casa nova"
           ideas={ideas}
@@ -162,6 +178,52 @@ export default function SuggestionsPlayground() {
           disclosure={DISCLOSURE}
           defaultIdeaId="toalhas-banho"
           onAdd={() => {}}
+        />
+      </Frame>
+
+      {matchProduct ? (
+        <Frame id="onde-comprar" title="Convidado · presente sem link que combina">
+          <div className="max-w-xs rounded-2xl border border-gift-available/20 bg-gift-available/10 p-5 flex flex-col gap-3">
+            <div className="h-36 rounded-xl border border-border/95 bg-blush/20" />
+            <h3 className="font-display italic text-base text-espresso">
+              Potes de vidro
+            </h3>
+            <GuestShoppingMatch giftId="dev" product={matchProduct} />
+            <Button size="sm" className="w-full">
+              <Heart className="size-3.5" />
+              Quero presentear
+            </Button>
+          </div>
+        </Frame>
+      ) : null}
+
+      {matchProduct ? (
+        <Frame id="link-sugerido" title="Anfitrião · presente sem link que combina">
+          <div className="max-w-xs rounded-2xl border border-gift-available/20 bg-gift-available/10 p-5 flex flex-col gap-3">
+            <div className="h-36 rounded-xl border border-border/95 bg-blush/20" />
+            <h3 className="font-display italic text-base text-espresso">
+              Potes de vidro
+            </h3>
+            <HostShoppingMatch
+              product={matchProduct}
+              isSaving={savingLink}
+              onUse={() => {
+                setSavingLink(true)
+                setTimeout(() => setSavingLink(false), 900)
+              }}
+            />
+          </div>
+        </Frame>
+      ) : null}
+
+      <Frame id="fora-da-lista" title="Convidado · fora da lista">
+        <OutsideListSuggestions
+          ideas={ideas}
+          occasionLabel="chá de casa nova"
+          hostNames="Gabriel e Giovanna"
+          everythingReserved={false}
+          disclosure={DISCLOSURE}
+          onProductClick={() => {}}
         />
       </Frame>
 

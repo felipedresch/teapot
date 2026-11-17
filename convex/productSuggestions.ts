@@ -21,6 +21,8 @@ import {
   suggestionOccasionValidator,
   suggestionSlotValidator,
 } from './lib/giftLinkValidators'
+import { bestMatchIndex, type MatchCandidate } from './lib/suggestionMatch'
+import type { Doc } from './_generated/dataModel'
 
 const suggestionProductValidator = v.object({
   slot: suggestionSlotValidator,
@@ -170,44 +172,61 @@ export const listProductSuggestions = query({
   },
 })
 
-function normalizeWords(text: string) {
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .split(/[^a-z0-9]+/)
-    .filter((word) => word.length > 2)
+type SuggestionRow = Doc<'productSuggestions'>
+
+function matchCandidates(rows: SuggestionRow[]): MatchCandidate[] {
+  return rows.map((row) => {
+    const idea = SUGGESTION_OCCASIONS[row.occasion].ideas.find(
+      (candidate) => candidate.id === row.ideaId,
+    )
+    return { label: idea?.label ?? '', name: row.name, slot: row.slot }
+  })
 }
 
-// Produto em cache que combina com o nome de um presente sem link (botão
-// "Ver opções na Shopee" do convidado, quando a Shopee não aceita link de
-// busca). Combina pelo rótulo da ideia ou pelo nome do produto; o mais
-// escolhido ganha. null quando nada combina.
+// Produto em cache que combina com o nome de um presente sem link, para o
+// /r/<giftId>?v=shopee (convex/lib/suggestionMatch.ts). null quando nada
+// combina.
 export const findSuggestionForGiftName = query({
   args: { name: v.string() },
   returns: v.union(v.null(), v.object({ productLink: v.string() })),
   handler: async (ctx, args) => {
-    const giftWords = new Set(normalizeWords(args.name))
-    if (giftWords.size === 0) return null
     const rows = await ctx.db.query('productSuggestions').take(500)
-    let best: { productLink: string; score: number } | null = null
-    for (const row of rows) {
-      const idea = SUGGESTION_OCCASIONS[row.occasion].ideas.find(
-        (candidate) => candidate.id === row.ideaId,
-      )
-      const words = new Set([
-        ...normalizeWords(idea?.label ?? ''),
-        ...normalizeWords(row.name),
-      ])
-      let score = 0
-      for (const word of giftWords) if (words.has(word)) score += 1
-      // Precisa bater pelo menos metade das palavras do presente.
-      if (score * 2 < giftWords.size) continue
-      score += row.slot === 'popular' ? 0.5 : 0
-      if (!best || score > best.score) {
-        best = { productLink: row.productLink, score }
+    const index = bestMatchIndex(args.name, matchCandidates(rows))
+    return index < 0 ? null : { productLink: rows[index].productLink }
+  },
+})
+
+// O mesmo casamento para todos os presentes sem link de uma página de uma
+// vez: "Onde comprar" do convidado e "Link sugerido" do anfitrião. Mesma
+// ordem dos nomes; null onde nada combina. Os produtos são públicos.
+export const matchSuggestionsForGiftNames = query({
+  args: { names: v.array(v.string()) },
+  returns: v.array(
+    v.union(
+      v.null(),
+      v.object({
+        itemId: v.string(),
+        name: v.string(),
+        imageUrl: v.string(),
+        price: v.number(),
+        productLink: v.string(),
+      }),
+    ),
+  ),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db.query('productSuggestions').take(500)
+    const candidates = matchCandidates(rows)
+    return args.names.slice(0, 300).map((name) => {
+      const index = bestMatchIndex(name, candidates)
+      if (index < 0) return null
+      const row = rows[index]
+      return {
+        itemId: row.itemId,
+        name: row.name,
+        imageUrl: row.imageUrl,
+        price: row.price,
+        productLink: row.productLink,
       }
-    }
-    return best ? { productLink: best.productLink } : null
+    })
   },
 })
