@@ -83,6 +83,7 @@ const SUGGESTION_LIST_SHARES = {
     giftInsights.occasions.chaDePanela.items.map((i) => [i.name, i.listShare]),
   ),
   aniversario: undefined,
+  bebe: undefined,
 } as const
 
 const AFFILIATE_DISCLOSURE_OFF: AffiliateDisclosure = {
