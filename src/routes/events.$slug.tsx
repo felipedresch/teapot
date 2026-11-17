@@ -1225,7 +1225,12 @@ function EventGiftsPageShell() {
   )
   const giftMatchResults = useQuery(
     api.productSuggestions.matchSuggestionsForGiftNames,
-    linklessGiftNames.length > 0 ? { names: linklessGiftNames } : 'skip',
+    linklessGiftNames.length > 0
+      ? {
+          names: linklessGiftNames,
+          occasion: suggestionOccasion ?? undefined,
+        }
+      : 'skip',
   )
   const giftMatches = useMemo(() => {
     const byGiftId = new Map<string, GiftShoppingMatchProduct>()

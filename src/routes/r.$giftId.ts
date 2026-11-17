@@ -21,6 +21,7 @@ import {
   parseGiftLinkSource,
 } from '../lib/affiliate/links'
 import { shopeeOptionsUrl } from '../lib/affiliate/shopeeOptions'
+import { suggestionOccasionForEventType } from '../../convex/lib/suggestionIdeas'
 
 // Registrar o clique não pode segurar o convidado.
 const CLICK_TIMEOUT_MS = 1500
@@ -97,7 +98,12 @@ export const Route = createFileRoute('/r/$giftId')({
                 (
                   await convex.query(
                     api.productSuggestions.findSuggestionForGiftName,
-                    { name },
+                    {
+                      name,
+                      occasion:
+                        suggestionOccasionForEventType(gift.eventType) ??
+                        undefined,
+                    },
                   )
                 )?.productLink ?? null,
             })
