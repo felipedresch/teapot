@@ -79,6 +79,12 @@ const FAQ_ITEMS = [
         answer:
           'Após a confirmação do Pix, a lista é liberada automaticamente. Se a tela ainda estiver aguardando, use a opção de verificar o pagamento. Não faça um segundo pagamento antes de conferir o primeiro.',
       },
+      {
+        // O rodapé ("Saiba mais") aponta para esta resposta.
+        question: 'O MyWish ganha com os links das lojas?',
+        answer:
+          'Em alguns presentes, o link da loja é um link de parceiro. Quando um convidado compra por ele, a loja pode pagar uma comissão ao MyWish. O preço para o convidado é o mesmo, e nada sai do valor do presente.',
+      },
     ],
     [
       {

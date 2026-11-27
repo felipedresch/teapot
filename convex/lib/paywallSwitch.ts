@@ -8,7 +8,7 @@
 // O site lê esta mesma constante: páginas, metadados, blog (marcadores
 // <!-- pago --> e <!-- gratis -->, docs/BLOG.md) e /llms.txt mudam junto.
 // Como virar: docs/PAYWALL.md.
-export const PAYWALL_ENABLED = false
+export const PAYWALL_ENABLED = true
 
 export type MonetizationStatus = 'grandfathered' | 'requires_payment' | 'paid'
 
